@@ -38,15 +38,16 @@ class ConsultaCatalogo:
 CONSULTAS: dict[str, ConsultaCatalogo] = {
     c.intent: c
     for c in [
+        # v2 em resumo_fornecedor e pagamentos_periodo: empenho separado do pago (o recibo guarda a versão).
         ConsultaCatalogo(
             "resumo_fornecedor",
-            "v1",
+            "v2",
             ("por_uf_orgao", "contratos", "pagamentos"),
             ("contratos", "pagamentos"),
         ),
         ConsultaCatalogo("contratos_vigentes", "v1", ("linhas",), ("linhas",)),
         ConsultaCatalogo("contratos_vencendo", "v1", ("linhas",), ("linhas",)),
-        ConsultaCatalogo("pagamentos_periodo", "v1", ("linhas",), ("linhas",)),
+        ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
         ConsultaCatalogo("sancoes_fornecedor", "v1", ("linhas",), ("linhas",), usa_uf=False),
     ]
 }

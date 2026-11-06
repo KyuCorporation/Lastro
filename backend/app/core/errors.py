@@ -3,12 +3,16 @@
 import logging
 import uuid
 
+import psycopg
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from psycopg_pool import PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 log = logging.getLogger("lastro.api")
+
+MENSAGEM_BANCO_INDISPONIVEL = "Os dados estão indisponíveis no momento. Tente de novo em instantes."
 
 
 class ErroApi(Exception):
@@ -63,6 +67,14 @@ def registrar_tratadores(app: FastAPI) -> None:
         padrao = "ERRO_INTERNO" if exc.status_code >= 500 else "ENTRADA_INVALIDA"
         codigo = _CODIGO_POR_STATUS.get(exc.status_code, padrao)
         return _resposta(request, exc.status_code, codigo, str(exc.detail), getattr(exc, "headers", None))
+
+    # Banco fora do ar ou sem conexão livre no pool: indisponibilidade, não bug (contracts/api.md: 503).
+    # QueryCanceled (statement_timeout) também é OperationalError e cai aqui se ninguém tratou antes.
+    @app.exception_handler(psycopg.OperationalError)
+    @app.exception_handler(PoolTimeout)
+    async def banco_indisponivel(request: Request, exc: Exception) -> JSONResponse:
+        log.warning("banco indisponível (request_id=%s): %s", _request_id(request), type(exc).__name__)
+        return _resposta(request, 503, "FONTE_INDISPONIVEL", MENSAGEM_BANCO_INDISPONIVEL)
 
     @app.exception_handler(Exception)
     async def interno(request: Request, exc: Exception) -> JSONResponse:

@@ -21,7 +21,16 @@ from app.modules.catalogo.registry import CONSULTAS, sql
 
 LIMITE_LINHAS = 200
 DIAS_PADRAO = 180
-_COLUNAS_DE_TOTAL = ("total_linhas", "valor_total", "valor_vigente_total")
+# Colunas de janela (iguais em todas as linhas) que viram totais e saem das linhas. Os nomes não podem
+# coincidir com colunas de dado de nenhum conjunto: elas também seriam tiradas.
+_COLUNAS_DE_TOTAL = (
+    "total_linhas",
+    "valor_total",
+    "valor_vigente_total",
+    "total_pagos",
+    "total_empenhos",
+    "valor_empenhado_total",
+)
 
 
 class IntentSemConsulta(ValueError):
@@ -78,10 +87,10 @@ def _percentual(parte: Decimal | None, todo: Decimal | None) -> Decimal | None:
 def _totais(intent: str, conjuntos: dict[str, list[dict]], janelas: dict[str, dict]) -> dict[str, Any]:
     if intent == "resumo_fornecedor":
         grupos = conjuntos["por_uf_orgao"]
-        contagens = {k: sum(g[k] for g in grupos) for k in ("n_contratos", "n_pagamentos")}
+        contagens = {k: sum(g[k] for g in grupos) for k in ("n_contratos", "n_pagamentos", "n_empenhos")}
         valores = {
             k: sum((g[k] for g in grupos), Decimal(0))
-            for k in ("valor_contratado", "valor_vigente", "valor_pago")
+            for k in ("valor_contratado", "valor_vigente", "valor_pago", "valor_empenhado")
         }
         return {**contagens, **valores}
     j = janelas.get("linhas", {})
@@ -97,7 +106,13 @@ def _totais(intent: str, conjuntos: dict[str, list[dict]], janelas: dict[str, di
             "percentual_do_vigente": _percentual(vencendo, vigente),
         }
     if intent == "pagamentos_periodo":
-        return {"n_pagamentos": n, "valor_total": j.get("valor_total") or Decimal(0)}
+        # Empenho não é pagamento: n e valor contam só o que saiu; o empenhado vem à parte (SQL v2).
+        return {
+            "n_pagamentos": j.get("total_pagos", 0),
+            "valor_total": j.get("valor_total") or Decimal(0),
+            "n_empenhos": j.get("total_empenhos", 0),
+            "valor_empenhado": j.get("valor_empenhado_total") or Decimal(0),
+        }
     if intent == "sancoes_fornecedor":
         return {"n_sancoes": n, "n_vigentes": sum(1 for s in conjuntos["linhas"] if s["vigente"])}
     return {}

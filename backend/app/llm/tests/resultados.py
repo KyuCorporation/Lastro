@@ -60,7 +60,7 @@ def pagamentos(linhas=None) -> ResultadoConsulta:
     ]  # fmt: skip
     return ResultadoConsulta(
         intent="pagamentos_periodo",
-        versao="pagamentos_periodo@v1",
+        versao="pagamentos_periodo@v2",
         parametros={
             "cnpj": CNPJ,
             "hoje": HOJE,
@@ -69,20 +69,26 @@ def pagamentos(linhas=None) -> ResultadoConsulta:
             "data_fim": date(2025, 12, 31),
         },
         conjuntos={"linhas": linhas},
-        totais={"n_pagamentos": len(linhas), "valor_total": sum((p["valor"] for p in linhas), Decimal(0))},
+        totais={
+            "n_pagamentos": len(linhas),
+            "valor_total": sum((p["valor"] for p in linhas), Decimal(0)),
+            "n_empenhos": 0,
+            "valor_empenhado": Decimal(0),
+        },
     )
 
 
-def resumo(vazio: bool = False) -> ResultadoConsulta:
+def resumo(vazio: bool = False, empenhado: str = "0") -> ResultadoConsulta:
     grupos = [] if vazio else [
         {"uf": "PE", "orgao_id": "pe_portal:1", "orgao_nome": "Secretaria de Saúde", "n_contratos": 2,
          "valor_contratado": Decimal("150000.00"), "valor_vigente": Decimal("100000.00"), "n_pagamentos": 1,
-         "valor_pago": Decimal("40000.00")},
+         "valor_pago": Decimal("40000.00"), "n_empenhos": int(Decimal(empenhado) > 0),
+         "valor_empenhado": Decimal(empenhado)},
     ]  # fmt: skip
-    soma = lambda k: sum((g[k] for g in grupos), Decimal(0))  # noqa: E731
+    soma = lambda k: sum((g[k] for g in grupos), Decimal(0))
     return ResultadoConsulta(
         intent="resumo_fornecedor",
-        versao="resumo_fornecedor@v1",
+        versao="resumo_fornecedor@v2",
         parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
         conjuntos={"por_uf_orgao": grupos, "contratos": [], "pagamentos": []},
         totais={
@@ -91,6 +97,8 @@ def resumo(vazio: bool = False) -> ResultadoConsulta:
             "valor_contratado": soma("valor_contratado"),
             "valor_vigente": soma("valor_vigente"),
             "valor_pago": soma("valor_pago"),
+            "n_empenhos": sum(g["n_empenhos"] for g in grupos),
+            "valor_empenhado": soma("valor_empenhado"),
         },
     )
 

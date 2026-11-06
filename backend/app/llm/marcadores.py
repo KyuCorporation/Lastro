@@ -3,16 +3,25 @@
 Todo número, valor, data e CNPJ da resposta sai daqui, do resultado do catálogo. O redator só vê os marcadores
 (`{{v1}}`) e o significado de cada um. O modelo determinístico é o texto pronto da intent, usado no modo mock,
 quando o verificador reprova o redator e quando o resultado vem vazio (abstenção).
+
+Intent nova do catálogo = uma função `@modelo_da_intent("<intent>")` que devolve o `Material`.
+`intents_sem_modelo()` acusa, na importação, consulta do catálogo sem modelo.
 """
 
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime
 from typing import Any
 
 from app.llm.formatacao import TipoValor, formatar, formatar_cnpj
+from app.llm.texto_externo import dado_nao_confiavel
 from app.modules.catalogo.executor import ResultadoConsulta
 from app.modules.catalogo.registry import CONSULTAS
 
 LIMITE_REGISTROS_TEXTO = 5
+
+# Compatibilidade: nome usado antes da quarentena ir para texto_externo.py.
+nao_confiavel = dado_nao_confiavel
 
 
 @dataclass(frozen=True)
@@ -35,43 +44,88 @@ class Material:
     marcadores: dict[str, Marcador]
     modelo: str
     vazio: bool
-    # Texto vindo das fontes (nome de órgão, objeto, tipo de sanção), sem nenhum número do resultado.
+    # Texto vindo das fontes (nome de órgão, objeto, tipo de sanção), já em quarentena e sem números.
     registros: tuple[str, ...] = field(default_factory=tuple)
+    # Marcadores que carregam a resposta (contagens, valores, datas do resultado). Identificação (CNPJ, UFs)
+    # e parâmetros da pergunta (prazo, período) não contam: um texto só com eles não respondeu nada.
+    essenciais: frozenset[str] = field(default_factory=frozenset)
 
 
 class _Montador:
-    def __init__(self) -> None:
-        self.marcadores: dict[str, Marcador] = {}
+    def __init__(self, inicial: dict[str, Marcador] | None = None) -> None:
+        self.marcadores: dict[str, Marcador] = dict(inicial or {})
+        self.essenciais: set[str] = set()
 
-    def add(self, valor: Any, tipo: TipoValor, significado: str, origem: str) -> str:
+    def add(
+        self, valor: Any, tipo: TipoValor, significado: str, origem: str, *, essencial: bool = True
+    ) -> str:
         mid = f"v{len(self.marcadores) + 1}"
         self.marcadores[mid] = Marcador(mid, valor, tipo, significado, origem)
+        if essencial:
+            self.essenciais.add(mid)
         return "{{" + mid + "}}"
 
-
-def nao_confiavel(texto: Any) -> str:
-    """Envolve texto de fonte externa. O próprio texto não pode abrir nem fechar a marcação."""
-    limpo = str(texto or "").replace("<dado_nao_confiavel>", "").replace("</dado_nao_confiavel>", "")
-    return f"<dado_nao_confiavel>{limpo[:300]}</dado_nao_confiavel>"
+    def material(self, modelo: str, vazio: bool, registros: tuple[str, ...] = ()) -> Material:
+        return Material(self.marcadores, modelo, vazio, registros, frozenset(self.essenciais))
 
 
+# ------------------------------------------------------------------ registro das intents
+ModeloDaIntent = Callable[[ResultadoConsulta], Material]
+_POR_INTENT: dict[str, ModeloDaIntent] = {}
+
+
+def modelo_da_intent(intent: str) -> Callable[[ModeloDaIntent], ModeloDaIntent]:
+    def registrar(funcao: ModeloDaIntent) -> ModeloDaIntent:
+        if intent in _POR_INTENT:
+            raise RuntimeError(f"modelo duplicado para a intent {intent}")
+        _POR_INTENT[intent] = funcao
+        return funcao
+
+    return registrar
+
+
+def intents_sem_modelo() -> set[str]:
+    return set(CONSULTAS) - set(_POR_INTENT)
+
+
+# ------------------------------------------------------------------ partes comuns
 def _ufs(resultado: ResultadoConsulta) -> str:
     return ", ".join(resultado.parametros.get("ufs", []))
 
 
 def _cnpj(m: _Montador, resultado: ResultadoConsulta) -> str:
     cnpj = resultado.parametros["cnpj"]
-    return m.add(formatar_cnpj(cnpj), "texto", "CNPJ do fornecedor", "parametros.cnpj")
+    return m.add(formatar_cnpj(cnpj), "texto", "CNPJ do fornecedor", "parametros.cnpj", essencial=False)
+
+
+def _ufs_marcador(m: _Montador, resultado: ResultadoConsulta) -> str:
+    return m.add(_ufs(resultado), "texto", "UFs consultadas", "parametros.ufs", essencial=False)
+
+
+def _frase_empenho(m: _Montador, t: dict[str, Any]) -> str:
+    """Empenho é reserva no orçamento, não pagamento: aparece à parte e só quando existe.
+
+    Os marcadores entram depois dos demais, então a numeração de quem não tem empenho não muda.
+    """
+    if not t["n_empenhos"]:
+        return ""
+    v_e = m.add(
+        t["valor_empenhado"], "moeda", "valor empenhado (reservado, ainda não pago)", "sum(empenhos.valor)"
+    )
+    n_e = m.add(t["n_empenhos"], "inteiro", "número de empenhos", "count(empenhos)")
+    return f" Há ainda {v_e} empenhado(s) em {n_e} empenho(s): reserva no orçamento, que só conta como pago depois de liquidada."
 
 
 def _registros_contratos(linhas: list[dict]) -> tuple[str, ...]:
     return tuple(
-        f"- Contrato com o órgão {nao_confiavel(c.get('orgao_nome'))} (UF {c['uf']}), "
-        f"objeto: {nao_confiavel(c.get('objeto'))}"
+        f"- Contrato com o órgão {dado_nao_confiavel(c.get('orgao_nome'))} (UF {c['uf']}), "
+        f"objeto: {dado_nao_confiavel(c.get('objeto'))}"
         for c in linhas[:LIMITE_REGISTROS_TEXTO]
     )
 
 
+# ------------------------------------------------------------------ intents
+@modelo_da_intent("resumo_fornecedor")
 def _resumo(r: ResultadoConsulta) -> Material:
     m, t = _Montador(), r.totais
     cnpj = _cnpj(m, r)
@@ -80,10 +134,12 @@ def _resumo(r: ResultadoConsulta) -> Material:
     v_v = m.add(
         t["valor_vigente"], "moeda", "valor dos contratos ainda vigentes", "sum(valor_global) vigentes"
     )
-    n_p = m.add(t["n_pagamentos"], "inteiro", "número de pagamentos", "count(pagamentos)")
-    v_p = m.add(t["valor_pago"], "moeda", "valor pago somado", "sum(pagamentos.valor)")
-    ufs = m.add(_ufs(r), "texto", "UFs consultadas", "parametros.ufs")
-    vazio = t["n_contratos"] == 0 and t["n_pagamentos"] == 0
+    n_p = m.add(
+        t["n_pagamentos"], "inteiro", "número de pagamentos (sem contar empenhos)", "count(pagamentos)"
+    )
+    v_p = m.add(t["valor_pago"], "moeda", "valor pago somado (sem contar empenhos)", "sum(pagamentos.valor)")
+    ufs = _ufs_marcador(m, r)
+    vazio = t["n_contratos"] == 0 and t["n_pagamentos"] == 0 and t["n_empenhos"] == 0
     if vazio:
         modelo = (
             f"Não encontrei contratos nem pagamentos do fornecedor {cnpj} "
@@ -94,14 +150,15 @@ def _resumo(r: ResultadoConsulta) -> Material:
             f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem {n_c} contrato(s), "
             f"somando {v_c}, dos quais {v_v} em contratos ainda vigentes. "
             f"Foram registrados {n_p} pagamento(s), num total de {v_p}."
-        )
+        ) + _frase_empenho(m, t)
     registros = tuple(
-        f"- Órgão {nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
+        f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
         for g in r.conjuntos["por_uf_orgao"][:LIMITE_REGISTROS_TEXTO]
     )
-    return Material(m.marcadores, modelo, vazio, registros)
+    return m.material(modelo, vazio, registros)
 
 
+@modelo_da_intent("contratos_vigentes")
 def _vigentes(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
@@ -113,7 +170,7 @@ def _vigentes(r: ResultadoConsulta) -> Material:
         "data do próximo fim de vigência",
         "min(vigencia_fim)",
     )
-    ufs = m.add(_ufs(r), "texto", "UFs consultadas", "parametros.ufs")
+    ufs = _ufs_marcador(m, r)
     if not linhas:
         modelo = (
             f"Não encontrei contratos vigentes do fornecedor {cnpj} nas fontes autorizadas para você ({ufs})."
@@ -123,13 +180,14 @@ def _vigentes(r: ResultadoConsulta) -> Material:
             f"O fornecedor {cnpj} tem {n} contrato(s) vigente(s) nas fontes autorizadas para você ({ufs}), "
             f"somando {valor}. O próximo a terminar vence em {proximo}."
         )
-    return Material(m.marcadores, modelo, not linhas, _registros_contratos(linhas))
+    return m.material(modelo, not linhas, _registros_contratos(linhas))
 
 
+@modelo_da_intent("contratos_vencendo")
 def _vencendo(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
-    dias = m.add(r.parametros["dias"], "inteiro", "prazo em dias", "parametros.dias")
+    dias = m.add(r.parametros["dias"], "inteiro", "prazo em dias", "parametros.dias", essencial=False)
     n = m.add(t["n_contratos"], "inteiro", "número de contratos que vencem no prazo", "count(contratos)")
     valor = m.add(t["valor_vencendo"], "moeda", "valor somado dos contratos que vencem", "sum(valor_global)")
     primeiro = m.add(
@@ -138,13 +196,13 @@ def _vencendo(r: ResultadoConsulta) -> Material:
         "data do primeiro vencimento",
         "min(vigencia_fim)",
     )
-    ufs = m.add(_ufs(r), "texto", "UFs consultadas", "parametros.ufs")
+    ufs = _ufs_marcador(m, r)
     if not linhas:
         modelo = (
             f"Não encontrei contratos do fornecedor {cnpj} que vençam nos próximos {dias} dias "
             f"nas fontes autorizadas para você ({ufs})."
         )
-        return Material(m.marcadores, modelo, True)
+        return m.material(modelo, True)
     modelo = f"Nos próximos {dias} dias vencem {n} contrato(s) do fornecedor {cnpj} ({ufs}), somando {valor}."
     if t.get("percentual_do_vigente") is not None:
         pct = m.add(
@@ -155,17 +213,27 @@ def _vencendo(r: ResultadoConsulta) -> Material:
         )
         modelo += f" Isso é {pct} do valor vigente."
     modelo += f" O primeiro vence em {primeiro}."
-    return Material(m.marcadores, modelo, False, _registros_contratos(linhas))
+    return m.material(modelo, False, _registros_contratos(linhas))
 
 
+@modelo_da_intent("pagamentos_periodo")
 def _pagamentos(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
-    inicio = m.add(r.parametros["data_inicio"], "data", "início do período", "parametros.data_inicio")
-    fim = m.add(r.parametros["data_fim"], "data", "fim do período", "parametros.data_fim")
-    n = m.add(t["n_pagamentos"], "inteiro", "número de pagamentos no período", "count(pagamentos)")
-    valor = m.add(t["valor_total"], "moeda", "valor pago no período", "sum(pagamentos.valor)")
-    ufs = m.add(_ufs(r), "texto", "UFs consultadas", "parametros.ufs")
+    inicio = m.add(
+        r.parametros["data_inicio"], "data", "início do período", "parametros.data_inicio", essencial=False
+    )
+    fim = m.add(r.parametros["data_fim"], "data", "fim do período", "parametros.data_fim", essencial=False)
+    n = m.add(
+        t["n_pagamentos"],
+        "inteiro",
+        "número de pagamentos no período (sem contar empenhos)",
+        "count(pagamentos)",
+    )
+    valor = m.add(
+        t["valor_total"], "moeda", "valor pago no período (sem contar empenhos)", "sum(pagamentos.valor)"
+    )
+    ufs = _ufs_marcador(m, r)
     if not linhas:
         modelo = (
             f"Não encontrei pagamentos ao fornecedor {cnpj} entre {inicio} e {fim} "
@@ -175,24 +243,23 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
         modelo = (
             f"Entre {inicio} e {fim}, o fornecedor {cnpj} recebeu {n} pagamento(s) "
             f"nas fontes autorizadas para você ({ufs}), num total de {valor}."
-        )
+        ) + _frase_empenho(m, t)
     registros = tuple(
-        f"- Pagamento do órgão {nao_confiavel(p.get('orgao_nome'))} (UF {p['uf']}): "
-        f"{nao_confiavel(p.get('descricao'))}"
+        f"- Pagamento do órgão {dado_nao_confiavel(p.get('orgao_nome'))} (UF {p['uf']}): "
+        f"{dado_nao_confiavel(p.get('descricao'))}"
         for p in linhas[:LIMITE_REGISTROS_TEXTO]
     )
-    return Material(m.marcadores, modelo, not linhas, registros)
+    return m.material(modelo, not linhas, registros)
 
 
+@modelo_da_intent("sancoes_fornecedor")
 def _sancoes(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
     n = m.add(t["n_sancoes"], "inteiro", "número de sanções registradas", "count(sancoes)")
     vig = m.add(t["n_vigentes"], "inteiro", "número de sanções vigentes", "count(sancoes vigentes)")
     if not linhas:
-        return Material(
-            m.marcadores, f"Não encontrei sanções do fornecedor {cnpj} no CEIS nem no CNEP.", True
-        )
+        return m.material(f"Não encontrei sanções do fornecedor {cnpj} no CEIS nem no CNEP.", True)
     modelo = (
         f"O fornecedor {cnpj} tem {n} sanção(ões) registradas no CEIS ou no CNEP, das quais {vig} vigente(s)."
     )
@@ -200,22 +267,33 @@ def _sancoes(r: ResultadoConsulta) -> Material:
         modelo += " Sanção vigente é um sinal para investigar."
     registros = tuple(
         f"- Sanção ({s['fonte_id'].upper()}, {'vigente' if s['vigente'] else 'encerrada'}): "
-        f"{nao_confiavel(s.get('tipo'))}, aplicada por {nao_confiavel(s.get('orgao_sancionador'))}"
+        f"{dado_nao_confiavel(s.get('tipo'))}, aplicada por {dado_nao_confiavel(s.get('orgao_sancionador'))}"
         for s in linhas[:LIMITE_REGISTROS_TEXTO]
     )
-    return Material(m.marcadores, modelo, False, registros)
+    return m.material(modelo, False, registros)
 
 
-_POR_INTENT = {
-    "resumo_fornecedor": _resumo,
-    "contratos_vigentes": _vigentes,
-    "contratos_vencendo": _vencendo,
-    "pagamentos_periodo": _pagamentos,
-    "sancoes_fornecedor": _sancoes,
-}
-
-assert set(_POR_INTENT) == set(CONSULTAS), "toda consulta do catálogo precisa de marcadores e modelo"
+if faltando := intents_sem_modelo():
+    raise RuntimeError(f"consulta do catálogo sem marcadores e modelo: {sorted(faltando)}")
 
 
-def montar_material(resultado: ResultadoConsulta) -> Material:
-    return _POR_INTENT[resultado.intent](resultado)
+# ------------------------------------------------------------------ entrada
+def _com_data_da_coleta(material: Material, coletado_em: date | datetime) -> Material:
+    """SPEC §8.4: a abstenção diz até quando as fontes foram coletadas."""
+    m = _Montador(material.marcadores)
+    data = coletado_em.date() if isinstance(coletado_em, datetime) else coletado_em
+    marcador = m.add(
+        data, "data", "data da coleta mais recente das fontes", "fontes.coletado_em", essencial=False
+    )
+    return replace(
+        material, marcadores=m.marcadores, modelo=f"{material.modelo} Fontes coletadas até {marcador}."
+    )
+
+
+def montar_material(
+    resultado: ResultadoConsulta, *, fontes_coletadas_em: date | datetime | None = None
+) -> Material:
+    material = _POR_INTENT[resultado.intent](resultado)
+    if material.vazio and fontes_coletadas_em is not None:
+        return _com_data_da_coleta(material, fontes_coletadas_em)
+    return material

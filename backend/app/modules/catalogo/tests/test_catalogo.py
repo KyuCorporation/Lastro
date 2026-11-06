@@ -60,7 +60,7 @@ def test_registro_cobre_as_intents_n1_e_os_arquivos_existem():
 # ---------------------------------------------------------------- resumo_fornecedor
 def test_resumo_so_com_as_ufs_da_ana(ctx_ana):
     r = executar(plano("resumo_fornecedor"), ctx_ana, HOJE)
-    assert r.versao == "resumo_fornecedor@v1"
+    assert r.versao == "resumo_fornecedor@v2"
     assert r.parametros["ufs"] == ["PE"]
     assert origens(r.conjuntos["contratos"]) == {"TCAT-C1", "TCAT-C2", "TCAT-C3"}
     assert origens(r.conjuntos["pagamentos"]) == {"TCAT-P1", "TCAT-P2", "TCAT-P3"}
@@ -71,6 +71,8 @@ def test_resumo_so_com_as_ufs_da_ana(ctx_ana):
         "valor_contratado": Decimal("450000.00"),
         "valor_vigente": Decimal("400000.00"),
         "valor_pago": Decimal("55000.00"),
+        "n_empenhos": 0,  # os pagamentos de teste não são empenho (id_origem sem "emp:")
+        "valor_empenhado": Decimal(0),
     }
     assert_proveniencia(r)
 
@@ -155,7 +157,12 @@ def test_pagamentos_no_periodo(ctx_ana):
         plano("pagamentos_periodo", data_inicio=date(2025, 1, 1), data_fim=date(2025, 12, 31)), ctx_ana, HOJE
     )
     assert origens(r.conjuntos["linhas"]) == {"TCAT-P1", "TCAT-P2"}
-    assert r.totais == {"n_pagamentos": 2, "valor_total": Decimal("50000.00")}
+    assert r.totais == {
+        "n_pagamentos": 2,
+        "valor_total": Decimal("50000.00"),
+        "n_empenhos": 0,
+        "valor_empenhado": Decimal(0),
+    }
     assert_proveniencia(r)
 
 

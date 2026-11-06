@@ -56,7 +56,7 @@ DOMINIO = re.compile(r"gast|govern|contrat|fornecedor|empresa|cnpj|pag|receb|lic
 # Em ordem: "objeto" tem prioridade, então em "contratos com objeto de X" o termo é X.
 _TERMO = r"\s+(?:de\s+|do\s+|da\s+)?(?P<termo>[a-z0-9 ]{2,80})"
 BUSCAS = [re.compile(r"objeto" + _TERMO), re.compile(r"(?:sobre|contratos? (?:de|para|com))" + _TERMO)]
-UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
+UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
 DATA_BR = re.compile(r"\b(\d{2})/(\d{2})/(\d{4})\b")
 CANDIDATO_NUMERICO = re.compile(r"\d[\d./-]*\d")
 DURACAO = re.compile(r"\b(\d{1,3}|" + "|".join(NUMEROS) + r")\s+(dias?|semanas?|mes|meses|anos?)\b")

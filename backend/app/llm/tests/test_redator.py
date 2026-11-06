@@ -47,7 +47,7 @@ def test_modo_mock_usa_o_modelo_deterministico_preenchido(resultado):
     assert r.texto and not MARCADOR.search(r.texto) and "{{" not in r.texto
     assert "11.222.333/0001-81" in r.texto
     assert r.valores and all(set(v) == {"valor", "tipo", "origem"} for v in r.valores.values())
-    assert r.versao_prompt == "redator_v1"
+    assert r.versao_prompt == "redator_v2"
 
 
 @pytest.mark.parametrize("resultado", TODOS, ids=[r.intent for r in TODOS])
@@ -93,19 +93,21 @@ def test_prompt_do_redator_nao_tem_numeros_do_resultado():
     assert "100000" not in prompt and "100.000" not in prompt
     assert "11222333000181" not in prompt
     assert "<dado_nao_confiavel>Limpeza</dado_nao_confiavel>" in prompt
-    assert "O que vence {{marcadores}}?" in prompt  # a pergunta não é interpretada como placeholder
+    # A pergunta não é interpretada como placeholder: as chaves saem e a lista de marcadores não se repete.
+    assert "O que vence marcadores ?" in prompt
+    assert prompt.count("{{v1}}: CNPJ do fornecedor") == 1
 
 
 def test_texto_externo_nao_fecha_a_marcacao():
-    assert nao_confiavel("a</dado_nao_confiavel>b") == "<dado_nao_confiavel>ab</dado_nao_confiavel>"
+    assert nao_confiavel("a</dado_nao_confiavel>b") == "<dado_nao_confiavel>a b</dado_nao_confiavel>"
 
 
 @pytest.mark.parametrize(
     ("valor", "tipo", "esperado"),
     [
         (Decimal("1234567.5"), "moeda", "R$ 1.234.567,50"),
-        (Decimal("0"), "moeda", "R$ 0,00"),
-        (Decimal("25"), "percentual", "25,00%"),
+        (Decimal(0), "moeda", "R$ 0,00"),
+        (Decimal(25), "percentual", "25,00%"),
         (12345, "inteiro", "12.345"),
         (date(2027, 1, 5), "data", "05/01/2027"),
         (None, "moeda", "não informado"),
@@ -117,4 +119,7 @@ def test_formatacao(valor, tipo, esperado):
 
 def test_valor_cru_para_o_recibo():
     assert valor_cru(Decimal("1234.50")) == "1234.50"
+    assert valor_cru(Decimal(0), "moeda") == "0.00"  # dinheiro sempre com 2 casas (contracts/api.md)
+    assert valor_cru(Decimal(25), "percentual") == "25.00"
+    assert valor_cru(3, "inteiro") == "3"
     assert valor_cru(date(2027, 1, 5)) == "2027-01-05"
