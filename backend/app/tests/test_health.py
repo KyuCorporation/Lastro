@@ -19,3 +19,10 @@ def test_health_sem_banco_fica_degradado(monkeypatch):
     assert r.status_code == 200
     assert r.json()["status"] == "degradado"
     assert r.json()["db"] == "indisponivel"
+
+
+def test_raiz_leva_para_a_documentacao():
+    r = client.get("/", follow_redirects=False)
+    assert r.status_code == 307
+    assert r.headers["location"] == "/docs"
+    assert client.get("/docs").status_code == 200

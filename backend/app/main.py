@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from app.core.config import get_settings
@@ -39,6 +40,12 @@ class Saude(BaseModel):
     status: str
     db: str
     llm: str
+
+
+@app.get("/", include_in_schema=False)
+def raiz() -> RedirectResponse:
+    """Quem abre a API no navegador cai na documentação interativa em vez de um 404."""
+    return RedirectResponse("/docs")
 
 
 @app.get("/health", response_model=Saude)
