@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lastro/plano_consulta.v1",
+  "title": "Plano de consulta (saída do planejador)",
+  "description": "A LLM escolhe UMA intent do catálogo (SPEC §7) e preenche parâmetros. Nunca contém tenant, usuário ou SQL. A UF é interseccionada com o escopo da sessão pelo backend.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao", "intent", "parametros"],
+  "properties": {
+    "versao": { "const": "v1" },
+    "intent": {
+      "enum": ["resumo_fornecedor", "contratos_vigentes", "contratos_vencendo", "pagamentos_periodo",
+               "sancoes_fornecedor", "orgaos_fornecedor", "busca_objeto", "fila_carteira",
+               "socios_sancionados", "fora_de_escopo", "esclarecer"]
+    },
+    "parametros": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cnpj": { "type": "string", "pattern": "^[0-9]{14}$" },
+        "uf": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "dias": { "type": "integer", "minimum": 1, "maximum": 365 },
+        "data_inicio": { "type": "string", "format": "date" },
+        "data_fim": { "type": "string", "format": "date" },
+        "termo": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "carteira_id": { "type": "string", "format": "uuid" },
+        "motivo": { "type": "string", "maxLength": 200 },
+        "pergunta_de_volta": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "confianca": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}

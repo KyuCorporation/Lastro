@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lastro/recibo.v1",
+  "title": "Recibo de resposta",
+  "description": "Gravado em recibos.conteudo. O hash é sha256 do JSON canônico deste objeto (chaves ordenadas, sem espaços, UTF-8). Tudo aqui vem do backend; nada é texto livre da LLM, exceto resposta_final, que já passou pelo verificador.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao", "consulta_id", "tenant_id", "usuario_id", "perfil", "ufs_autorizadas", "pergunta",
+               "plano", "execucao", "linhas", "fontes", "resposta_final", "verificacao", "ia", "criado_em"],
+  "properties": {
+    "versao": { "const": "v1" },
+    "consulta_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "usuario_id": { "type": "string", "format": "uuid" },
+    "perfil": { "enum": ["analista", "gestor", "auditor", "admin"] },
+    "ufs_autorizadas": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+    "carteira": {
+      "type": ["object", "null"],
+      "properties": { "id": { "type": "string" }, "finalidade": { "type": "string" } }
+    },
+    "pergunta": { "type": "string" },
+    "plano": { "$ref": "plano_consulta.schema.json" },
+    "execucao": {
+      "type": "object",
+      "required": ["consulta_catalogo", "parametros_efetivos", "ufs_efetivas", "n_linhas", "duracao_ms"],
+      "properties": {
+        "consulta_catalogo": { "type": "string", "description": "id da intent e versão do SQL, ex. contratos_vencendo@1" },
+        "parametros_efetivos": { "type": "object" },
+        "ufs_efetivas": { "type": "array", "items": { "type": "string" } },
+        "n_linhas": { "type": "integer" },
+        "duracao_ms": { "type": "integer" }
+      }
+    },
+    "linhas": {
+      "type": "array",
+      "description": "Linhas usadas na resposta, com proveniência",
+      "items": {
+        "type": "object",
+        "required": ["tabela", "id", "fonte_id", "id_origem", "hash_conteudo"],
+        "properties": {
+          "tabela": { "enum": ["contratos", "pagamentos", "sancoes", "sinais", "socios"] },
+          "id": { "type": "string" },
+          "fonte_id": { "type": "string" },
+          "id_origem": { "type": "string" },
+          "url_origem": { "type": ["string", "null"] },
+          "coletado_em": { "type": "string" },
+          "hash_conteudo": { "type": "string" }
+        }
+      }
+    },
+    "valores": {
+      "type": "object",
+      "description": "Marcadores usados pelo redator e o valor inserido pelo código. Ex.: {\"v1\": {\"valor\": \"1234.56\", \"tipo\": \"moeda\", \"origem\": \"sum(valor_global)\"}}",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["valor", "tipo"],
+        "properties": {
+          "valor": { "type": "string" },
+          "tipo": { "enum": ["moeda", "data", "inteiro", "percentual", "texto"] },
+          "origem": { "type": "string" }
+        }
+      }
+    },
+    "fontes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fonte_id", "nome", "coletado_em"],
+        "properties": {
+          "fonte_id": { "type": "string" },
+          "nome": { "type": "string" },
+          "coletado_em": { "type": "string" },
+          "execucao_id": { "type": ["string", "null"] },
+          "sintetico": { "type": "boolean" }
+        }
+      }
+    },
+    "resposta_final": { "type": "string" },
+    "verificacao": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["aprovado", "fallback", "abstencao", "negado"] },
+        "motivos": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ia": {
+      "type": "object",
+      "properties": {
+        "provedor": { "type": "string" },
+        "modelo": { "type": "string" },
+        "versao_prompt_planejador": { "type": "string" },
+        "versao_prompt_redator": { "type": "string" },
+        "planejador_por_regras": { "type": "boolean" }
+      }
+    },
+    "criado_em": { "type": "string", "format": "date-time" }
+  }
+}

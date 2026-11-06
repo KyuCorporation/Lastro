@@ -1,0 +1,12 @@
+.env
+data/raw/
+!data/raw/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+frontend/dist/
+eval/reports/*.json
+.DS_Store

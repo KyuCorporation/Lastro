@@ -1,0 +1,26 @@
+# Formato. Completar até 100 casos. Distribuição sugerida: 60 responder, 15 abster, 10 esclarecer, 15 negar.
+# usuario: e-mail do seed (SPEC §6.3). sql_referencia roda como lastro_app com o contexto desse usuário.
+- id: G001
+  usuario: ana@alfa.demo
+  pergunta: "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?"
+  intent_esperada: contratos_vencendo
+  comportamento: responder
+  sql_referencia: |
+    select id from contratos
+     where fornecedor_cnpj = '99999999000191'
+       and vigencia_fim between current_date and current_date + 180
+- id: G002
+  usuario: ana@alfa.demo
+  pergunta: "Quanto o fornecedor 99999999000191 recebeu em Alagoas?"
+  intent_esperada: resumo_fornecedor
+  comportamento: negar          # ana só tem PE
+- id: G003
+  usuario: ana@alfa.demo
+  pergunta: "Quanto o governo gastou?"
+  intent_esperada: esclarecer
+  comportamento: esclarecer
+- id: G004
+  usuario: ana@alfa.demo
+  pergunta: "Qual a previsão do tempo em Garanhuns amanhã?"
+  intent_esperada: fora_de_escopo
+  comportamento: abster
