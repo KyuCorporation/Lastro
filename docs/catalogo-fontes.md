@@ -13,7 +13,7 @@ Para cada fonte: URL oficial, forma de acesso (API ou arquivo), formato, autenti
 
 ## Resumo por fonte
 
-> Rascunho (T14): consolida o que está nos detalhes abaixo e no código dos conectores. Itens "a confirmar" dependem da amostra real ou da documentação oficial.
+Consolida os detalhes abaixo e o código dos conectores. Itens "a confirmar" dependem da amostra real ou da documentação oficial.
 
 | | pe_portal (TCE-PE) | pncp | ceis / cnep |
 |---|---|---|---|
@@ -65,7 +65,7 @@ Conferido na especificação OpenAPI (`/api/consulta/v3/api-docs`) e numa coleta
 - **Rota:** `GET /v1/contratos?dataInicial=AAAAMMDD&dataFinal=AAAAMMDD&pagina=N&tamanhoPagina=M` (máx. 500). Sem autenticação.
 - **Resposta:** `{data: [...], totalRegistros, totalPaginas, numeroPagina, paginasRestantes, empty}`; `204` quando não há contratos.
 - **Sem filtro de UF na rota:** o conector divide o período em janelas mensais, pagina cada uma e filtra por `unidadeOrgao.ufSigla`. **PE nunca vem do PNCP**, salvo `PNCP_PE_FALLBACK=true` (mesmo que PE esteja em `PNCP_UFS`).
-- **Volume:** outubro/2026 teve 174.972 contratos no país (350 páginas de 500). Nas 40 primeiras páginas, 74 de 20 mil eram de AL. A 1 req/s, um mês leva cerca de 6 minutos e o período padrão (jan/2025 a out/2026), algumas horas. Para a demo, encurte `PNCP_DATA_INICIAL`/`PNCP_DATA_FINAL`.
+- **Volume:** outubro/2026 teve 174.972 contratos no país (350 páginas de 500). Nas 40 primeiras páginas, 74 de 20 mil eram de AL. A 1 req/s, um mês leva cerca de 6 minutos. O período padrão do `.env.example` é um mês (out/2026); período longo leva horas.
 
 | Origem (RecuperarContratoDTO) | Destino | Regra |
 |---|---|---|
