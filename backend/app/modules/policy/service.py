@@ -54,3 +54,20 @@ def exigir(acao: Acao) -> Callable[[ContextoAcesso], ContextoAcesso]:
         raise ErroApi(403, "PERFIL_SEM_PERMISSAO", "Seu perfil não tem permissão para esta ação.")
 
     return dependencia
+
+
+def exigir_qualquer(*acoes: Acao) -> Callable[[ContextoAcesso], ContextoAcesso]:
+    """Como `exigir`, mas basta o perfil poder uma das ações (ex.: ver as próprias consultas ou as do tenant)."""
+
+    def dependencia(ctx: Contexto) -> ContextoAcesso:
+        if any(pode(ctx.perfil, a) for a in acoes):
+            return ctx
+        detalhes = {
+            "motivo": "perfil_sem_permissao",
+            "acao": "|".join(a.value for a in acoes),
+            "perfil": ctx.perfil,
+        }
+        auditoria.registrar(ctx, "negado", detalhes)
+        raise ErroApi(403, "PERFIL_SEM_PERMISSAO", "Seu perfil não tem permissão para esta ação.")
+
+    return dependencia
