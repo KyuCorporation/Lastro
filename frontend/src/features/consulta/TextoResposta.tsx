@@ -6,20 +6,20 @@ import { dividirEmTrechos } from "../../lib/destaques";
 export function TextoResposta({ texto, idCitacao }: { texto: string; idCitacao: (n: number) => string }) {
   const trechos = useMemo(() => dividirEmTrechos(texto), [texto]);
   return (
-    <p className="text-lg leading-relaxed text-slate-900">
+    <p className="text-xl font-semibold leading-relaxed text-kyu-texto">
       {trechos.map((t, i) => {
         switch (t.tipo) {
           case "moeda":
           case "data":
             return (
-              <mark key={i} className="rounded bg-blue-100 px-1 font-semibold text-blue-950">
+              <mark key={i} className="bg-transparent font-bold text-kyu-texto">
                 <span aria-hidden="true">{t.texto}</span>
                 <span className="sr-only">{t.falado}</span>
               </mark>
             );
           case "numero":
             return (
-              <mark key={i} className="rounded bg-blue-100 px-1 font-semibold text-blue-950">
+              <mark key={i} className="bg-transparent font-bold text-kyu-texto">
                 {t.texto}
               </mark>
             );
@@ -28,7 +28,7 @@ export function TextoResposta({ texto, idCitacao }: { texto: string; idCitacao: 
               <a
                 key={i}
                 href={`#${idCitacao(t.n)}`}
-                className="align-super text-sm font-semibold text-blue-800 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
+                className="foco align-super text-sm font-semibold text-kyu-laranja underline"
                 aria-label={`fonte ${t.n}`}
               >
                 {t.texto}

@@ -1,8 +1,11 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 import { RotaProtegida } from "./auth/RotaProtegida";
-import { Cabecalho } from "./components/Cabecalho";
+import { Moldura } from "./components/Moldura";
+import { AcessoPage } from "./pages/AcessoPage";
+import { AuditoriaPage } from "./pages/AuditoriaPage";
 import { ConsultaPage } from "./pages/ConsultaPage";
+import { FontesPage } from "./pages/FontesPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ReciboPage } from "./pages/ReciboPage";
 
@@ -11,19 +14,18 @@ function Layout() {
     <RotaProtegida>
       <a
         href="#conteudo"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:rounded focus:bg-white focus:p-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-10 focus:rounded focus:bg-white focus:p-2"
       >
         Pular para o conteúdo
       </a>
-      <Cabecalho />
-      <div id="conteudo">
+      <Moldura>
         <Outlet />
-      </div>
+      </Moldura>
     </RotaProtegida>
   );
 }
 
-/** Rotas. Tela nova (T22, T26) = uma <Route> dentro do Layout e uma página em pages/. */
+/** Rotas das 5 telas do design. Tela nova = uma <Route> dentro do Layout e uma página em pages/. */
 export default function App() {
   return (
     <Routes>
@@ -31,6 +33,9 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<ConsultaPage />} />
         <Route path="/recibos/:id" element={<ReciboPage />} />
+        <Route path="/acesso" element={<AcessoPage />} />
+        <Route path="/auditoria" element={<AuditoriaPage />} />
+        <Route path="/fontes" element={<FontesPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

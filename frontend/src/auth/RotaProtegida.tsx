@@ -10,7 +10,9 @@ export function RotaProtegida({ children }: { children: ReactNode }) {
   const local = useLocation();
   if (estado.status === "verificando") return <Carregando texto="Conferindo sua sessão…" />;
   if (estado.status === "anonimo") {
-    return <Navigate to="/login" replace state={{ de: local.pathname, motivo: estado.motivo }} />;
+    // Quem saiu de propósito não volta para a tela anterior: o próximo login pode ser de outra pessoa.
+    const de = estado.motivo === "saiu" ? undefined : local.pathname;
+    return <Navigate to="/login" replace state={{ de, motivo: estado.motivo }} />;
   }
   return <>{children}</>;
 }

@@ -1,7 +1,7 @@
 """Planejador (SPEC §8.1): pergunta → plano de consulta. Nunca recebe dado do banco.
 
-Com LLM: monta o prompt versionado, valida a saída e tenta mais uma vez se vier inválida; na segunda falha,
-devolve `esclarecer`. Se o provedor estiver fora (ou em modo mock), usa o roteador por regras.
+Com LLM: monta o prompt versionado, valida a saída (normalizando o que é só formato) e tenta mais uma vez se
+vier inválida; na segunda falha, ou com o provedor fora (ou em modo mock), usa o roteador por regras.
 """
 
 from dataclasses import dataclass
@@ -9,7 +9,7 @@ from datetime import date
 from functools import cache
 from pathlib import Path
 
-from app.llm.plano import PlanoConsulta, PlanoInvalido, esclarecer, validar_plano
+from app.llm.plano import PlanoConsulta, PlanoInvalido, validar_plano
 from app.llm.providers import ProvedorIndisponivel, ProvedorLLM
 from app.llm.regras import planejar_por_regras
 from app.modules.catalogo.intents import descrever_catalogo
@@ -69,4 +69,6 @@ def planejar(
             return ResultadoPlanejamento(validar_plano(bruto), False, VERSAO_PROMPT, provedor.modelo)
         except PlanoInvalido:
             continue
-    return ResultadoPlanejamento(esclarecer(PERGUNTA_REFORMULAR), False, VERSAO_PROMPT, provedor.modelo)
+    # Duas saídas fora do contrato: a pergunta não fica pior do que no modo mock (o roteador por regras decide,
+    # e o recibo registra planejador_por_regras). O escopo continua vindo só da sessão.
+    return ResultadoPlanejamento(planejar_por_regras(pergunta, hoje), True, VERSAO_PROMPT, None)
