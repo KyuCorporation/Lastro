@@ -5,7 +5,7 @@ import App from "../App";
 import { Provedores } from "../Provedores";
 import type { Api } from "../api";
 import { ErroApi } from "../api/http";
-import type { ConsultaListada, ConsultaSaida, Recibo, Usuario } from "../api/types";
+import type { ConsultaListada, ConsultaSaida, Fonte, Recibo, Usuario } from "../api/types";
 import { criarSessao, type ArmazenamentoToken } from "../auth/sessao";
 import { FUTURO_ROUTER } from "../config/ambiente";
 
@@ -96,6 +96,15 @@ export const RECIBO_ANA: Recibo = {
   },
 };
 
+export const FONTES: Fonte[] = [
+  { id: "pncp", nome: "Portal Nacional de Contratações Públicas", tipo: "api",
+    ultima_execucao: { id: "e1", status: "ok", finalizada_em: "2026-11-06T12:00:00Z", registros_novos: 1234 } },
+  { id: "ceis", nome: "Cadastro de Empresas Inidôneas e Suspensas", tipo: "arquivo",
+    ultima_execucao: { id: "e2", status: "ok", finalizada_em: "2026-11-06T12:05:00Z", registros_novos: 14604 } },
+  { id: "pe_portal", nome: "TCE-PE Dados Abertos", tipo: "api", ultima_execucao: null },
+  { id: "demo_sintetico", nome: "Dados sintéticos de demonstração", tipo: "sintetico", ultima_execucao: null },
+];
+
 export const HISTORICO: ConsultaListada[] = [
   { id: "c1000000-0000-0000-0000-000000000001", usuario_id: ANA.id, carteira_id: null, pergunta: "Resumo do CNPJ X",
     intent: "resumo_fornecedor", status: "respondida", criada_em: "2026-11-06T11:12:00Z", recibo_id: "recibo-1" },
@@ -133,6 +142,7 @@ export function apiFalsa(
       criar: vi.fn(opcoes.consulta ?? (async () => RESPOSTA_ANA)),
       listar: vi.fn(opcoes.historico ?? (async () => HISTORICO)),
     },
+    fontes: { listar: vi.fn(async () => FONTES) },
     recibos: {
       obter: vi.fn(
         opcoes.recibo ??

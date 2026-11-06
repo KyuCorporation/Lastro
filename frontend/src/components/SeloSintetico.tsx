@@ -1,14 +1,13 @@
-/** Aviso fixo quando a resposta usa dado sintético (SPEC §12: banner fixo em dados sintéticos). */
+/** Rótulo quando a resposta usa um registro sintético de teste (SPEC §12). Só aparece se houver um. */
 export function SeloSintetico({ simulado = false }: { simulado?: boolean }) {
   return (
     <p
       role="note"
-      className="rounded-md border-2 border-dashed border-kyu-ambar bg-kyu-ambar-fundo px-3 py-2 text-sm font-semibold text-kyu-ambar"
+      className="rounded-md bg-kyu-cabecalho px-3 py-1.5 text-sm text-kyu-suave"
     >
-      <span aria-hidden="true">⚠ </span>
       {simulado
-        ? "Resposta simulada pela interface (a consulta real ainda não está ligada). Dados fictícios."
-        : "Contém dado sintético de demonstração. Não use como informação real."}
+        ? "Resposta simulada pela interface, sem consulta ao servidor."
+        : "Inclui registro sintético de teste, separado dos dados oficiais."}
     </p>
   );
 }

@@ -156,9 +156,9 @@ describe("04 auditoria de consultas", () => {
     expect(screen.getByRole("table")).toHaveTextContent("Bloqueada");
     expect(screen.getByRole("button", { name: "Bloqueadas" })).toHaveAttribute("aria-pressed", "true");
 
-    await usuario.click(screen.getByRole("button", { name: "Sem dados" }));
+    await usuario.click(screen.getByRole("button", { name: "Sem registros" }));
     expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
-    expect(screen.getByRole("table")).toHaveTextContent("Sem evidência");
+    expect(screen.getByRole("table")).toHaveTextContent("Sem registros");
   });
 
   it("auditor vê as consultas do cliente", async () => {
@@ -174,13 +174,20 @@ describe("04 auditoria de consultas", () => {
 });
 
 describe("05 fonte e catálogo", () => {
-  it("mostra a fonte, o catálogo a confirmar e o pipeline, sem contagens", async () => {
-    await montarLogado("ana@alfa.demo", "/fontes");
+  it("mostra as fontes com a última coleta real e o catálogo, sem avisos de pendência", async () => {
+    const { api } = await montarLogado("ana@alfa.demo", "/fontes");
     expect(await screen.findByRole("heading", { name: "Fonte e catálogo de dados" })).toBeInTheDocument();
-    expect(screen.getByText("Tribunal de Contas do Estado de Pernambuco (TCE-PE)")).toBeInTheDocument();
-    expect(screen.getByText("A validar · API / endpoint")).toBeInTheDocument();
-    expect(screen.getAllByText("A confirmar")).toHaveLength(3);
-    expect(screen.getByRole("region", { name: "Pipeline de dados" })).toHaveTextContent("Catálogo KYU");
-    expect(screen.getByText("Não exibir contagens ou status como reais até a primeira sincronização bem-sucedida.")).toBeInTheDocument();
+    const tabela = await screen.findByRole("table", { name: /Fontes integradas/ });
+    expect(api.fontes.listar).toHaveBeenCalled();
+    const linhas = within(tabela).getAllByRole("row").slice(1);
+    expect(linhas.map((l) => within(l).getByRole("rowheader").textContent)).toEqual([
+      "TCE-PE Dados Abertos",
+      "Portal Nacional de Contratações Públicas",
+      "Cadastro de Empresas Inidôneas e Suspensas",
+    ]); // a fonte sintética não aparece
+    expect(linhas[1]).toHaveTextContent("Coletada");
+    expect(linhas[2]).toHaveTextContent("14.604 registros novos");
+    expect(linhas[0]).toHaveTextContent("Sem coleta");
+    expect(screen.queryByText(/A confirmar|A validar|previsto/)).not.toBeInTheDocument();
   });
 });

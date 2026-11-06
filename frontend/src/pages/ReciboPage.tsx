@@ -18,8 +18,8 @@ const DESCRICAO_ORIGEM: Record<string, string> = {
 
 const VERIFICACAO: Record<string, string> = {
   aprovado: "aprovado pelo verificador",
-  fallback: "texto pronto do sistema (o texto da IA não passou na conferência)",
-  abstencao: "abstenção: sem registros nas fontes autorizadas",
+  fallback: "resposta padrão do sistema, com os valores do banco",
+  abstencao: "sem registros nas fontes autorizadas",
   negado: "negado",
 };
 
@@ -62,10 +62,9 @@ export function ReciboPage() {
           <p className="mt-2 text-4xl font-extrabold text-kyu-texto sm:text-5xl">
             {principal ? moeda(principal.valor) : "Sem valor em reais"}
           </p>
-          <p className={`mt-3 text-sm font-semibold ${sintetico ? "text-kyu-ambar" : "text-kyu-suave"}`}>
-            {sintetico
-              ? "Exemplo demonstrativo · valores fictícios · não representa consulta oficial"
-              : "Calculado pelo banco a partir dos registros de origem abaixo"}
+          <p className="mt-3 text-sm font-semibold text-kyu-suave">
+            Calculado pelo banco a partir dos registros de origem abaixo
+            {sintetico && " · inclui registro sintético de teste"}
           </p>
         </div>
         <Selo tom="verde">

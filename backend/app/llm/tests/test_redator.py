@@ -58,12 +58,12 @@ def test_todo_marcador_do_modelo_existe(resultado):
 
 def test_textos_deterministicos():
     assert redigir("p", resultados.vencendo(), ufs_autorizadas=PE, provedor=None).texto == (
-        "Nos próximos 180 dias vencem 1 contrato(s) do fornecedor 11.222.333/0001-81 (PE), "
+        "Nos próximos 180 dias vence 1 contrato do fornecedor 11.222.333/0001-81 (PE), "
         "somando R$ 100.000,00. "
         "Isso é 25,00% do valor vigente. O primeiro vence em 05/01/2027."
     )
     assert redigir("p", resultados.sancoes(), ufs_autorizadas=PE, provedor=None).texto.endswith(
-        "das quais 1 vigente(s). Sanção vigente é um sinal para investigar."
+        "no CEIS ou no CNEP, ainda vigente. Sanção vigente é um sinal para investigar."
     )
 
 
@@ -83,7 +83,7 @@ def test_provedor_fora_cai_no_fallback():
     r = redigir("p", resultados.vigentes(), ufs_autorizadas=PE, provedor=ProvedorFora())
     assert r.status == "fallback"
     assert r.motivos == ("provedor_indisponivel",)
-    assert r.texto.startswith("O fornecedor 11.222.333/0001-81 tem 2 contrato(s) vigente(s)")
+    assert r.texto.startswith("O fornecedor 11.222.333/0001-81 tem 2 contratos vigentes")
 
 
 def test_prompt_do_redator_nao_tem_numeros_do_resultado():
