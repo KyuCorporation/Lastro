@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.core.db import fechar_pool
 from app.core.errors import registrar_tratadores
 from app.core.health import db_disponivel
+from app.modules.alertas.router import router as alertas_router
 from app.modules.auditoria.router import router as auditoria_router
 from app.modules.auth.router import router as auth_router
 from app.modules.carteiras.router import router as carteiras_router
@@ -42,6 +43,7 @@ app.include_router(carteiras_router)
 app.include_router(fornecedores_router)
 app.include_router(auditoria_router)
 app.include_router(fontes_router)
+app.include_router(alertas_router)
 
 
 class Saude(BaseModel):
