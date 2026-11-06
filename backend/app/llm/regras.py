@@ -46,7 +46,7 @@ ASSUNTOS: list[tuple[str, re.Pattern[str]]] = [
     ("socios_sancionados", re.compile(r"\bsoci[oa]s?\b|quadro societario")),
     ("sancoes_fornecedor", re.compile(r"sanc|sancion|\bceis\b|\bcnep\b|inidone|punid|impedid")),
     ("contratos_vencendo", re.compile(r"\bvenc|terminam|\btermina\b|\bacaba|expira")),
-    ("contratos_vigentes", re.compile(r"vigent|em vigor|contratos ativos")),
+    ("contratos_vigentes", re.compile(r"vigent|em vigor|\bativos?\b|em andamento|em execucao")),
     ("pagamentos_periodo", re.compile(r"pagament|\bpag[oa]s?\b|\bpagou|liquidac|empenh")),
     ("orgaos_fornecedor", re.compile(r"\borgao|\borgaos|concentra|\bdepende")),
     ("resumo_fornecedor", re.compile(r"resum|receb|\btotal\b|\bvalor|historico|panorama|faturou")),
