@@ -106,10 +106,10 @@ Para ver o banco barrar o acesso, entre como **bia** (só AL) e faça a primeira
 | Login, `/me`, permissão por perfil, limite de 30 consultas por minuto | pronto |
 | Ingestão PNCP, CEIS, CNEP e TCE-PE (`pe_portal` ainda sem amostra real) | pronto |
 | `POST /consultas` de ponta a ponta: planejador, catálogo N1, redator e verificador, recibo com hash e auditoria (T08–T11) | pronto |
-| `GET /consultas` e `GET /recibos/{id}` | pronto |
+| `GET /consultas`, `GET /recibos/{id}` e `GET /recibos/{id}/verificar` (selo íntegro ou alterado, T15) | pronto |
 | Telas de login e consulta, com citações e acesso negado (T12) | pronto |
 | LLM fora do ar: resposta pelo texto pronto, sem travar a tela | pronto |
-| Verificação do recibo e da cadeia de auditoria (`/verificar`, T15 e T16) | *pendente* |
+| Verificação da cadeia de auditoria (`/auditoria/verificar`, T16) | *pendente* |
 | Sinais (`make sinais`, T17), carteiras, fila e dossiê (T18) | *pendente* |
 | Telas de recibo, carteira, dossiê, auditoria, fontes e métricas (T22, T26) | *pendente* |
 | Gabarito e ataques (`make eval`, `make eval-ataques`, T20 e T21) | *pendente* |
