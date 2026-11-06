@@ -29,6 +29,10 @@ services:
     build: ./frontend
     environment:
       VITE_API_URL: http://localhost:8000
+      # Seletor rápido dos usuários do seed na tela de login (DEMO_MODE do .env).
+      VITE_DEMO_MODE: ${DEMO_MODE:-false}
+      # Respostas simuladas em /consultas até a T11; a tela avisa. Deixe false na demo.
+      VITE_CONSULTAS_SIMULADAS: ${CONSULTAS_SIMULADAS:-false}
     ports: ["5173:5173"]
     depends_on: [api]
 

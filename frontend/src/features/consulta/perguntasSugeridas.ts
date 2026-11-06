@@ -1,0 +1,14 @@
+// Perguntas sugeridas na tela de consulta. Cobrem intents N1 do catálogo (SPEC §7) e usam o CNPJ
+// fictício do gabarito (eval/gabarito/perguntas.yaml). `{uf}` vira a primeira UF autorizada do usuário.
+
+export const PERGUNTAS_SUGERIDAS = [
+  "Qual o resumo de contratos e pagamentos do CNPJ 99.999.999/0001-91 em {uf}?",
+  "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?",
+  "O fornecedor 99.999.999/0001-91 tem sanção no CEIS ou no CNEP?",
+  "Quanto o CNPJ 99.999.999/0001-91 recebeu em 2025?",
+] as const;
+
+export function sugestoesPara(ufs: string[]): string[] {
+  const uf = ufs[0] ?? "PE";
+  return PERGUNTAS_SUGERIDAS.map((p) => p.replace("{uf}", uf));
+}

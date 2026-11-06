@@ -3,7 +3,7 @@ export
 DC = docker compose
 PSQL_SU = $(DC) exec -T db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -v ON_ERROR_STOP=1
 
-.PHONY: up down reset-db seed ingest-pe ingest-pncp ingest-sancoes ingest-qsa sinais test test-db test-pipeline test-api eval eval-ataques lint tag-good
+.PHONY: up down reset-db seed ingest-pe ingest-pncp ingest-sancoes ingest-qsa sinais test test-db test-pipeline test-api test-web eval eval-ataques lint tag-good
 
 up:            ; $(DC) up -d --build
 down:          ; $(DC) down
@@ -14,10 +14,11 @@ ingest-pncp:   ; $(DC) run --rm pipeline python -m lastro_pipeline.cli ingest pn
 ingest-sancoes:; $(DC) run --rm pipeline python -m lastro_pipeline.cli ingest sancoes
 ingest-qsa:    ; $(DC) run --rm pipeline python -m lastro_pipeline.cli ingest qsa
 sinais:        ; $(DC) run --rm pipeline python -m lastro_pipeline.cli sinais
-test:          test-db test-pipeline test-api
+test:          test-db test-pipeline test-api test-web
 test-db:       seed ; $(DC) run --rm api pytest -q app/tests/test_acesso.py
 test-pipeline: ; $(DC) run --rm pipeline pytest -q
 test-api:      seed ; $(DC) run --rm api pytest -q
+test-web:      ; $(DC) run --rm --no-deps web npm test
 eval:          ; $(DC) run --rm api python /eval/run_eval.py gabarito
 eval-ataques:  ; $(DC) run --rm api python /eval/run_eval.py ataques
 lint:          ; cd backend && ruff check . && cd ../pipeline && ruff check . && cd ../frontend && npm run lint
