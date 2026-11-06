@@ -4,7 +4,7 @@ Este arquivo vale para qualquer agente de código (Claude Code, Codex, Cursor) e
 
 ## 1. Antes de começar
 
-1. Leia `SPEC.md` §1 e §4, e as seções que a sua alteração toca.
+1. Leia `SPEC.md` §1 e §4, e as seções que a sua alteração toca. Se o pedido citar uma tarefa por ID (`T05`…), leia a linha dela em `docs/backlog.md`.
 2. Leia o `README.md` da pasta onde vai trabalhar. Ele diz o que a pasta faz.
 3. Confira `contracts/` e `db/migrations/`. Eles são **contratos congelados** (seção 4).
 4. Trabalhe em uma alteração por vez.
