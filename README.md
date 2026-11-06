@@ -121,7 +121,7 @@ cp .env.example .env    # troque POSTGRES_PASSWORD, APP_DB_PASSWORD, INGEST_DB_P
 make demo               # apaga o banco, aplica migrations e seeds, carrega data/fixtures, sobe API e interface
 ```
 
-- Interface: http://localhost:5173 (com `DEMO_MODE=true`, o login mostra o seletor dos usuários de demonstração)
+- Interface: http://localhost:5173 (login por e-mail e senha; com `DEMO_MODE=true`, aparece também o "Acesso rápido")
 - API: http://localhost:8000/docs · saúde: http://localhost:8000/health → `{"status":"ok","db":"ok","llm":"mock"}`
 
 Passo a passo equivalente: `make up`, `make seed` e `make ingest-offline`. O `make up` reconstrói as imagens. Um `docker compose up -d` sem `--build` reaproveita imagens antigas e mostra código antigo.
