@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     llm_model: str = ""
     gemini_api_key: str = ""
     llm_timeout_seconds: float = 20.0
+    # Raciocínio interno do modelo (Gemini 2.5+). Desligado: mesma resposta, de 5 a 8 vezes mais rápido.
+    llm_raciocinio: bool = False
 
 
 @lru_cache

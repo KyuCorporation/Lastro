@@ -3,7 +3,7 @@ export function SeloSintetico({ simulado = false }: { simulado?: boolean }) {
   return (
     <p
       role="note"
-      className="rounded-md border-2 border-dashed border-amber-700 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950"
+      className="rounded-md border-2 border-dashed border-kyu-ambar bg-kyu-ambar-fundo px-3 py-2 text-sm font-semibold text-kyu-ambar"
     >
       <span aria-hidden="true">⚠ </span>
       {simulado

@@ -6,7 +6,7 @@ from datetime import date
 import pytest
 
 from app.conftest import arquivo_do_repo
-from app.llm.planejador import PERGUNTA_REFORMULAR, montar_prompt, planejar
+from app.llm.planejador import montar_prompt, planejar
 from app.llm.plano import Parametros, PlanoConsulta, PlanoInvalido, validar_plano
 from app.llm.providers import ProvedorIndisponivel
 from app.modules.catalogo.intents import INTENTS
@@ -62,12 +62,18 @@ def test_saida_invalida_tenta_mais_uma_vez():
     assert len(provedor.prompts) == 2
 
 
-def test_duas_saidas_invalidas_viram_esclarecer():
+def test_duas_saidas_invalidas_caem_nas_regras():
     provedor = ProvedorFalso(["{}", '{"versao": "v1", "intent": "apagar_tudo", "parametros": {}}'])
     r = rodar(provedor)
-    assert r.plano.intent == "esclarecer"
-    assert r.plano.parametros.pergunta_de_volta == PERGUNTA_REFORMULAR
-    assert not r.por_regras
+    assert len(provedor.prompts) == 2
+    assert r.por_regras and r.modelo is None
+    assert r.plano.intent == "contratos_vencendo"  # o que o modo mock responderia
+
+
+def test_duas_saidas_invalidas_sem_cnpj_pedem_detalhe_pelas_regras():
+    provedor = ProvedorFalso(["{}", "{}"])
+    r = planejar("o que esse fornecedor tem?", ufs=("PE",), hoje=HOJE, provedor=provedor)
+    assert r.por_regras and r.plano.intent == "esclarecer"
 
 
 def test_provedor_fora_cai_nas_regras():
@@ -93,7 +99,6 @@ def test_prompt_tem_catalogo_e_isola_a_pergunta():
         ({"parametros": {"cnpj": "99999999000191", "dias": 400}}, "dias acima de 365"),
         ({"parametros": {"cnpj": "99999999000191", "uf": "XX"}}, "UF inexistente"),
         ({"parametros": {}}, "CNPJ obrigatório ausente"),
-        ({"parametros": {"cnpj": "99999999000191", "termo": "limpeza"}}, "parâmetro que a intent não aceita"),
         ({"versao": "v2"}, "versão errada"),
         ({"sql": "select 1"}, "campo extra no plano"),
     ],
@@ -113,9 +118,9 @@ def test_validacao_rejeita_periodo_invertido():
         validar_plano(json.dumps(plano))
 
 
-def test_validacao_exige_campos_do_contrato():
+def test_validacao_exige_a_intent():
     with pytest.raises(PlanoInvalido):
-        validar_plano(json.dumps({"intent": "contratos_vencendo", "parametros": {"cnpj": "99999999000191"}}))
+        validar_plano(json.dumps({"versao": "v1", "parametros": {"cnpj": "99999999000191"}}))
 
 
 def test_paridade_com_contracts_plano_consulta():
