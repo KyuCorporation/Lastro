@@ -10,6 +10,7 @@ from app.core.db import fechar_pool
 from app.core.errors import registrar_tratadores
 from app.core.health import db_disponivel
 from app.modules.auth.router import router as auth_router
+from app.modules.consulta.router import router as consulta_router
 
 settings = get_settings()
 
@@ -29,6 +30,7 @@ app.add_middleware(
 )
 registrar_tratadores(app)
 app.include_router(auth_router)
+app.include_router(consulta_router)
 
 
 class Saude(BaseModel):
