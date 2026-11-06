@@ -113,13 +113,15 @@ Para ver o banco barrar o acesso, entre como **bia** (só AL) e faça a primeira
 | Sinais `sancao_direta`, `penhasco` e `concentracao` por UF (`make sinais`, T17) | pronto |
 | Carteiras, fila priorizada por sinais e dossiê do fornecedor (`/carteiras`, `/fornecedores/{cnpj}/dossie`, T18) | pronto |
 | Telas de recibo, carteira, dossiê, auditoria, fontes e métricas (T22, T26) | *pendente* |
-| Gabarito e ataques (`make eval`, `make eval-ataques`, T20 e T21) | *pendente* |
+| Suíte de ataques com harness (`make eval-ataques`, T21): 58 casos, zero vazamento | pronto |
+| Gabarito de 100 perguntas (`make eval`, T20) | *pendente* |
 
 ## Testes
 
 | Comando | O que prova | Precisa |
 |---|---|---|
-| `make test` | Matriz de acesso, pipeline, API e interface (aplica os seeds antes) | só o banco de pé |
+| `make test` | Matriz de acesso, pipeline, API, harness do eval e interface (aplica os seeds antes) | só o banco de pé |
+| `make eval-ataques` | Suíte de ataques contra a API: zero vazamento e ≥ 95% bloqueado; relatório em `eval/reports/` | só o banco de pé (`make demo` para ter dados de AL) |
 | `make test-integracao` | API real por HTTP com os dados da pipeline, escopo por UF, injeção armazenada, consultas simultâneas | `make demo` antes |
 | `make test-e2e` | Navegador real na interface: login, pergunta, citação, recibo, acesso negado, teclado | `make demo` e Google Chrome |
 | `bash scripts/teste_resiliencia.sh` | API reiniciada, banco fora e de volta, fonte fora na ingestão | `make demo` antes |

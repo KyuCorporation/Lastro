@@ -11,4 +11,5 @@ frontend/dist/
 frontend/test-results/
 frontend/playwright-report/
 eval/reports/*.json
+eval/reports/resumo.md
 .DS_Store
