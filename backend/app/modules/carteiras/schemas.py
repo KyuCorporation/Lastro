@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.tipos import Dinheiro
+from app.core.tipos import Dinheiro, TextoSemNulo
 
 Finalidade = Literal["homologacao", "monitoramento", "renovacao"]
 
@@ -14,10 +14,10 @@ MAX_CNPJS_POR_CARTEIRA = 1000
 
 
 class CarteiraEntrada(BaseModel):
-    nome: str = Field(min_length=1, max_length=120)
+    nome: TextoSemNulo = Field(min_length=1, max_length=120)
     finalidade: Finalidade
     # Aceita com ou sem máscara; inválidos voltam em `cnpjs_invalidos` em vez de derrubar a carteira inteira.
-    cnpjs: list[str] = Field(min_length=1, max_length=MAX_CNPJS_POR_CARTEIRA)
+    cnpjs: list[TextoSemNulo] = Field(min_length=1, max_length=MAX_CNPJS_POR_CARTEIRA)
 
     @field_validator("nome")
     @classmethod

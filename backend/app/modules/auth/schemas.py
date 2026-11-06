@@ -3,11 +3,12 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.core.contexto import Perfil
+from app.core.tipos import TextoSemNulo
 
 
 class LoginEntrada(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-    senha: str = Field(min_length=1, max_length=200)
+    email: TextoSemNulo = Field(min_length=3, max_length=254)
+    senha: TextoSemNulo = Field(min_length=1, max_length=200)
 
 
 class TenantSaida(BaseModel):
