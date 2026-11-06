@@ -3,5 +3,22 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-100 text-slate-900 antialiased;
+  @apply bg-kyu-creme font-sans text-kyu-texto antialiased;
+}
+
+@layer components {
+  /* Cartão branco das telas do design. */
+  .cartao {
+    @apply rounded-xl border border-kyu-borda bg-kyu-cartao;
+  }
+  /* Foco visível em tudo que é clicável (teclado). */
+  .foco {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kyu-laranja;
+  }
+  .botao-primario {
+    @apply foco rounded-md bg-kyu-laranja px-6 py-3 font-semibold text-white hover:bg-kyu-laranja-forte disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .tabela-cabecalho {
+    @apply bg-kyu-cabecalho text-left text-sm font-semibold text-kyu-suave;
+  }
 }

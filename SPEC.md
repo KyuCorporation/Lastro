@@ -221,7 +221,7 @@ Regras do executor:
 ### 8.1 Planejador
 
 - Entrada: a pergunta do usuário, a data de hoje, as UFs do escopo e a descrição do catálogo (§7). **Nenhum dado do banco.**
-- Saída: JSON validado por `contracts/plano_consulta.schema.json`. Saída inválida tenta uma vez e depois vira `esclarecer`.
+- Saída: JSON validado por `contracts/plano_consulta.schema.json`. O que é só formato é normalizado (CNPJ com máscara, UF minúscula, parâmetro nulo, parâmetro que a intent não usa); desvio de sentido ou do contrato é reprovado. Saída reprovada tenta uma vez e depois usa o roteador por regras (o mesmo do modo mock), registrado no recibo como `planejador_por_regras`.
 - Prompt versionado em `backend/app/llm/prompts/planejador_v1.md`. A versão vai para o recibo.
 
 ### 8.2 Redator (quarentena)
