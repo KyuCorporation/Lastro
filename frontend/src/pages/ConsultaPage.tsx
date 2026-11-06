@@ -4,6 +4,7 @@ import { MensagemErro } from "../components/MensagemErro";
 import { ambiente } from "../config/ambiente";
 import { FormularioConsulta } from "../features/consulta/FormularioConsulta";
 import { ResultadoConsulta } from "../features/consulta/ResultadoConsulta";
+import { negacaoComoResultado } from "../features/consulta/negacao";
 import { sugestoesPara } from "../features/consulta/perguntasSugeridas";
 import { useCriarConsulta } from "../features/consulta/useCriarConsulta";
 
@@ -12,6 +13,7 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
   const { usuario } = useAuth();
   const consulta = useCriarConsulta();
   if (!usuario) return null;
+  const negacao = consulta.isError ? negacaoComoResultado(consulta.error) : null;
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
@@ -36,7 +38,10 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
       )}
 
       <div aria-live="polite">
-        {consulta.isError && <MensagemErro erro={consulta.error} titulo="A consulta não foi concluída" />}
+        {negacao && <ResultadoConsulta resultado={negacao} simulado={false} />}
+        {consulta.isError && !negacao && (
+          <MensagemErro erro={consulta.error} titulo="A consulta não foi concluída" />
+        )}
         {consulta.data && <ResultadoConsulta resultado={consulta.data} simulado={simulado} />}
       </div>
     </main>

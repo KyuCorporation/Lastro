@@ -98,6 +98,21 @@ describe("consulta", () => {
     expect(within(resultado).queryByRole("link", { name: "Ver recibo" })).not.toBeInTheDocument();
   });
 
+  it("negação de escopo da API (403 ESCOPO_NEGADO) aparece no painel de acesso negado", async () => {
+    const api = apiFalsa({
+      consulta: async () => {
+        throw new ErroApi(403, "ESCOPO_NEGADO", "Você não tem acesso a dados de AL.", "rid-403");
+      },
+    });
+    montarApp({ api });
+    const usuario = await entrarComo("ana@alfa.demo");
+    await usuario.type(await screen.findByLabelText("Sua pergunta"), "Quanto recebeu em Alagoas?");
+    await usuario.click(screen.getByRole("button", { name: "Perguntar" }));
+    const resultado = await screen.findByRole("region", { name: "Acesso negado" });
+    expect(resultado).toHaveTextContent("Você não tem acesso a dados de AL.");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument(); // não é erro: é a regra funcionando
+  });
+
   it("resposta sintética mostra o selo", async () => {
     montarApp({ api: apiFalsa({ consulta: async () => ({ ...RESPOSTA_ANA, sintetico: true }) }) });
     const usuario = await entrarComo("ana@alfa.demo");
