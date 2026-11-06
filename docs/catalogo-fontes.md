@@ -11,6 +11,24 @@ Para cada fonte: URL oficial, forma de acesso (API ou arquivo), formato, autenti
 | receita_qsa | (preencher) | API por CNPJ | | Opcional; 1 req/s; só carteiras e sancionadas |
 | demo_sintetico | — | seed | | Sintético, rotulado em toda a interface |
 
+## Resumo por fonte
+
+> Rascunho (T14): consolida o que está nos detalhes abaixo e no código dos conectores. Itens "a confirmar" dependem da amostra real ou da documentação oficial.
+
+| | pe_portal (TCE-PE) | pncp | ceis / cnep |
+|---|---|---|---|
+| Formato | JSON (a confirmar) | JSON | zip com CSV (`latin-1`, `;`) |
+| Autenticação | nenhuma documentada | nenhuma | nenhuma |
+| Paginação | `pagina` quando a resposta traz `totalPaginas` (a confirmar) | `pagina` e `tamanhoPagina` (máx. 500) | arquivo inteiro |
+| Recorte | ano × esfera × município (`TCEPE_*`) | janelas mensais de `PNCP_DATA_INICIAL` a `PNCP_DATA_FINAL`, filtro por `PNCP_UFS` | arquivo do dia, volta até `SANCOES_DIAS_RETROATIVOS` |
+| Identificador único | `ctr:`, `emp:`, `liq:` + chaves da UG (a confirmar) | `numeroControlePNCP` | `CÓDIGO DA SANÇÃO` |
+| Licença | dados abertos (LAI) | dados abertos (Lei 14.133/2021) | dados abertos (CGU) |
+| Limites conhecidos | só IP brasileiro | 404 intermitente; ~6 min por mês de dados a 1 req/s | firewall pode bloquear cliente HTTP; dia sem arquivo responde 403 |
+| Download manual | respostas salvas em `data/raw/pe/` | — | zip em `data/raw/sancoes/` com `CEIS` ou `CNEP` no nome |
+| Fixture | `exemplo_manual` (falta `amostra` real) | `amostra` + `exemplo_manual` | `amostra` (+ `ceis/exemplo_manual`) |
+
+Em todas: 1 requisição por segundo, retry com backoff, cache em disco do dia, `User-Agent: lastro-hackathon`, resposta bruta em `data/raw/<fonte>/<data>/` e em `arquivos_brutos` (sha256), e pessoa física descartada e contada em `registros_descartados`.
+
 ## pe_portal — TCE-PE Dados Abertos (detalhe)
 
 **O que se sabe** (documentação do cliente R `tceper`, que consome esta API; confirmar na documentação oficial):
