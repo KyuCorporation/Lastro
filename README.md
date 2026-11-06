@@ -110,7 +110,8 @@ Para ver o banco barrar o acesso, entre como **bia** (só AL) e faça a primeira
 | Telas de login e consulta, com citações e acesso negado (T12) | pronto |
 | LLM fora do ar: resposta pelo texto pronto, sem travar a tela | pronto |
 | Verificação da cadeia de auditoria (`/auditoria/verificar`, T16) | *pendente* |
-| Sinais (`make sinais`, T17), carteiras, fila e dossiê (T18) | *pendente* |
+| Sinais `sancao_direta`, `penhasco` e `concentracao` por UF (`make sinais`, T17) | pronto |
+| Carteiras, fila e dossiê (T18) | *pendente* |
 | Telas de recibo, carteira, dossiê, auditoria, fontes e métricas (T22, T26) | *pendente* |
 | Gabarito e ataques (`make eval`, `make eval-ataques`, T20 e T21) | *pendente* |
 

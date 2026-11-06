@@ -10,9 +10,10 @@ python -m lastro_pipeline.cli ingest pncp                 # PNCP: UFs de PNCP_UF
 python -m lastro_pipeline.cli ingest sancoes              # CEIS + CNEP (ou: ceis, cnep)
 python -m lastro_pipeline.cli ingest todas --offline      # tudo a partir de data/fixtures, sem rede
 python -m lastro_pipeline.cli ingest pncp --amostra 100   # grava data/fixtures/pncp/amostra/ (não grava no banco)
+python -m lastro_pipeline.cli sinais                      # recalcula os sinais (ou --hoje AAAA-MM-DD)
 ```
 
-Pelo Make: `make ingest-pe`, `make ingest-pncp`, `make ingest-sancoes`, `make test-pipeline`.
+Pelo Make: `make ingest-pe`, `make ingest-pncp`, `make ingest-sancoes`, `make sinais`, `make test-pipeline`.
 Rodar duas vezes não muda contagens: a segunda execução sai com `novos 0, atualizados 0`.
 
 ## Estrutura
@@ -30,7 +31,7 @@ lastro_pipeline/
   connectors/       # base.py (contrato), pe_portal.py, pncp.py, sancoes.py; __init__.py registra as fontes
   normalize/        # cnpj.py, valores.py e o mapeamento campo a campo de cada fonte
   quality/          # relatorio.py: completude, duplicidade, datas fora de faixa, queda de volume > 50%
-  sinais/           # (T17) sempre por UF
+  sinais/           # regras.py (regras v1, puras) e calculo.py (lê fatos, grava sinais)
 tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 ```
 
@@ -43,6 +44,25 @@ tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 4. Em erro, os fatos não são gravados (transação única) e a execução fica `falhou`, com a mensagem em `erro`.
 
 Pessoa física (CPF, `tipoPessoa = PF`, `TIPO DE PESSOA = F`) é descartada e contada em `registros_descartados`.
+
+## Sinais (`make sinais`)
+
+Regras v1 do SPEC §9 em `sinais/regras.py`. Cada sinal tem `explicacao` em uma frase e `evidencias`
+(`[{tabela, id, url_origem}]`, até 50, as de maior valor). Linguagem: "sinal para investigar", nunca acusação.
+
+| Sinal | Regra | UF | Gravidade |
+|---|---|---|---|
+| `sancao_direta` | CNPJ com sanção vigente no CEIS ou CNEP (começou e não terminou; sem data final = vigente) | nula (nacional) | forte |
+| `penhasco` | ≥ 50% do valor dos contratos vigentes (`vigencia_fim >= hoje`) termina em até 180 dias | por UF | atenção |
+| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses | por UF | atenção |
+
+- **Por UF:** penhasco e concentração usam só fatos da própria UF, para a RLS de `sinais` não vazar outra UF.
+- **Recebido** = pagamentos e liquidações; empenho (`id_origem` `emp:`) não conta, como no catálogo. Se a UF não
+  tem nenhum pagamento do fornecedor (o PNCP só traz contratos), usa o valor dos contratos assinados na janela, e a
+  explicação diz isso. Órgão desconhecido entra no total, mas nunca como "o maior órgão".
+- **Recálculo idempotente:** o mesmo (fornecedor, UF, tipo) atualiza a mesma linha (o `id` não muda); sinal que
+  deixou de valer é apagado (se um alerta ainda apontar para ele, fica e o CLI avisa). Tudo numa transação com
+  lock, e cada recálculo grava `sinais_recalculados` na trilha global de auditoria.
 
 ## Fonte nova
 
