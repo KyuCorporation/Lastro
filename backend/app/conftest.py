@@ -39,5 +39,10 @@ def ctx_caio() -> ContextoAcesso:
 
 
 @pytest.fixture
+def ctx_admin() -> ContextoAcesso:
+    return ContextoAcesso(TENANT_ALFA, UUID("00000000-0000-0000-0000-0000000000a4"), "admin", ("AL", "PE"))
+
+
+@pytest.fixture
 def ctx_bia() -> ContextoAcesso:
     return ContextoAcesso(TENANT_BETA, UUID("00000000-0000-0000-0000-0000000000b1"), "analista", ("AL",))
