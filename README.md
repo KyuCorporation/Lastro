@@ -178,11 +178,12 @@ Um CNPJ só traz resultado se estiver nos dados carregados. A LLM não busca nad
 
 | Comando | Cobertura | Precisa |
 |---|---|---|
-| `make test` | Matriz de acesso do SPEC §6.4, pipeline, API (TestClient + Postgres) e interface (Vitest) | banco de pé |
+| `make test` | Matriz de acesso do SPEC §6.4, pipeline, API (TestClient + Postgres), harness do eval e interface (Vitest) | banco de pé |
+| `make eval-ataques` | Suíte de ataques contra a API: zero vazamento e ≥ 95% bloqueado; relatório em `eval/reports/` | banco de pé (`make demo` para ter dados de AL) |
 | `make test-integracao` | API real por HTTP com os dados da pipeline: escopo por UF, injeção armazenada, concorrência na auditoria | `make demo` |
 | `make test-e2e` | Navegador real nas 5 telas: login, consulta, recibo, acesso negado, auditoria, teclado. `E2E_CANAL=msedge` usa o Edge | `make demo` |
 | `bash scripts/teste_resiliencia.sh` | API reiniciada, banco fora e de volta, fonte fora na ingestão | `make demo` |
-| `make lint` | ruff (backend e pipeline) e `tsc` (interface) | — |
+| `make lint` | ruff (backend, pipeline e eval) e `tsc` (interface) | — |
 
 Rodar `make test` depois do `make demo` grava as consultas de teste no histórico, e o histórico é imutável. Antes de apresentar, rode `make demo` por último. Detalhes e defeitos já corrigidos: [`docs/integracao.md`](docs/integracao.md).
 
@@ -194,8 +195,12 @@ Rodar `make test` depois do `make demo` grava as consultas de teste no históric
 | Login, `/me`, permissão por perfil, limite de 30 consultas por minuto | pronto |
 | Ingestão PNCP, CEIS, CNEP e TCE-PE (falta a amostra real do TCE-PE) | pronto |
 | `POST /consultas` de ponta a ponta com recibo e auditoria; `GET /consultas`, `GET /recibos/{id}` | pronto |
+| `GET /recibos/{id}/verificar`: selo íntegro ou alterado pelo hash canônico (T15) | pronto |
 | Interface: consulta, recibo, acesso, auditoria e fontes | pronto |
-| Verificação de recibo e da cadeia (`/verificar`), sinais, carteiras e fila, dossiê, eval | pendente |
+| Sinais `sancao_direta`, `penhasco` e `concentracao` por UF (`make sinais`, T17) | pronto |
+| Carteiras, fila priorizada por sinais e dossiê do fornecedor (`/carteiras`, `/fornecedores/{cnpj}/dossie`, T18) | pronto |
+| Suíte de ataques com harness (`make eval-ataques`, T21): 58 casos, zero vazamento | pronto |
+| Verificação da cadeia de auditoria (`/auditoria/verificar`, T16), gabarito (`make eval`, T20) | pendente |
 
 ## Problemas comuns
 
