@@ -119,4 +119,7 @@ def test_formatacao(valor, tipo, esperado):
 
 def test_valor_cru_para_o_recibo():
     assert valor_cru(Decimal("1234.50")) == "1234.50"
+    assert valor_cru(Decimal(0), "moeda") == "0.00"  # dinheiro sempre com 2 casas (contracts/api.md)
+    assert valor_cru(Decimal(25), "percentual") == "25.00"
+    assert valor_cru(3, "inteiro") == "3"
     assert valor_cru(date(2027, 1, 5)) == "2027-01-05"
