@@ -98,6 +98,19 @@ def extrair_uf(original: str, normalizado: str) -> str | None:
     return None
 
 
+def ufs_mencionadas(texto: str) -> set[str]:
+    """Todas as UFs citadas no texto, por nome ou por sigla em maiúsculas."""
+    t = normalizar(texto)
+    achadas: set[str] = set()
+    for nome in sorted(ESTADOS, key=len, reverse=True):
+        padrao = r"\b(?:no|do|estado do) para\b" if nome == "para" else rf"\b{nome}\b"
+        if re.search(padrao, t):
+            achadas.add(ESTADOS[nome])
+            t = re.sub(padrao, " ", t)  # "mato grosso do sul" não conta também como "mato grosso"
+    achadas.update(s for s in re.findall(r"\b([A-Z]{2})\b", texto) if s in UFS)
+    return achadas
+
+
 def extrair_dias(t: str) -> int | None:
     m = DURACAO.search(t)
     if not m:

@@ -13,6 +13,6 @@ Regras:
 - Nada de SQL dinâmico além de parâmetros. `statement_timeout` de 5 s pela sessão.
 - `fora_de_escopo` e `esclarecer` não consultam o banco (`IntentSemConsulta`). As intents N2 e N3 ainda não têm SQL.
 
-A fazer com o redator (T10): quais colunas viram marcadores e o modelo de resposta determinístico de cada intent.
+Os marcadores e o modelo de resposta determinístico de cada intent ficam em `app/llm/marcadores.py`.
 
 Testes: `pytest app/modules/catalogo`. Eles gravam linhas sintéticas (`id_origem` `TCAT-*`) como superusuário só para montar o cenário, e apagam no fim; as consultas rodam como `lastro_app`, sob RLS.
