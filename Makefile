@@ -25,7 +25,7 @@ test-web:      ; $(DC) run --rm --no-deps web npm test
 # Integração e E2E: precisam do sistema de pé e com dados (make demo). Não entram no make test.
 test-integracao: ; $(DC) run --rm -e LASTRO_API_URL=http://api:8000 api pytest -q -m integracao app/tests/integracao
 test-e2e:      ; cd frontend && npm run e2e
-eval:          ; $(DC) run --rm api python /eval/run_eval.py gabarito
+eval:          seed ; $(DC) run --rm api python /eval/run_eval.py gabarito
 eval-ataques:  seed ; $(DC) run --rm api python /eval/run_eval.py ataques
 lint:          ; cd backend && ruff check . && cd ../pipeline && ruff check . && cd ../eval && ruff check . && cd ../frontend && npm run lint
 tag-good:      ; git tag good-$$(date +%H%M) && echo "tag criada"
