@@ -12,7 +12,9 @@ def registrar_em(conn: psycopg.Connection, evento: str, detalhes: dict[str, Any]
     """Grava um evento dentro de uma transação que já tem o contexto de acesso aplicado.
 
     Usado quando o evento precisa entrar junto com outras linhas (consulta e recibo): ou tudo, ou nada.
+    O lock vale até o fim da transação, como o do trigger; pegar de novo na mesma transação não bloqueia.
     """
+    conn.execute(queries.TRAVAR_CADEIA)
     conn.execute(queries.INSERIR_EVENTO, {"evento": evento, "detalhes": Jsonb(detalhes)})
 
 
