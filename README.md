@@ -111,7 +111,7 @@ Para ver o banco barrar o acesso, entre como **bia** (só AL) e faça a primeira
 | LLM fora do ar: resposta pelo texto pronto, sem travar a tela | pronto |
 | Verificação da cadeia de auditoria (`/auditoria/verificar`, T16) | *pendente* |
 | Sinais `sancao_direta`, `penhasco` e `concentracao` por UF (`make sinais`, T17) | pronto |
-| Carteiras, fila e dossiê (T18) | *pendente* |
+| Carteiras, fila priorizada por sinais e dossiê do fornecedor (`/carteiras`, `/fornecedores/{cnpj}/dossie`, T18) | pronto |
 | Telas de recibo, carteira, dossiê, auditoria, fontes e métricas (T22, T26) | *pendente* |
 | Gabarito e ataques (`make eval`, `make eval-ataques`, T20 e T21) | *pendente* |
 
