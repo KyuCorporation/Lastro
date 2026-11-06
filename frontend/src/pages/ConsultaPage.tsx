@@ -5,7 +5,6 @@ import { TituloPagina } from "../components/TituloPagina";
 import { ambiente } from "../config/ambiente";
 import { FormularioConsulta } from "../features/consulta/FormularioConsulta";
 import { ResultadoConsulta } from "../features/consulta/ResultadoConsulta";
-import { TesteSeguranca } from "../features/consulta/TesteSeguranca";
 import { negacaoComoResultado } from "../features/consulta/negacao";
 import { sugestoesPara } from "../features/consulta/perguntasSugeridas";
 import { useCriarConsulta } from "../features/consulta/useCriarConsulta";
@@ -48,7 +47,6 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
         )}
       </div>
 
-      {consulta_permitida && !simulado && <TesteSeguranca />}
     </div>
   );
 }
