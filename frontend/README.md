@@ -1,6 +1,6 @@
 # frontend/ — interface
 
-Criar com: `npm create vite@latest . -- --template react-ts`, depois `npm i @tanstack/react-query react-router-dom` e Tailwind.
+Scaffold Vite + React + TypeScript (`strict`). Rodar: `npm run dev` (ou `make up`); checar tipos: `npm run lint`. Ainda a adicionar: `@tanstack/react-query`, `react-router-dom` e Tailwind.
 
 ```
 src/
