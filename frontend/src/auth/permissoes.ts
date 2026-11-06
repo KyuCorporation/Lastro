@@ -3,12 +3,14 @@
 
 import type { Perfil } from "../api/types";
 
-export type Acao = "consultar" | "ver_auditoria" | "editar_carteira";
+export type Acao = "consultar" | "ver_auditoria" | "editar_carteira" | "ver_historico";
 
 const MATRIZ: Record<Acao, readonly Perfil[]> = {
   consultar: ["analista", "admin"],
   ver_auditoria: ["auditor", "admin"],
   editar_carteira: ["analista", "admin"],
+  // GET /consultas: próprias (analista, admin) ou do tenant (auditor, admin). Gestor recebe 403.
+  ver_historico: ["analista", "auditor", "admin"],
 };
 
 export function pode(perfil: Perfil | undefined, acao: Acao): boolean {

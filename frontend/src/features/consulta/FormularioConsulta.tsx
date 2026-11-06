@@ -8,6 +8,7 @@ interface Props {
   aoEnviar(pergunta: string): void;
 }
 
+/** Cartão da pergunta (tela 01): campo em linguagem natural e o botão "Consultar". */
 export function FormularioConsulta({ sugestoes, enviando, aoEnviar }: Props) {
   const [pergunta, setPergunta] = useState("");
   const idCampo = useId();
@@ -20,53 +21,58 @@ export function FormularioConsulta({ sugestoes, enviando, aoEnviar }: Props) {
   }
 
   return (
-    <form onSubmit={enviar} className="space-y-3" aria-busy={enviando}>
-      <label htmlFor={idCampo} className="block text-base font-semibold text-slate-900">
-        Sua pergunta
-      </label>
-      <textarea
-        id={idCampo}
-        aria-describedby={idAjuda}
-        value={pergunta}
-        maxLength={LIMITE_PERGUNTA}
-        rows={3}
-        onChange={(e) => setPergunta(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) enviar(e);
-        }}
-        className="w-full rounded-md border border-slate-500 p-3 text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
-        placeholder="Ex.: Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?"
-      />
-      <div id={idAjuda} className="flex justify-between text-sm text-slate-700">
-        <span>Ctrl+Enter envia. Responde só com dados das fontes que você pode ver.</span>
+    <form onSubmit={enviar} className="cartao p-5" aria-busy={enviando}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="flex-1">
+          <label htmlFor={idCampo} className="block text-sm font-semibold text-kyu-suave">
+            Pergunta em linguagem natural
+          </label>
+          <textarea
+            id={idCampo}
+            aria-describedby={idAjuda}
+            value={pergunta}
+            maxLength={LIMITE_PERGUNTA}
+            rows={1}
+            onChange={(e) => setPergunta(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) enviar(e);
+            }}
+            className="foco mt-1 w-full resize-none rounded-md border border-transparent bg-transparent py-1 text-lg text-kyu-texto [field-sizing:content] placeholder:text-kyu-suave hover:border-kyu-borda"
+            placeholder="Ex.: Quais contratos do CNPJ 99.000.001/0001-01 vencem nos próximos 6 meses?"
+          />
+        </div>
+        <button type="submit" disabled={!limpa || enviando} className="botao-primario md:min-w-44">
+          {enviando ? "Consultando…" : "Consultar"}
+        </button>
+      </div>
+      <div id={idAjuda} className="mt-2 flex flex-wrap justify-between gap-2 text-sm text-kyu-suave">
+        <span>Ctrl+Enter envia. Informe o CNPJ do fornecedor. A resposta usa só as fontes que você pode ver.</span>
         <span>
           {pergunta.length}/{LIMITE_PERGUNTA}
         </span>
       </div>
-      <button
-        type="submit"
-        disabled={!limpa || enviando}
-        className="rounded-md bg-blue-800 px-4 py-2 font-semibold text-white hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-      >
-        {enviando ? "Consultando…" : "Perguntar"}
-      </button>
 
-      <fieldset className="pt-2">
-        <legend className="text-sm font-semibold text-slate-800">Perguntas sugeridas</legend>
-        <ul className="mt-2 flex flex-col gap-2">
-          {sugestoes.map((s) => (
-            <li key={s}>
-              <button
-                type="button"
-                onClick={() => setPergunta(s)}
-                className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-left text-sm text-slate-900 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
-              >
-                {s}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </fieldset>
+      {sugestoes.length > 0 && (
+        <fieldset className="mt-4 border-t border-kyu-linha pt-4">
+          <legend className="sr-only">Perguntas sugeridas</legend>
+          <p aria-hidden="true" className="text-sm font-semibold text-kyu-suave">
+            Perguntas sugeridas
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {sugestoes.map((s) => (
+              <li key={s}>
+                <button
+                  type="button"
+                  onClick={() => setPergunta(s)}
+                  className="foco rounded-md border border-kyu-borda bg-kyu-creme px-3 py-1.5 text-left text-sm text-kyu-texto hover:border-kyu-laranja"
+                >
+                  {s}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      )}
     </form>
   );
 }

@@ -11,7 +11,8 @@ from app.llm.providers.base import ProvedorIndisponivel, ProvedorLLM
 
 log = logging.getLogger("lastro.llm")
 
-MODELO_GEMINI_PADRAO = "gemini-2.5-flash"
+# Conferido em 06/11/2026: o gemini-2.5-flash não aceita mais contas novas (404). Troque por LLM_MODEL no .env.
+MODELO_GEMINI_PADRAO = "gemini-3.6-flash"
 
 __all__ = ["ProvedorIndisponivel", "ProvedorLLM", "obter_provedor"]
 
@@ -23,5 +24,9 @@ def obter_provedor(settings: Settings) -> ProvedorLLM | None:
             return None
         from app.llm.providers.gemini import ProvedorGemini
 
-        return ProvedorGemini(settings.gemini_api_key, settings.llm_model or MODELO_GEMINI_PADRAO)
+        return ProvedorGemini(
+            settings.gemini_api_key,
+            settings.llm_model or MODELO_GEMINI_PADRAO,
+            raciocinio=settings.llm_raciocinio,
+        )
     return None

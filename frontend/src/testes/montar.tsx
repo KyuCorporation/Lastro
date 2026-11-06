@@ -5,7 +5,7 @@ import App from "../App";
 import { Provedores } from "../Provedores";
 import type { Api } from "../api";
 import { ErroApi } from "../api/http";
-import type { ConsultaSaida, Usuario } from "../api/types";
+import type { ConsultaListada, ConsultaSaida, Recibo, Usuario } from "../api/types";
 import { criarSessao, type ArmazenamentoToken } from "../auth/sessao";
 import { FUTURO_ROUTER } from "../config/ambiente";
 
@@ -19,10 +19,13 @@ export const ANA: Usuario = {
 
 export const GIL: Usuario = { ...ANA, id: "00000000-0000-0000-0000-0000000000a3", nome: "Gil (gestor)", perfil: "gestor" };
 
+const RESPOSTA_ANA_TEXTO =
+  "O fornecedor tem 2 contratos vigentes em PE, que somam R$ 1.250.000,00 [1], até 14/01/2027 [2].";
+
 export const RESPOSTA_ANA: ConsultaSaida = {
   consulta_id: "c-1",
   status: "respondida",
-  resposta: "O fornecedor tem 2 contratos vigentes em PE, que somam R$ 1.250.000,00 [1], até 14/01/2027 [2].",
+  resposta: RESPOSTA_ANA_TEXTO,
   citacoes: [
     {
       n: 1,
@@ -38,9 +41,80 @@ export const RESPOSTA_ANA: ConsultaSaida = {
   sintetico: false,
 };
 
+export const CAIO: Usuario = { ...ANA, id: "00000000-0000-0000-0000-0000000000a2", nome: "Caio (auditor)", perfil: "auditor" };
+
+/** Recibo de RESPOSTA_ANA, no formato de contracts/recibo.schema.json. */
+export const RECIBO_ANA: Recibo = {
+  id: "recibo-1",
+  hash: "a".repeat(64),
+  criado_em: "2026-11-06T11:12:00Z",
+  conteudo: {
+    versao: "v1",
+    consulta_id: "c-1",
+    perfil: "analista",
+    ufs_autorizadas: ["PE"],
+    pergunta: "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?",
+    plano: { intent: "contratos_vencendo", parametros: { cnpj: "99999999000191", dias: 180 } },
+    execucao: {
+      consulta_catalogo: "contratos_vencendo@v1",
+      parametros_efetivos: { cnpj: "99999999000191", dias: 180, hoje: "2026-11-06", ufs: ["PE"] },
+      ufs_efetivas: ["PE"],
+      n_linhas: 2,
+      duracao_ms: 12,
+    },
+    linhas: [
+      {
+        tabela: "contratos",
+        id: "linha-1",
+        fonte_id: "pe_portal",
+        id_origem: "ctr:2025:001",
+        url_origem: "https://sistemas.tcepe.tc.br/DadosAbertos/Contratos!json?AnoReferencia=2025",
+        coletado_em: "2026-11-06T09:00:00Z",
+        hash_conteudo: "b".repeat(64),
+      },
+      {
+        tabela: "contratos",
+        id: "linha-2",
+        fonte_id: "pe_portal",
+        id_origem: "ctr:2025:002",
+        url_origem: null,
+        coletado_em: "2026-11-06T09:00:00Z",
+        hash_conteudo: "c".repeat(64),
+      },
+    ],
+    valores: {
+      v1: { valor: "99.999.999/0001-91", tipo: "texto", origem: "parametros.cnpj" },
+      v4: { valor: "1250000.00", tipo: "moeda", origem: "sum(valor_global)" },
+    },
+    fontes: [
+      { fonte_id: "pe_portal", nome: "TCE-PE Dados Abertos", coletado_em: "2026-11-06T09:00:00Z", execucao_id: null, sintetico: false },
+    ],
+    resposta_final: RESPOSTA_ANA_TEXTO,
+    verificacao: { status: "aprovado", motivos: [] },
+    ia: { provedor: "mock", versao_prompt_planejador: "planejador_v1", planejador_por_regras: true },
+    criado_em: "2026-11-06T11:12:00Z",
+  },
+};
+
+export const HISTORICO: ConsultaListada[] = [
+  { id: "c1000000-0000-0000-0000-000000000001", usuario_id: ANA.id, carteira_id: null, pergunta: "Resumo do CNPJ X",
+    intent: "resumo_fornecedor", status: "respondida", criada_em: "2026-11-06T11:12:00Z", recibo_id: "recibo-1" },
+  { id: "c2000000-0000-0000-0000-000000000002", usuario_id: ANA.id, carteira_id: null, pergunta: "Quanto recebeu em Alagoas?",
+    intent: "resumo_fornecedor", status: "negada", criada_em: "2026-11-06T11:13:00Z", recibo_id: null },
+  { id: "c3000000-0000-0000-0000-000000000003", usuario_id: "outro", carteira_id: null, pergunta: "Previsão do tempo",
+    intent: "fora_de_escopo", status: "abstencao", criada_em: "2026-11-06T11:15:00Z", recibo_id: null },
+];
+
 /** Backend falso: usuários por e-mail (senha demo123), resposta de consulta configurável. */
-export function apiFalsa(opcoes: { usuarios?: Record<string, Usuario>; consulta?: () => Promise<ConsultaSaida> } = {}) {
-  const usuarios = opcoes.usuarios ?? { "ana@alfa.demo": ANA, "gil@alfa.demo": GIL };
+export function apiFalsa(
+  opcoes: {
+    usuarios?: Record<string, Usuario>;
+    consulta?: () => Promise<ConsultaSaida>;
+    recibo?: (id: string) => Promise<Recibo>;
+    historico?: () => Promise<ConsultaListada[]>;
+  } = {},
+) {
+  const usuarios = opcoes.usuarios ?? { "ana@alfa.demo": ANA, "gil@alfa.demo": GIL, "caio@alfa.demo": CAIO };
   let atual: Usuario | null = null;
   const api: Api = {
     auth: {
@@ -55,7 +129,19 @@ export function apiFalsa(opcoes: { usuarios?: Record<string, Usuario>; consulta?
         return atual;
       }),
     },
-    consultas: { criar: vi.fn(opcoes.consulta ?? (async () => RESPOSTA_ANA)) },
+    consultas: {
+      criar: vi.fn(opcoes.consulta ?? (async () => RESPOSTA_ANA)),
+      listar: vi.fn(opcoes.historico ?? (async () => HISTORICO)),
+    },
+    recibos: {
+      obter: vi.fn(
+        opcoes.recibo ??
+          (async (id: string) => {
+            if (id !== RECIBO_ANA.id) throw new ErroApi(404, "NAO_ENCONTRADO", "Recibo não encontrado.", "rid-404");
+            return RECIBO_ANA;
+          }),
+      ),
+    },
   };
   return api;
 }
