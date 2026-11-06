@@ -7,7 +7,9 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.core.db import fechar_pool
+from app.core.errors import registrar_tratadores
 from app.core.health import db_disponivel
+from app.modules.auth.router import router as auth_router
 
 settings = get_settings()
 
@@ -25,6 +27,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+registrar_tratadores(app)
+app.include_router(auth_router)
 
 
 class Saude(BaseModel):
