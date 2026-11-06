@@ -1,0 +1,34 @@
+{
+ "resposta": {
+  "status": "OK",
+  "conteudo": [
+   {
+    "AnoReferencia": 2025,
+    "Esfera": "M",
+    "CodigoMunicipio": "2606002",
+    "Municipio": "GARANHUNS",
+    "CodigoUG": "1146",
+    "NomeUG": "PREFEITURA EXEMPLO DE GARANHUNS (SINTÉTICO)",
+    "NumeroEmpenho": "2025NE00310",
+    "CpfCnpjCredor": "99000002000148",
+    "NomeCredor": "TRANSPORTES EXEMPLO BETA LTDA (SINTÉTICO)",
+    "ValorEmpenho": "40.000,00",
+    "DataEmpenho": "05/04/2025",
+    "Historico": "Transporte escolar, abril"
+   },
+   {
+    "AnoReferencia": 2025,
+    "Esfera": "M",
+    "CodigoMunicipio": "2606002",
+    "CodigoUG": "1146",
+    "NomeUG": "PREFEITURA EXEMPLO DE GARANHUNS (SINTÉTICO)",
+    "NumeroEmpenho": "2025NE00311",
+    "CpfCnpjCredor": "987.654.321-00",
+    "NomeCredor": "CREDOR PESSOA FÍSICA SINTÉTICO",
+    "ValorEmpenho": "1.200,00",
+    "DataEmpenho": "06/04/2025",
+    "Historico": "Diária (deve ser descartada: CPF)"
+   }
+  ]
+ }
+}

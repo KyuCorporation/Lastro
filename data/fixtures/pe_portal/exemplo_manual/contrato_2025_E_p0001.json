@@ -1,0 +1,35 @@
+{
+ "resposta": {
+  "status": "OK",
+  "conteudo": [
+   {
+    "AnoReferencia": 2025,
+    "Esfera": "E",
+    "CodigoEfiscoUG": "510101",
+    "NomeUG": "SECRETARIA EXEMPLO DE INFRAESTRUTURA (SINTÉTICO)",
+    "NumeroContrato": "001/2025",
+    "CpfCnpj": "99.000.001/0001-01",
+    "NomeContratado": "CONSTRUTORA EXEMPLO ALFA LTDA (SINTÉTICO)",
+    "Objeto": "Manutenção predial de escolas estaduais do agreste",
+    "ValorContrato": "1.250.000,00",
+    "DataAssinatura": "15/01/2025",
+    "DataInicioVigencia": "15/01/2025",
+    "DataFimVigencia": "14/01/2027"
+   },
+   {
+    "AnoReferencia": 2025,
+    "Esfera": "E",
+    "CodigoEfiscoUG": "510101",
+    "NomeUG": "SECRETARIA EXEMPLO DE INFRAESTRUTURA (SINTÉTICO)",
+    "NumeroContrato": "002/2025",
+    "CpfCnpj": "123.456.789-09",
+    "NomeContratado": "PESSOA FÍSICA SINTÉTICA",
+    "Objeto": "Consultoria individual (deve ser descartada: CPF)",
+    "ValorContrato": "30.000,00",
+    "DataAssinatura": "01/02/2025",
+    "DataInicioVigencia": "01/02/2025",
+    "DataFimVigencia": "31/12/2025"
+   }
+  ]
+ }
+}

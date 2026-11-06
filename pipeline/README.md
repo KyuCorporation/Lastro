@@ -2,18 +2,59 @@
 
 Conecta como `lastro_ingest`. Roda por CLI (`python -m lastro_pipeline.cli ...`), sem fila.
 
+## Uso
+
+```
+python -m lastro_pipeline.cli ingest pe_portal            # TCE-PE (só em rede brasileira)
+python -m lastro_pipeline.cli ingest pncp                 # PNCP: UFs de PNCP_UFS no período do .env
+python -m lastro_pipeline.cli ingest sancoes              # CEIS + CNEP (ou: ceis, cnep)
+python -m lastro_pipeline.cli ingest todas --offline      # tudo a partir de data/fixtures, sem rede
+python -m lastro_pipeline.cli ingest pncp --amostra 100   # grava data/fixtures/pncp/amostra/ (não grava no banco)
+```
+
+Pelo Make: `make ingest-pe`, `make ingest-pncp`, `make ingest-sancoes`, `make test-pipeline`.
+Rodar duas vezes não muda contagens: a segunda execução sai com `novos 0, atualizados 0`.
+
+## Estrutura
+
 ```
 lastro_pipeline/
-  cli.py            # typer: ingest <fonte>, sinais, qualidade
+  cli.py            # typer: ingest <fonte> [--offline] [--amostra N], sinais
   config.py         # pydantic-settings (.env)
-  db.py             # conexão, upsert por (fonte_id, id_origem), registro de execucoes_ingestao
-  bronze.py         # salva arquivo/resposta em /data/raw/<fonte>/<data>/ e em arquivos_brutos (sha256)
-  connectors/       # pe_portal.py (API do TCE-PE), pncp.py, sancoes.py, qsa.py (opcional)
-  normalize/        # mapeamento campo a campo por fonte; cnpj.py (limpa e valida DV); descarta favorecido PF
-  quality/          # completude, duplicidade, datas fora de faixa, queda de volume > 50% → execução 'parcial'
-  sinais/           # sancao_direta.py, penhasco.py, concentracao.py, contagio.py (opcional); sempre por UF
+  modelos.py        # RespostaBruta, Orgao, Fornecedor, Contrato, Pagamento, Sancao, Descarte
+  http.py           # cliente comum: N req/s, retry com backoff, cache em disco do dia, User-Agent lastro-hackathon
+  bronze.py         # resposta bruta em data/raw/<fonte>/<data>/ e em arquivos_brutos (sha256 único por fonte)
+  db.py             # SQL explícito: execucoes_ingestao e upsert por (fonte_id, id_origem) só se hash_conteudo mudou
+  runner.py         # orquestra uma execução, igual para todas as fontes
+  fixtures.py       # lê e grava data/fixtures/<fonte>/<conjunto>/ com manifest.json (url_origem, coletado_em)
+  connectors/       # base.py (contrato), pe_portal.py, pncp.py, sancoes.py; __init__.py registra as fontes
+  normalize/        # cnpj.py, valores.py e o mapeamento campo a campo de cada fonte
+  quality/          # relatorio.py: completude, duplicidade, datas fora de faixa, queda de volume > 50%
+  sinais/           # (T17) sempre por UF
 tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 ```
 
-Regras: SPEC §5 e §10, AGENTS.md §3 e §10. Cada conector salva amostra em `data/fixtures/<fonte>/`.
-Upsert: se `hash_conteudo` não mudou, não atualiza. Rodar duas vezes não muda contagens (critério de todos os conectores).
+## Como uma execução funciona (`runner.py`)
+
+1. Abre `execucoes_ingestao` (`rodando`) e grava os filtros em `parametros.filtros`.
+2. Para cada resposta bruta: bronze → `interpretar` → `normalizar` → upsert de órgão, fornecedor e fato.
+3. Fecha com `ok`, ou com `parcial` se o volume lido caiu mais de 50% em relação à última execução com os
+   mesmos filtros. O relatório de qualidade vai para `parametros.qualidade`. Nada é apagado.
+4. Em erro, os fatos não são gravados (transação única) e a execução fica `falhou`, com a mensagem em `erro`.
+
+Pessoa física (CPF, `tipoPessoa = PF`, `TIPO DE PESSOA = F`) é descartada e contada em `registros_descartados`.
+
+## Fonte nova
+
+1. `connectors/<fonte>.py` com uma classe que segue `connectors/base.py` (`filtros`, `coletar`, `interpretar`,
+   `normalizar`, `amostra`).
+2. `normalize/<fonte>.py` com o mapeamento para os modelos de `modelos.py`.
+3. Uma linha em `connectors/__init__.py` e a fixture em `data/fixtures/<fonte>/`.
+
+Bronze, upsert, qualidade, retry, cache e limite de taxa já vêm prontos.
+
+## Testes
+
+`make test-pipeline` roda tudo no Compose. Os testes de banco (`tests/test_ingestao.py`) usam o Postgres real como
+`lastro_ingest` dentro de uma transação desfeita no fim; sem `DATABASE_URL` eles são pulados com aviso.
+Testes `@pytest.mark.rede` batem na fonte real e só rodam com `pytest -m rede` (o do TCE-PE, só em rede brasileira).
