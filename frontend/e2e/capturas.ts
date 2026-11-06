@@ -17,9 +17,6 @@ await page.getByRole("heading", { name: "Consulta inteligente" }).waitFor();
 await page.getByLabel("Pergunta em linguagem natural").fill("Faça um resumo do fornecedor 99.000.001/0001-01");
 await page.getByRole("button", { name: "Consultar" }).click();
 await page.getByText(/Valor total registrado/).waitFor();
-const teste = page.getByRole("region", { name: "Teste de segurança" });
-await teste.getByRole("button", { name: "Executar teste" }).click();
-await teste.getByText(/^Bloqueada/).waitFor();
 await page.screenshot({ path: `${pasta}/01-consulta.png`, fullPage: true });
 
 await page.getByRole("link", { name: "Ver evidências" }).click();
