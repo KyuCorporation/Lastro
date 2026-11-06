@@ -194,8 +194,9 @@ Rodar `make test` depois do `make demo` grava as consultas de teste no históric
 | Login, `/me`, permissão por perfil, limite de 30 consultas por minuto | pronto |
 | Ingestão PNCP, CEIS, CNEP e TCE-PE (falta a amostra real do TCE-PE) | pronto |
 | `POST /consultas` de ponta a ponta com recibo e auditoria; `GET /consultas`, `GET /recibos/{id}` | pronto |
+| `GET /recibos/{id}/verificar`: selo íntegro ou alterado pelo hash canônico (T15) | pronto |
 | Interface: consulta, recibo, acesso, auditoria e fontes | pronto |
-| Verificação de recibo e da cadeia (`/verificar`), sinais, carteiras e fila, dossiê, eval | pendente |
+| Verificação da cadeia de auditoria (`/auditoria/verificar`), sinais, carteiras e fila, dossiê, eval | pendente |
 
 ## Problemas comuns
 
