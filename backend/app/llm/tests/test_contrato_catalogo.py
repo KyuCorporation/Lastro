@@ -83,7 +83,7 @@ def test_valores_do_texto_batem_com_o_banco(ctx_ana):
         ufs_autorizadas=("PE",),
         provedor=None,
     )
-    assert "vencem 1 contrato(s)" in vencendo.texto
+    assert "vence 1 contrato" in vencendo.texto
     assert "R$ 100.000,00" in vencendo.texto
     assert "25,00% do valor vigente" in vencendo.texto
     assert vencendo.valores["v4"] == {"valor": "100000.00", "tipo": "moeda", "origem": "sum(valor_global)"}
@@ -94,7 +94,7 @@ def test_valores_do_texto_batem_com_o_banco(ctx_ana):
         ufs_autorizadas=("PE",),
         provedor=None,
     )
-    assert "3 contrato(s), somando R$ 450.000,00" in resumo.texto
+    assert "3 contratos, somando R$ 450.000,00" in resumo.texto
     assert "R$ 400.000,00 em contratos ainda vigentes" in resumo.texto
     assert "70.000" not in resumo.texto  # contrato de AL
 

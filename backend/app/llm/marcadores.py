@@ -89,6 +89,11 @@ def intents_sem_modelo() -> set[str]:
 
 
 # ------------------------------------------------------------------ partes comuns
+def _p(n: int, singular: str, plural: str) -> str:
+    """Concordância do texto pronto: o código sabe o valor, então escolhe a forma certa (nada de "contrato(s)")."""
+    return singular if n == 1 else plural
+
+
 def _ufs(resultado: ResultadoConsulta) -> str:
     return ", ".join(resultado.parametros.get("ufs", []))
 
@@ -113,7 +118,11 @@ def _frase_empenho(m: _Montador, t: dict[str, Any]) -> str:
         t["valor_empenhado"], "moeda", "valor empenhado (reservado, ainda não pago)", "sum(empenhos.valor)"
     )
     n_e = m.add(t["n_empenhos"], "inteiro", "número de empenhos", "count(empenhos)")
-    return f" Há ainda {v_e} empenhado(s) em {n_e} empenho(s): reserva no orçamento, que só conta como pago depois de liquidada."
+    empenhos = _p(t["n_empenhos"], "empenho", "empenhos")
+    return (
+        f" Há ainda {v_e} empenhados em {n_e} {empenhos}: reserva no orçamento, que só conta como pago "
+        "depois de liquidada."
+    )
 
 
 def _registros_contratos(linhas: list[dict]) -> tuple[str, ...]:
@@ -147,9 +156,10 @@ def _resumo(r: ResultadoConsulta) -> Material:
         )
     else:
         modelo = (
-            f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem {n_c} contrato(s), "
-            f"somando {v_c}, dos quais {v_v} em contratos ainda vigentes. "
-            f"Foram registrados {n_p} pagamento(s), num total de {v_p}."
+            f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem {n_c} "
+            f"{_p(t['n_contratos'], 'contrato', 'contratos')}, somando {v_c}, dos quais {v_v} em contratos "
+            f"ainda vigentes. {_p(t['n_pagamentos'], 'Foi registrado', 'Foram registrados')} {n_p} "
+            f"{_p(t['n_pagamentos'], 'pagamento', 'pagamentos')}, num total de {v_p}."
         ) + _frase_empenho(m, t)
     registros = tuple(
         f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
@@ -177,7 +187,8 @@ def _vigentes(r: ResultadoConsulta) -> Material:
         )
     else:
         modelo = (
-            f"O fornecedor {cnpj} tem {n} contrato(s) vigente(s) nas fontes autorizadas para você ({ufs}), "
+            f"O fornecedor {cnpj} tem {n} {_p(t['n_contratos'], 'contrato vigente', 'contratos vigentes')} "
+            f"nas fontes autorizadas para você ({ufs}), "
             f"somando {valor}. O próximo a terminar vence em {proximo}."
         )
     return m.material(modelo, not linhas, _registros_contratos(linhas))
@@ -203,7 +214,11 @@ def _vencendo(r: ResultadoConsulta) -> Material:
             f"nas fontes autorizadas para você ({ufs})."
         )
         return m.material(modelo, True)
-    modelo = f"Nos próximos {dias} dias vencem {n} contrato(s) do fornecedor {cnpj} ({ufs}), somando {valor}."
+    vence = _p(t["n_contratos"], "vence", "vencem")
+    contratos = _p(t["n_contratos"], "contrato", "contratos")
+    modelo = (
+        f"Nos próximos {dias} dias {vence} {n} {contratos} do fornecedor {cnpj} ({ufs}), somando {valor}."
+    )
     if t.get("percentual_do_vigente") is not None:
         pct = m.add(
             t["percentual_do_vigente"],
@@ -241,7 +256,8 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
         )
     else:
         modelo = (
-            f"Entre {inicio} e {fim}, o fornecedor {cnpj} recebeu {n} pagamento(s) "
+            f"Entre {inicio} e {fim}, o fornecedor {cnpj} recebeu {n} "
+            f"{_p(t['n_pagamentos'], 'pagamento', 'pagamentos')} "
             f"nas fontes autorizadas para você ({ufs}), num total de {valor}."
         ) + _frase_empenho(m, t)
     registros = tuple(
@@ -260,8 +276,13 @@ def _sancoes(r: ResultadoConsulta) -> Material:
     vig = m.add(t["n_vigentes"], "inteiro", "número de sanções vigentes", "count(sancoes vigentes)")
     if not linhas:
         return m.material(f"Não encontrei sanções do fornecedor {cnpj} no CEIS nem no CNEP.", True)
+    registradas = _p(t["n_sancoes"], "sanção registrada", "sanções registradas")
+    vigentes = _p(t["n_vigentes"], "vigente", "vigentes")
     modelo = (
-        f"O fornecedor {cnpj} tem {n} sanção(ões) registradas no CEIS ou no CNEP, das quais {vig} vigente(s)."
+        f"O fornecedor {cnpj} tem {n} {registradas} no CEIS ou no CNEP, das quais {vig} {vigentes}."
+        if t["n_sancoes"] > 1
+        else f"O fornecedor {cnpj} tem {n} {registradas} no CEIS ou no CNEP"
+        + (", ainda vigente." if t["n_vigentes"] else ", já encerrada.")
     )
     if t["n_vigentes"]:
         modelo += " Sanção vigente é um sinal para investigar."

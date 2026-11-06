@@ -106,8 +106,8 @@ def test_texto_do_resumo_diz_pago_e_empenhado_separados(ctx_ana):
     texto = redigir(
         "p", executar(_plano("resumo_fornecedor"), ctx_ana, HOJE), ufs_autorizadas=("PE",), provedor=None
     ).texto
-    assert "Foram registrados 2 pagamento(s), num total de R$ 40.000,00." in texto
-    assert "R$ 40.000,00 empenhado(s) em 1 empenho(s)" in texto
+    assert "Foram registrados 2 pagamentos, num total de R$ 40.000,00." in texto
+    assert "R$ 40.000,00 empenhados em 1 empenho" in texto
     assert "80.000" not in texto
 
 
@@ -116,5 +116,5 @@ def test_texto_dos_pagamentos_no_periodo(ctx_ana):
         _plano("pagamentos_periodo", data_inicio=date(2025, 1, 1), data_fim=date(2025, 12, 31)), ctx_ana, HOJE
     )
     texto = redigir("p", resultado, ufs_autorizadas=("PE",), provedor=None).texto
-    assert "recebeu 2 pagamento(s)" in texto and "num total de R$ 40.000,00" in texto
-    assert "R$ 40.000,00 empenhado(s) em 1 empenho(s)" in texto
+    assert "recebeu 2 pagamentos" in texto and "num total de R$ 40.000,00" in texto
+    assert "R$ 40.000,00 empenhados em 1 empenho" in texto
