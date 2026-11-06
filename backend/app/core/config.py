@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     jwt_exp_minutes: int = 480
     cors_origin: str = "http://localhost:5173"
     llm_provider: str = "mock"
+    llm_model: str = ""
+    gemini_api_key: str = ""
+    llm_timeout_seconds: float = 20.0
 
 
 @lru_cache

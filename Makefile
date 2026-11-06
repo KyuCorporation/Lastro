@@ -18,7 +18,7 @@ test:          test-db test-pipeline test-api
 test-db:       seed ; $(DC) run --rm api pytest -q app/tests/test_acesso.py
 test-pipeline: ; $(DC) run --rm pipeline pytest -q
 test-api:      seed ; $(DC) run --rm api pytest -q
-eval:          ; $(DC) run --rm -v $(PWD)/eval:/eval api python /eval/run_eval.py gabarito
-eval-ataques:  ; $(DC) run --rm -v $(PWD)/eval:/eval api python /eval/run_eval.py ataques
+eval:          ; $(DC) run --rm api python /eval/run_eval.py gabarito
+eval-ataques:  ; $(DC) run --rm api python /eval/run_eval.py ataques
 lint:          ; cd backend && ruff check . && cd ../pipeline && ruff check . && cd ../frontend && npm run lint
 tag-good:      ; git tag good-$$(date +%H%M) && echo "tag criada"
