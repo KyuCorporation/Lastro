@@ -11,6 +11,24 @@ Para cada fonte: URL oficial, forma de acesso (API ou arquivo), formato, autenti
 | receita_qsa | (preencher) | API por CNPJ | | Opcional; 1 req/s; só carteiras e sancionadas |
 | demo_sintetico | — | seed | | Sintético, rotulado em toda a interface |
 
+## Resumo por fonte
+
+Consolida os detalhes abaixo e o código dos conectores. Itens "a confirmar" dependem da amostra real ou da documentação oficial.
+
+| | pe_portal (TCE-PE) | pncp | ceis / cnep |
+|---|---|---|---|
+| Formato | JSON (a confirmar) | JSON | zip com CSV (`latin-1`, `;`) |
+| Autenticação | nenhuma documentada | nenhuma | nenhuma |
+| Paginação | `pagina` quando a resposta traz `totalPaginas` (a confirmar) | `pagina` e `tamanhoPagina` (máx. 500) | arquivo inteiro |
+| Recorte | ano × esfera × município (`TCEPE_*`) | janelas mensais de `PNCP_DATA_INICIAL` a `PNCP_DATA_FINAL`, filtro por `PNCP_UFS` | arquivo do dia, volta até `SANCOES_DIAS_RETROATIVOS` |
+| Identificador único | `ctr:`, `emp:`, `liq:` + chaves da UG (a confirmar) | `numeroControlePNCP` | `CÓDIGO DA SANÇÃO` |
+| Licença | dados abertos (LAI) | dados abertos (Lei 14.133/2021) | dados abertos (CGU) |
+| Limites conhecidos | só IP brasileiro | 404 intermitente; ~6 min por mês de dados a 1 req/s | firewall pode bloquear cliente HTTP; dia sem arquivo responde 403 |
+| Download manual | respostas salvas em `data/raw/pe/` | — | zip em `data/raw/sancoes/` com `CEIS` ou `CNEP` no nome |
+| Fixture | `exemplo_manual` (falta `amostra` real) | `amostra` + `exemplo_manual` | `amostra` (+ `ceis/exemplo_manual`) |
+
+Em todas: 1 requisição por segundo, retry com backoff, cache em disco do dia, `User-Agent: lastro-hackathon`, resposta bruta em `data/raw/<fonte>/<data>/` e em `arquivos_brutos` (sha256), e pessoa física descartada e contada em `registros_descartados`.
+
 ## pe_portal — TCE-PE Dados Abertos (detalhe)
 
 **O que se sabe** (documentação do cliente R `tceper`, que consome esta API; confirmar na documentação oficial):
@@ -47,7 +65,7 @@ Conferido na especificação OpenAPI (`/api/consulta/v3/api-docs`) e numa coleta
 - **Rota:** `GET /v1/contratos?dataInicial=AAAAMMDD&dataFinal=AAAAMMDD&pagina=N&tamanhoPagina=M` (máx. 500). Sem autenticação.
 - **Resposta:** `{data: [...], totalRegistros, totalPaginas, numeroPagina, paginasRestantes, empty}`; `204` quando não há contratos.
 - **Sem filtro de UF na rota:** o conector divide o período em janelas mensais, pagina cada uma e filtra por `unidadeOrgao.ufSigla`. **PE nunca vem do PNCP**, salvo `PNCP_PE_FALLBACK=true` (mesmo que PE esteja em `PNCP_UFS`).
-- **Volume:** outubro/2026 teve 174.972 contratos no país (350 páginas de 500). Nas 40 primeiras páginas, 74 de 20 mil eram de AL. A 1 req/s, um mês leva cerca de 6 minutos e o período padrão (jan/2025 a out/2026), algumas horas. Para a demo, encurte `PNCP_DATA_INICIAL`/`PNCP_DATA_FINAL`.
+- **Volume:** outubro/2026 teve 174.972 contratos no país (350 páginas de 500). Nas 40 primeiras páginas, 74 de 20 mil eram de AL. A 1 req/s, um mês leva cerca de 6 minutos. O período padrão do `.env.example` é um mês (out/2026); período longo leva horas.
 
 | Origem (RecuperarContratoDTO) | Destino | Regra |
 |---|---|---|
