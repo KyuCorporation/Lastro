@@ -19,58 +19,34 @@ Etapas ainda não implementadas (sinais, eval) avisam e não interrompem a prepa
 | `make test-e2e` | Navegador real (Chrome da máquina, via Playwright) na interface: login, pergunta, resposta com citação e recibo, acesso negado, teclado, perfis | Sim, e Google Chrome instalado |
 | `bash scripts/teste_resiliencia.sh` | API reiniciada no meio da sessão; banco fora e de volta (503 e recuperação sozinha); fonte fora na ingestão (execução `falhou`, nada apagado) | Sim |
 
-## Defeitos encontrados na integração
+## Defeitos encontrados e corrigidos
 
-### Valor pago soma empenho e liquidação (T05/T08) — aberto
+### Valor pago somava empenho e liquidação (T05/T08) — corrigido
 
-Empenho e liquidação vão para `pagamentos` (SPEC §10, regra 6) e o `resumo_fornecedor` soma os dois. Com as
-fixtures do TCE-PE, Garanhuns tem empenho de R$ 40.000 e duas liquidações de R$ 20.000 desse empenho: o pago é
-R$ 40.000, e a resposta diz R$ 80.000. Precisa de decisão de produto (somar só liquidação? separar empenhado e
-pago?). O teste `test_valor_pago_nao_soma_empenho_com_liquidacao` está marcado `xfail` estrito: quando corrigirem,
-ele passa e acusa, para tirar a marca.
+Empenho e liquidação vão para `pagamentos` (SPEC §10, regra 6) e o resumo somava os dois: Garanhuns (empenho de
+R$ 40.000 e duas liquidações de R$ 20.000 dele) aparecia como pago R$ 80.000. Decisão de produto (06/11/2026):
+**pago = o que saiu (liquidação, pagamento); o empenhado aparece à parte**. O empenho é reconhecido pelo
+`id_origem` com prefixo `emp:` (gravado pelo conector do TCE-PE). `resumo_fornecedor` e `pagamentos_periodo`
+passaram para a v2 (o recibo registra a versão) e devolvem `n_empenhos` e `valor_empenhado`; o texto diz
+"Foram registrados 2 pagamento(s), num total de R$ 40.000,00. Há ainda R$ 40.000,00 empenhado(s) em 1 empenho(s)…".
+Fonte sem empenho (PNCP, CEIS) não muda.
 
-### Trilha de auditoria fora de ordem com escrita simultânea — contornado na API
+### Trilha de auditoria fora de ordem com escrita simultânea — corrigido no banco e na API
 
-O `seq` da auditoria é sorteado antes de o trigger `auditoria_encadear` pegar o lock. Com duas transações ao mesmo
-tempo, a que pegou o `seq` maior pode encadear primeiro: a cadeia continua válida, mas fora da ordem do `seq`, e a
-verificação da T16 (percorrendo por `seq`) acusaria adulteração falsa. A API agora pega o mesmo lock antes do
-insert (`modules/auditoria/queries.py`, `TRAVAR_CADEIA`); o teste `test_cadeia_concorrente.py` falha sem isso e
-passa com isso. Quem gravar auditoria fora da API (pipeline) continua exposto: a correção definitiva é no banco.
+O `seq` da auditoria era sorteado antes de o trigger pegar o lock do tenant: com duas transações ao mesmo tempo,
+a cadeia ficava fora da ordem do `seq`, e a verificação (T16) acusaria adulteração falsa. Duas correções:
+`db/migrations/006_auditoria_seq_no_trigger.sql` (aprovada em 06/11/2026) sorteia o `seq` dentro do trigger,
+depois do lock; e a API pega o mesmo lock antes do insert. `test_cadeia_concorrente.py` falha sem as duas e
+passa com qualquer uma delas. Banco criado antes da 006: `make reset-db` (ou ver `db/README.md`).
 
-**Mudança de contrato proposta** (AGENTS.md §4; precisa de aprovação humana; arquivo novo `006_…`): sortear o
-`seq` dentro do trigger, depois do lock.
+### LLM fora do ar travava a tela por até 40 s — corrigido
 
-```sql
--- 006_auditoria_seq_no_trigger.sql
-create or replace function auditoria_encadear() returns trigger
-language plpgsql security definer set search_path = public, pg_temp as $$
-declare
-  anterior char(64);
-begin
-  perform pg_advisory_xact_lock(hashtext(coalesce(new.tenant_id::text, 'global')));
-  new.seq := nextval('auditoria_seq_seq');  -- depois do lock: ordem do seq = ordem da cadeia
-  select a.hash into anterior
-    from auditoria a
-   where a.tenant_id is not distinct from new.tenant_id
-   order by a.seq desc
-   limit 1;
-  new.criado_em := coalesce(new.criado_em, now());
-  new.hash_anterior := coalesce(anterior, repeat('0', 64));
-  new.hash := encode(digest(
-      new.hash_anterior || '|' ||
-      coalesce(new.tenant_id::text, '') || '|' ||
-      coalesce(new.usuario_id::text, '') || '|' ||
-      new.evento || '|' ||
-      coalesce(new.detalhes::text, '') || '|' ||
-      extract(epoch from new.criado_em)::text,
-    'sha256'), 'hex');
-  return new;
-end $$;
-```
+`LLM_TIMEOUT_SECONDS` era ignorado (20 s fixos), e com o provedor fora o planejador esperava o timeout e o
+redator esperava outro. Agora o tempo vem do `.env` e, se o planejador já caiu nas regras por indisponibilidade,
+o redator vai direto ao modelo determinístico: uma chamada só. O recibo registra `fallback` com
+`provedor_indisponivel`.
 
-O `nextval` do default da coluna também roda (deixa um buraco no `seq`), o que não afeta a cadeia.
-
-### Corrigidos nesta integração
+### Outros corrigidos nesta integração
 
 - Healthcheck do Postgres aprovava o servidor temporário do init (só socket): agora é por TCP, e `make reset-db`
   espera o banco de verdade (`up --wait`) em vez de `sleep 5`.
@@ -78,3 +54,13 @@ O `nextval` do default da coluna também roda (deixa um buraco no `seq`), o que 
   `make demo` e avisa o que falta.
 - Banco fora do ar respondia 500: agora 503 `FONTE_INDISPONIVEL` (contracts/api.md).
 - Negação de escopo (403 `ESCOPO_NEGADO`) aparecia na tela como erro genérico: agora no painel "Acesso negado".
+- 429 do limite de consultas agora traz `Retry-After` (segundos até abrir vaga) e a mensagem diz quanto esperar.
+- Porta do banco no host configurável (`DB_PORTA_HOST`, padrão 5432): quem já tem Postgres na máquina troca no `.env`.
+- Período padrão do PNCP no `.env.example` encurtado para um mês (o país inteiro leva ~6 min por mês a 1 req/s).
+
+## O que ainda depende de pessoas
+
+- **Amostra real do TCE-PE** (R1): rodar em rede brasileira `python -m lastro_pipeline.cli ingest pe_portal --amostra 200`
+  e `pytest -m rede tests/test_pe_portal.py`; o conector foi escrito contra formato hipotético.
+- **Gemini real**: nenhum teste chama o provedor de verdade. Com `LLM_PROVIDER=gemini` e a chave, fazer umas 20
+  perguntas e conferir no recibo quantas saem `aprovado` e quantas `fallback`, e o tempo de cada uma.

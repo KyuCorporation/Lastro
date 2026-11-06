@@ -255,10 +255,11 @@ def test_injecao_armazenada_cai_no_fallback_e_vira_evento_de_ataque(api, autenti
 def test_limite_de_consultas_por_minuto(api, autenticar, com_ambiente):
     com_ambiente(limite=2)
     cabecalho = autenticar("ana@alfa.demo")
-    codigos = [
-        api.post("/consultas", json={"pergunta": VENCENDO}, headers=cabecalho).status_code for _ in range(3)
-    ]
-    assert codigos == [200, 200, 429]
+    respostas = [api.post("/consultas", json={"pergunta": VENCENDO}, headers=cabecalho) for _ in range(3)]
+    assert [r.status_code for r in respostas] == [200, 200, 429]
+    excedida = respostas[-1]
+    assert excedida.json()["erro"]["codigo"] == "LIMITE_EXCEDIDO"
+    assert 1 <= int(excedida.headers["Retry-After"]) <= 60  # cabeçalho padrão: quanto esperar
 
 
 def test_pergunta_vazia_ou_longa_e_entrada_invalida(api, autenticar):
@@ -369,3 +370,61 @@ def test_falha_na_gravacao_nao_deixa_consulta_sem_recibo(api, autenticar, monkey
         == 500
     )
     assert _status_das_consultas(ctx_ana, pergunta) == ["erro"]  # nada "respondida" sem recibo
+
+
+# ------------------------------------------------------------------ LLM fora do ar (SPEC §8.6, §14.5)
+class ProvedorFora:
+    """Simula o Gemini fora do ar: toda chamada falha como timeout."""
+
+    nome, modelo = "fora", "fora-1"
+
+    def __init__(self) -> None:
+        self.chamadas = 0
+        self.timeouts: list[float] = []
+
+    def gerar(self, prompt, *, json=False, timeout_s, temperatura=0.0):
+        from app.llm.providers import ProvedorIndisponivel
+
+        self.chamadas += 1
+        self.timeouts.append(timeout_s)
+        raise ProvedorIndisponivel("timeout")
+
+
+def test_llm_fora_do_ar_chama_o_provedor_uma_vez_so_e_responde(api, autenticar, com_ambiente):
+    """Planejador falhou por indisponibilidade: o redator não espera outro timeout, vai direto ao modelo."""
+    provedor = ProvedorFora()
+    com_ambiente(provedor=provedor)
+    r = api.post("/consultas", json={"pergunta": VENCENDO}, headers=autenticar("ana@alfa.demo"))
+    assert r.status_code == 200
+    assert r.json()["status"] == "respondida" and "R$ 100.000,00" in r.json()["resposta"]
+    assert provedor.chamadas == 1
+
+
+def test_timeout_da_llm_vem_da_configuracao(api, autenticar, com_ambiente):
+    provedor = ProvedorFora()
+    com_ambiente(provedor=provedor, timeout_s=7.5)
+    api.post("/consultas", json={"pergunta": VENCENDO}, headers=autenticar("ana@alfa.demo"))
+    assert provedor.timeouts == [7.5]
+
+
+def test_recibo_registra_que_a_llm_caiu(api, autenticar, com_ambiente):
+    com_ambiente(provedor=ProvedorFora())
+    cabecalho = autenticar("ana@alfa.demo")
+    corpo = api.post("/consultas", json={"pergunta": VENCENDO}, headers=cabecalho).json()
+    recibo = api.get(f"/recibos/{corpo['recibo_id']}", headers=cabecalho).json()["conteudo"]
+    assert recibo["verificacao"] == {"status": "fallback", "motivos": ["provedor_indisponivel"]}
+    assert recibo["ia"]["planejador_por_regras"] is True
+
+
+def test_ambiente_padrao_le_o_timeout_do_env(monkeypatch):
+    from app.core.config import get_settings
+    from app.modules.consulta import dependencias
+
+    monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "6")
+    get_settings.cache_clear()
+    dependencias._ambiente_padrao.cache_clear()
+    try:
+        assert dependencias.ambiente().timeout_s == 6.0
+    finally:
+        get_settings.cache_clear()
+        dependencias._ambiente_padrao.cache_clear()

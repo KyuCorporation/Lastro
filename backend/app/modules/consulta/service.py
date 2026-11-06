@@ -10,7 +10,7 @@ consulta, recibo e evento de auditoria juntos, ou nada. Negação grava e só en
 import logging
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -60,11 +60,12 @@ def hoje_recife() -> date:
 
 @dataclass(frozen=True)
 class Ambiente:
-    """O que vem de fora da regra: provedor de LLM e relógio. Os testes trocam por versões fixas."""
+    """O que vem de fora da regra: provedor de LLM, tempo limite dele e relógio. Os testes trocam por fixos."""
 
     provedor: ProvedorLLM | None
     hoje: Callable[[], date] = hoje_recife
     agora: Callable[[], datetime] = lambda: datetime.now(UTC)
+    timeout_s: float = 20.0  # LLM_TIMEOUT_SECONDS, por chamada ao provedor
 
 
 @dataclass
@@ -134,9 +135,18 @@ def _executar_e_redigir(
     if not any(resultado.conjuntos.values()):
         with sessao(ctx) as conn:
             coleta = fontes.ultima_coleta(conn, resultado.intent)
+    # Planejador já caiu nas regras por indisponibilidade: o redator não espera outro timeout (SPEC §8.6).
+    llm_caiu = amb.provedor is not None and planejamento.por_regras
     redacao = redator.redigir(
-        pergunta, resultado, ufs_autorizadas=ctx.ufs, provedor=amb.provedor, fontes_coletadas_em=coleta
+        pergunta,
+        resultado,
+        ufs_autorizadas=ctx.ufs,
+        provedor=None if llm_caiu else amb.provedor,
+        timeout_s=amb.timeout_s,
+        fontes_coletadas_em=coleta,
     )
+    if llm_caiu and redacao.status == "aprovado":
+        redacao = replace(redacao, status="fallback", motivos=("provedor_indisponivel",))
     linhas = cit.linhas_citaveis(resultado)
     respondida = redacao.status != "abstencao"
     return Desfecho(
@@ -158,7 +168,9 @@ def _decidir(entrada: ConsultaEntrada, ctx: ContextoAcesso, amb: Ambiente) -> De
     if negacao := guardas.checar_pergunta(entrada.pergunta, ctx):
         return _negado(negacao)
 
-    planejamento = planejador.planejar(entrada.pergunta, ufs=ctx.ufs, hoje=amb.hoje(), provedor=amb.provedor)
+    planejamento = planejador.planejar(
+        entrada.pergunta, ufs=ctx.ufs, hoje=amb.hoje(), provedor=amb.provedor, timeout_s=amb.timeout_s
+    )
     plano = planejamento.plano
     if plano.intent == "esclarecer":
         return _esclarecimento(

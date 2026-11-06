@@ -112,6 +112,20 @@ def test_limite_por_chave_em_janela_deslizante():
     assert limitador.permitir("ana")
 
 
+def test_espera_ate_abrir_vaga():
+    agora = [0.0]
+    limitador = LimitadorJanela(2, 60, relogio=lambda: agora[0])
+    assert limitador.espera_s("ana") == 0
+    limitador.permitir("ana")
+    agora[0] = 10.0
+    limitador.permitir("ana")
+    agora[0] = 20.5
+    assert not limitador.permitir("ana")
+    assert limitador.espera_s("ana") == 40  # a primeira vaga abre em 60 s
+    agora[0] = 59.9
+    assert limitador.espera_s("ana") == 1
+
+
 def test_limite_invalido_e_recusado():
     with pytest.raises(ValueError):
         LimitadorJanela(0, 60)

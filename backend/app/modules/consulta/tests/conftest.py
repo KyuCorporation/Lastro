@@ -38,9 +38,9 @@ def _json(dados) -> str:
 def com_ambiente() -> Iterator[Callable[..., None]]:
     """Troca o ambiente da rota. Sem chamar: modo mock com a data de hoje dos dados de teste."""
 
-    def trocar(provedor=None, limite: int = 1000) -> None:
+    def trocar(provedor=None, limite: int = 1000, timeout_s: float = 20.0) -> None:
         app.dependency_overrides[dependencias.ambiente] = lambda: Ambiente(
-            provedor=provedor, hoje=lambda: HOJE
+            provedor=provedor, hoje=lambda: HOJE, timeout_s=timeout_s
         )
         limitador = LimitadorJanela(limite, 60)
         app.dependency_overrides[dependencias.limitador_consultas] = lambda: limitador

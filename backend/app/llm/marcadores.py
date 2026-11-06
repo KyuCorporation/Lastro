@@ -102,6 +102,20 @@ def _ufs_marcador(m: _Montador, resultado: ResultadoConsulta) -> str:
     return m.add(_ufs(resultado), "texto", "UFs consultadas", "parametros.ufs", essencial=False)
 
 
+def _frase_empenho(m: _Montador, t: dict[str, Any]) -> str:
+    """Empenho é reserva no orçamento, não pagamento: aparece à parte e só quando existe.
+
+    Os marcadores entram depois dos demais, então a numeração de quem não tem empenho não muda.
+    """
+    if not t["n_empenhos"]:
+        return ""
+    v_e = m.add(
+        t["valor_empenhado"], "moeda", "valor empenhado (reservado, ainda não pago)", "sum(empenhos.valor)"
+    )
+    n_e = m.add(t["n_empenhos"], "inteiro", "número de empenhos", "count(empenhos)")
+    return f" Há ainda {v_e} empenhado(s) em {n_e} empenho(s): reserva no orçamento, que só conta como pago depois de liquidada."
+
+
 def _registros_contratos(linhas: list[dict]) -> tuple[str, ...]:
     return tuple(
         f"- Contrato com o órgão {dado_nao_confiavel(c.get('orgao_nome'))} (UF {c['uf']}), "
@@ -120,10 +134,12 @@ def _resumo(r: ResultadoConsulta) -> Material:
     v_v = m.add(
         t["valor_vigente"], "moeda", "valor dos contratos ainda vigentes", "sum(valor_global) vigentes"
     )
-    n_p = m.add(t["n_pagamentos"], "inteiro", "número de pagamentos", "count(pagamentos)")
-    v_p = m.add(t["valor_pago"], "moeda", "valor pago somado", "sum(pagamentos.valor)")
+    n_p = m.add(
+        t["n_pagamentos"], "inteiro", "número de pagamentos (sem contar empenhos)", "count(pagamentos)"
+    )
+    v_p = m.add(t["valor_pago"], "moeda", "valor pago somado (sem contar empenhos)", "sum(pagamentos.valor)")
     ufs = _ufs_marcador(m, r)
-    vazio = t["n_contratos"] == 0 and t["n_pagamentos"] == 0
+    vazio = t["n_contratos"] == 0 and t["n_pagamentos"] == 0 and t["n_empenhos"] == 0
     if vazio:
         modelo = (
             f"Não encontrei contratos nem pagamentos do fornecedor {cnpj} "
@@ -134,7 +150,7 @@ def _resumo(r: ResultadoConsulta) -> Material:
             f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem {n_c} contrato(s), "
             f"somando {v_c}, dos quais {v_v} em contratos ainda vigentes. "
             f"Foram registrados {n_p} pagamento(s), num total de {v_p}."
-        )
+        ) + _frase_empenho(m, t)
     registros = tuple(
         f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
         for g in r.conjuntos["por_uf_orgao"][:LIMITE_REGISTROS_TEXTO]
@@ -208,8 +224,15 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
         r.parametros["data_inicio"], "data", "início do período", "parametros.data_inicio", essencial=False
     )
     fim = m.add(r.parametros["data_fim"], "data", "fim do período", "parametros.data_fim", essencial=False)
-    n = m.add(t["n_pagamentos"], "inteiro", "número de pagamentos no período", "count(pagamentos)")
-    valor = m.add(t["valor_total"], "moeda", "valor pago no período", "sum(pagamentos.valor)")
+    n = m.add(
+        t["n_pagamentos"],
+        "inteiro",
+        "número de pagamentos no período (sem contar empenhos)",
+        "count(pagamentos)",
+    )
+    valor = m.add(
+        t["valor_total"], "moeda", "valor pago no período (sem contar empenhos)", "sum(pagamentos.valor)"
+    )
     ufs = _ufs_marcador(m, r)
     if not linhas:
         modelo = (
@@ -220,7 +243,7 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
         modelo = (
             f"Entre {inicio} e {fim}, o fornecedor {cnpj} recebeu {n} pagamento(s) "
             f"nas fontes autorizadas para você ({ufs}), num total de {valor}."
-        )
+        ) + _frase_empenho(m, t)
     registros = tuple(
         f"- Pagamento do órgão {dado_nao_confiavel(p.get('orgao_nome'))} (UF {p['uf']}): "
         f"{dado_nao_confiavel(p.get('descricao'))}"
