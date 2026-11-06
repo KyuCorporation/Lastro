@@ -31,7 +31,7 @@ export function ListaCitacoes({ citacoes, idCitacao }: { citacoes: Citacao[]; id
                   Abrir na fonte oficial<span className="sr-only"> (abre em nova aba)</span>
                 </a>
               ) : (
-                <span>Sem endereço público (dado sintético ou arquivo).</span>
+                <span>Registro sem link público; identificado pelo código abaixo.</span>
               )}{" "}
               · registro {c.id}
             </p>

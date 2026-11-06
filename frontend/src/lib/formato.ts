@@ -13,7 +13,7 @@ const NOMES_FONTES: Record<string, string> = {
   ceis: "CEIS",
   cnep: "CNEP",
   receita_qsa: "Quadro societário (Receita)",
-  demo_sintetico: "Dado sintético de demonstração",
+  demo_sintetico: "Registro sintético de teste",
 };
 
 export function nomeFonte(fonteId: string): string {

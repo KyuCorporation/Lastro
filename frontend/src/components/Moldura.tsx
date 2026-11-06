@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthProvider";
 import { pode } from "../auth/permissoes";
-import { ambiente } from "../config/ambiente";
 import { NOME_PERFIL, nomesUfs } from "../lib/apresentacao";
 import { LogoKyu } from "./LogoKyu";
 
@@ -20,7 +19,7 @@ function classeItem(ativo: boolean): string {
 }
 
 /** Moldura das telas autenticadas: lateral escura com a marca e o menu, barra do topo com escopo e perfil. */
-export function Moldura({ children, demo = ambiente.demo }: { children: ReactNode; demo?: boolean }) {
+export function Moldura({ children }: { children: ReactNode }) {
   const { usuario, sair } = useAuth();
   const local = useLocation();
   if (!usuario) return null;
@@ -76,11 +75,6 @@ export function Moldura({ children, demo = ambiente.demo }: { children: ReactNod
             {" · "}
             {NOME_PERFIL[usuario.perfil]}
           </p>
-          {demo && (
-            <span className="rounded-md bg-kyu-ambar-fundo px-3 py-1 text-sm font-semibold text-kyu-ambar">
-              Demonstração · dados fictícios
-            </span>
-          )}
         </header>
         <main id="conteudo" tabIndex={-1} className="flex-1 px-4 py-8 sm:px-7">
           <div className="max-w-[80rem]">{children}</div>

@@ -60,8 +60,8 @@ def test_contrato_encerrado_vira_abstencao_com_data_da_coleta(perguntar):
 def test_valor_pago_nao_soma_empenho_com_liquidacao(perguntar):
     """Garanhuns: empenho de R$ 40.000 e duas liquidações de R$ 20.000 dele. Pago é R$ 40.000, empenhado à parte."""
     corpo = perguntar("ana@alfa.demo", f"Qual o resumo do fornecedor {GARANHUNS}?").json()
-    assert "Foram registrados 2 pagamento(s), num total de R$ 40.000,00." in corpo["resposta"]
-    assert "R$ 40.000,00 empenhado(s) em 1 empenho(s)" in corpo["resposta"]
+    assert "Foram registrados 2 pagamentos, num total de R$ 40.000,00." in corpo["resposta"]
+    assert "R$ 40.000,00 empenhados em 1 empenho" in corpo["resposta"]
     assert "R$ 80.000,00" not in corpo["resposta"]  # (o contrato é R$ 480.000,50: comparar o valor inteiro)
 
 

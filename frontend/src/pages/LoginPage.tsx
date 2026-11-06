@@ -109,11 +109,11 @@ export function LoginPage({ demo = ambiente.demo }: { demo?: boolean }) {
       </form>
 
       {demo && (
-        <section aria-labelledby="titulo-demo" className="mt-8 rounded-xl border-2 border-dashed border-kyu-ambar bg-kyu-ambar-fundo/40 p-4">
+        <section aria-labelledby="titulo-demo" className="cartao mt-6 p-5">
           <h2 id="titulo-demo" className="font-semibold text-kyu-texto">
-            Usuários de demonstração
+            Acesso rápido
           </h2>
-          <p className="text-sm text-kyu-suave">Modo demo: entra com o usuário do seed de desenvolvimento.</p>
+          <p className="text-sm text-kyu-suave">Perfis com permissões e estados diferentes.</p>
           <ul className="mt-3 space-y-2">
             {USUARIOS_DEMO.map((u) => (
               <li key={u.email}>

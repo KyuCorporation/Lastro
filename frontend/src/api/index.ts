@@ -8,6 +8,7 @@ import type {
   ConsultaEntrada,
   ConsultaListada,
   ConsultaSaida,
+  Fonte,
   LoginEntrada,
   LoginSaida,
   Recibo,
@@ -29,10 +30,15 @@ export interface ApiRecibos {
   obter(id: string): Promise<Recibo>;
 }
 
+export interface ApiFontes {
+  listar(): Promise<Fonte[]>;
+}
+
 export interface Api {
   auth: ApiAuth;
   consultas: ApiConsultas;
   recibos: ApiRecibos;
+  fontes: ApiFontes;
 }
 
 export function criarApiAuth(http: Http): ApiAuth {
@@ -55,6 +61,10 @@ export function criarApiRecibos(http: Http): ApiRecibos {
   };
 }
 
+export function criarApiFontes(http: Http): ApiFontes {
+  return { listar: () => http.get<Fonte[]>("/fontes") };
+}
+
 export interface OpcoesApi {
   /** Troca POST /consultas pelo adaptador simulado (só para desenvolver a tela sem backend). */
   consultasSimuladas?: boolean;
@@ -65,5 +75,6 @@ export function criarApi(http: Http, opcoes: OpcoesApi = {}): Api {
     auth: criarApiAuth(http),
     consultas: opcoes.consultasSimuladas ? consultasSimuladas() : criarApiConsultas(http),
     recibos: criarApiRecibos(http),
+    fontes: criarApiFontes(http),
   };
 }

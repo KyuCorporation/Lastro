@@ -8,7 +8,7 @@ select f.id, f.nome, f.tipo,
   left join lateral (
     select id, status, finalizada_em, registros_novos
       from execucoes_ingestao
-     where fonte_id = f.id
+     where fonte_id = f.id and status <> 'rodando'  -- ingestão em andamento não conta
      order by iniciada_em desc
      limit 1
   ) e on true

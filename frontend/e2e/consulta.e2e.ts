@@ -27,23 +27,22 @@ test("senha errada mostra a mensagem da API", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText("E-mail ou senha inválidos.");
 });
 
-test("ana pergunta pela sugestão e recebe resposta com selo sintético, citação e recibo", async ({ page }) => {
+test("registro sintético de teste aparece rotulado, com citação e recibo", async ({ page }) => {
   await entrarComo(page, "Ana");
   await expect(page.getByLabel("Estados autorizados: PE")).toBeVisible();
 
-  await page.getByRole("button", { name: /vencem nos próximos 6 meses/ }).click();
-  await page.getByRole("button", { name: "Consultar" }).click();
+  await perguntar(page, "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?");
 
   const resposta = page.getByRole("region", { name: "Resposta com evidências" });
   await expect(resposta).toContainText("R$ 120.000,00");
   await expect(resposta).toContainText("99.999.999/0001-91");
-  await expect(resposta.getByRole("note")).toContainText("dado sintético"); // seed 020 é demo_sintetico
+  await expect(resposta.getByRole("note")).toContainText("registro sintético de teste"); // seed 020 é demo_sintetico
   await expect(resposta.getByText("cento e vinte mil reais")).toHaveClass(/sr-only/); // leitor de tela
   await expect(page.getByRole("heading", { name: "Resposta com evidências" })).toBeFocused(); // foco vai para a resposta
 
   const fontes = resposta.getByRole("region", { name: "Fontes citadas" });
   await expect(fontes.getByRole("listitem")).toHaveCount(1);
-  await expect(fontes).toContainText("Dado sintético de demonstração");
+  await expect(fontes).toContainText("Registro sintético de teste");
 
   await resposta.getByRole("link", { name: "Ver evidências" }).click();
   await expect(page).toHaveURL(/\/recibos\/[0-9a-f-]{36}$/);
@@ -176,12 +175,22 @@ test("acesso mostra a sessão real e a matriz; gestor não tem Auditoria no menu
   await expect(menu.getByRole("link", { name: "Auditoria" })).toHaveCount(0);
 });
 
-test("fontes e catálogo segue o design, sem contagens", async ({ page }) => {
+test("fontes mostra a última coleta real de cada fonte (GET /fontes)", async ({ page }) => {
   await entrarComo(page, "Ana");
   await page.getByRole("link", { name: "Fontes e catálogo" }).click();
   await expect(page.getByRole("heading", { name: "Fonte e catálogo de dados" })).toBeVisible();
-  await expect(page.getByText("A validar · API / endpoint")).toBeVisible();
-  await expect(page.getByText("A confirmar")).toHaveCount(3);
+  const tabela = page.getByRole("table", { name: /Fontes integradas/ });
+  await expect(tabela.getByRole("row", { name: /Cadastro de Empresas Inidôneas/ })).toContainText("Coletada");
+  await expect(tabela.getByRole("row", { name: /Portal Nacional de Contratações/ })).toContainText("Coletada");
+  await expect(page.getByText(/A confirmar|A validar|previsto/)).toHaveCount(0);
+});
+
+test("nenhuma tela mostra aviso de dados fictícios", async ({ page }) => {
+  await entrarComo(page, "Ana");
+  for (const tela of ["Consulta", "Fontes e catálogo", "Acesso", "Auditoria"]) {
+    await page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: tela }).click();
+    await expect(page.getByText(/fictíci|Demonstração ·|não representa consulta oficial/i)).toHaveCount(0);
+  }
 });
 
 test("cores e marca da KYU estão aplicadas", async ({ page }) => {

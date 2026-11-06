@@ -1,15 +1,18 @@
-// Perguntas sugeridas na tela de consulta. Cobrem intents N1 do catálogo (SPEC §7).
-// O CNPJ 99.999.999/0001-91 é o fornecedor fictício do seed (cena do ataque); o 99.000.001/0001-01 vem da
-// fixture do TCE-PE (make demo). `{uf}` vira a primeira UF autorizada do usuário.
+// Perguntas sugeridas na tela de consulta, só com dados reais da base: contratos do PNCP (AL) e sanções do
+// CEIS/CNEP (nacionais). Cada usuário vê as que cabem no próprio escopo.
 
-export const PERGUNTAS_SUGERIDAS = [
-  "Qual o resumo de contratos e pagamentos do CNPJ 99.999.999/0001-91 em {uf}?",
-  "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?",
-  "O fornecedor 99.999.999/0001-91 tem sanção no CEIS ou no CNEP?",
-  "Quanto o CNPJ 99.999.999/0001-91 recebeu em 2025?",
-] as const;
+const SANCOES = [
+  "A empresa 20.217.208/0001-74 tem sanção no CEIS ou no CNEP?",
+  "A empresa 26.852.688/0001-21 tem alguma sanção no CEIS ou no CNEP?",
+];
+
+const POR_UF: Record<string, string[]> = {
+  AL: [
+    "Qual o resumo do fornecedor 21.162.446/0001-92?",
+    "Quais contratos vigentes o CNPJ 18.008.915/0001-09 tem?",
+  ],
+};
 
 export function sugestoesPara(ufs: string[]): string[] {
-  const uf = ufs[0] ?? "PE";
-  return PERGUNTAS_SUGERIDAS.map((p) => p.replace("{uf}", uf));
+  return [...ufs.flatMap((uf) => POR_UF[uf] ?? []), ...SANCOES];
 }

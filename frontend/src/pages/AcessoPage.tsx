@@ -95,8 +95,8 @@ export function AcessoPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-6 font-semibold text-kyu-vermelho">
-          A interface apenas apresenta permissões; a regra efetiva é aplicada e testada no backend.
+        <p className="mt-6 text-kyu-suave">
+          As permissões são aplicadas pelo servidor e pelo banco de dados (Row-Level Security). Esta tela as exibe.
         </p>
       </section>
     </div>

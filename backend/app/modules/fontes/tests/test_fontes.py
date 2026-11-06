@@ -75,3 +75,17 @@ def test_execucoes_sem_filtro_e_fonte_desconhecida(api, autenticar, execucoes):
     assert len(api.get("/fontes/execucoes", headers=ana).json()) >= 2
     assert api.get("/fontes/execucoes?fonte_id=inexistente", headers=ana).json() == []
     assert api.get("/fontes/execucoes?fonte_id=x';drop", headers=ana).status_code == 422
+
+
+def test_ingestao_em_andamento_nao_conta_como_ultima_execucao(api, autenticar, execucoes):
+    with _superusuario() as su:
+        rodando = su.execute(
+            "insert into execucoes_ingestao (fonte_id, iniciada_em, status) "
+            "values ('demo_sintetico', now() + interval '2 days', 'rodando') returning id::text"
+        ).fetchone()[0]
+    try:
+        fontes = {f["id"]: f for f in api.get("/fontes", headers=autenticar("ana@alfa.demo")).json()}
+        assert fontes["demo_sintetico"]["ultima_execucao"]["id"] == execucoes[1]
+    finally:
+        with _superusuario() as su:
+            su.execute("delete from execucoes_ingestao where id = %s", (rodando,))

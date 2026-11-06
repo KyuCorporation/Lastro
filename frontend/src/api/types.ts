@@ -123,6 +123,19 @@ export interface ConteudoRecibo {
   criado_em: string;
 }
 
+/** GET /fontes */
+export interface Fonte {
+  id: string;
+  nome: string;
+  tipo: string;
+  ultima_execucao: {
+    id: string;
+    status: "ok" | "parcial" | "falhou" | string;
+    finalizada_em: string | null;
+    registros_novos: number | null;
+  } | null;
+}
+
 /** GET /recibos/{id} */
 export interface Recibo {
   id: string;
