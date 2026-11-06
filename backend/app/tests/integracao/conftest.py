@@ -5,6 +5,7 @@ Não usa TestClient nem troca dependências: é o mesmo caminho que o navegador 
 """
 
 import os
+import time
 from collections.abc import Callable
 
 import httpx
@@ -40,7 +41,13 @@ def cabecalho(http) -> Callable[[str], dict[str, str]]:
 @pytest.fixture(scope="session")
 def perguntar(http, cabecalho) -> Callable[[str, str], httpx.Response]:
     def enviar(email: str, pergunta: str) -> httpx.Response:
-        return http.post("/consultas", json={"pergunta": pergunta}, headers=cabecalho(email))
+        """Respeita o limite de 30 consultas por minuto: no 429, espera o Retry-After e tenta de novo."""
+        for _ in range(3):
+            r = http.post("/consultas", json={"pergunta": pergunta}, headers=cabecalho(email))
+            if r.status_code != 429:
+                return r
+            time.sleep(int(r.headers.get("Retry-After", "5")))
+        return r
 
     return enviar
 

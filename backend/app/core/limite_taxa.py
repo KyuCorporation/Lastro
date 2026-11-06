@@ -4,6 +4,7 @@ Em memória, por processo: basta para a API única do Compose. Com mais réplica
 compartilhado mantendo a mesma interface (`permitir`).
 """
 
+import math
 import threading
 import time
 from collections import defaultdict, deque
@@ -30,6 +31,15 @@ class LimitadorJanela:
                 return False
             eventos.append(agora)
             return True
+
+    def espera_s(self, chave: Hashable) -> int:
+        """Segundos (arredondados para cima) até abrir uma vaga para a chave; 0 se já há vaga."""
+        agora = self._relogio()
+        with self._trava:
+            eventos = self._eventos.get(chave)
+            if not eventos or len(eventos) < self.maximo:
+                return 0
+            return max(1, math.ceil(eventos[0] + self.janela_s - agora))
 
     def limpar(self) -> None:
         with self._trava:

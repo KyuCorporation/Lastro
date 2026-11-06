@@ -23,7 +23,8 @@ def limitador_consultas() -> LimitadorJanela:
 
 @cache
 def _ambiente_padrao() -> Ambiente:
-    return Ambiente(provedor=obter_provedor(get_settings()))
+    settings = get_settings()
+    return Ambiente(provedor=obter_provedor(settings), timeout_s=settings.llm_timeout_seconds)
 
 
 def ambiente() -> Ambiente:
@@ -36,5 +37,11 @@ def consultante(
 ) -> ContextoAcesso:
     """Perfil que pode consultar (senão 403 auditado) e dentro do limite por usuário (senão 429)."""
     if not limitador.permitir(ctx.usuario_id):
-        raise ErroApi(429, "LIMITE_EXCEDIDO", "Limite de 30 consultas por minuto. Aguarde um pouco.")
+        espera = limitador.espera_s(ctx.usuario_id)
+        raise ErroApi(
+            429,
+            "LIMITE_EXCEDIDO",
+            f"Limite de {CONSULTAS_POR_MINUTO} consultas por minuto. Tente de novo em {espera} s.",
+            {"Retry-After": str(espera)},
+        )
     return ctx
