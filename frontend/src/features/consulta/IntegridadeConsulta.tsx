@@ -5,8 +5,8 @@ import { nomesFontes } from "../recibo/leitura";
 
 const VERIFICACAO: Record<string, string> = {
   aprovado: "Texto conferido pelo verificador",
-  fallback: "Texto pronto do sistema (o da IA não passou na conferência)",
-  abstencao: "Sem registros: o sistema não concluiu",
+  fallback: "Resposta padrão do sistema, com os valores do banco",
+  abstencao: "Sem registros nas fontes: o sistema não conclui",
   negado: "Pedido negado",
 };
 

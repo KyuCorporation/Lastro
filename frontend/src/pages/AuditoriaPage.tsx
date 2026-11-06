@@ -20,7 +20,7 @@ const FILTROS: { id: Filtro; rotulo: string; status: StatusConsulta[] | null; cl
   { id: "todas", rotulo: "Todas", status: null, classe: "bg-kyu-verde-fundo text-kyu-verde" },
   { id: "respondidas", rotulo: "Respondidas", status: ["respondida"], classe: "bg-kyu-verde-fundo text-kyu-verde" },
   { id: "bloqueadas", rotulo: "Bloqueadas", status: ["negada", "erro"], classe: "bg-kyu-vermelho-fundo text-kyu-vermelho" },
-  { id: "sem_dados", rotulo: "Sem dados", status: ["abstencao", "esclarecimento"], classe: "bg-kyu-ambar-fundo text-kyu-ambar" },
+  { id: "sem_dados", rotulo: "Sem registros", status: ["abstencao", "esclarecimento"], classe: "bg-kyu-ambar-fundo text-kyu-ambar" },
 ];
 
 const DETALHE: Record<StatusConsulta, string> = {
@@ -52,7 +52,7 @@ function Linha({ c, meuId, meuPerfil, minhasUfs }: { c: ConsultaListada; meuId: 
       <td className="px-4 py-5 font-semibold">
         {c.recibo_id ? (
           <Link to={`/recibos/${c.recibo_id}`} className="foco text-kyu-laranja underline">
-            {c.status === "respondida" ? "Ver recibo" : "Ver recibo da abstenção"}
+            Ver recibo
           </Link>
         ) : (
           <span className="text-kyu-laranja">{DETALHE[c.status]}</span>
@@ -154,7 +154,7 @@ export function AuditoriaPage() {
       )}
 
       <p className="cartao p-5 text-kyu-texto">
-        Não registrar senhas, tokens ou dados pessoais desnecessários no histórico.
+        O histórico não guarda senhas nem tokens. Cada consulta respondida tem um recibo com selo sha256.
       </p>
     </div>
   );

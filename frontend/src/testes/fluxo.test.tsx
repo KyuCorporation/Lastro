@@ -67,7 +67,10 @@ describe("consulta", () => {
   it("pergunta e recebe resposta com valores destacados, citações e recibo", async () => {
     const { api } = montarApp();
     const usuario = await entrarComo("ana@alfa.demo");
-    await usuario.click(await screen.findByRole("button", { name: /vencem nos próximos 6 meses/ }));
+    await usuario.type(
+      await screen.findByLabelText("Pergunta em linguagem natural"),
+      "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?",
+    );
     await usuario.click(screen.getByRole("button", { name: "Consultar" }));
 
     const resultado = await screen.findByRole("region", { name: "Resposta com evidências" });
@@ -128,7 +131,7 @@ describe("consulta", () => {
     const usuario = await entrarComo("ana@alfa.demo");
     await usuario.type(await screen.findByLabelText("Pergunta em linguagem natural"), "x");
     await usuario.click(screen.getByRole("button", { name: "Consultar" }));
-    expect(await screen.findByRole("note")).toHaveTextContent("dado sintético");
+    expect(await screen.findByRole("note")).toHaveTextContent("registro sintético");
   });
 
   it("erro da API (limite) aparece com a mensagem e o código do pedido", async () => {

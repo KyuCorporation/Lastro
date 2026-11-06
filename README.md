@@ -140,11 +140,22 @@ Senha `demo123`, só para desenvolvimento.
 | admin@alfa.demo | Cliente Alfa | admin | PE, AL |
 | bia@beta.demo | Cliente Beta | analista | AL |
 
-Perguntas que respondem com os dados do `make demo`:
-- como **ana**: "Faça um resumo do fornecedor 99.000.001/0001-01";
-- como **bia**: "Qual o resumo do fornecedor 18.008.915/0001-09?".
+### Perguntas para os avaliadores
 
-Pedir outro estado (bia perguntando sobre Pernambuco) é negado pelo banco e vai para a auditoria.
+Todas usam dados públicos reais da base: contratos do PNCP e sanções do CEIS/CNEP.
+
+| Entrar como | Pergunta | O que mostra |
+|---|---|---|
+| bia (AL) | Qual o resumo do fornecedor 21.162.446/0001-92? | Contratos reais do PNCP, valor somado, citação com link oficial e recibo |
+| bia (AL) | Quais contratos vigentes o CNPJ 18.008.915/0001-09 tem? | Contratos vigentes, próximo vencimento, "Ver evidências" |
+| ana (PE) | A empresa 20.217.208/0001-74 tem sanção no CEIS ou no CNEP? | Sanção vigente no CEIS, apresentada como "sinal para investigar" |
+| ana (PE) | A empresa 26.852.688/0001-21 tem alguma sanção no CEIS ou no CNEP? | Nenhum registro: o sistema não inventa |
+| ana (PE) | Qual o resumo do fornecedor 21.162.446/0001-92 em Alagoas? | Acesso negado pelo escopo (ana só vê PE), registrado na auditoria |
+| ana (PE) | Botão "Executar teste" em Teste de segurança | Pedido para burlar as regras, bloqueado antes da LLM |
+| gil (gestor) | — | Sem formulário de consulta: o perfil não consulta |
+| caio (auditor) | Menu Auditoria | Histórico de consultas do cliente, com filtro e recibos |
+
+Depois de cada resposta, "Ver evidências" abre o recibo: registros de origem com link para a fonte oficial, a origem de cada total e o selo sha256.
 
 ## LLM (Gemini)
 

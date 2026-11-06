@@ -32,7 +32,7 @@ export type Tom = "verde" | "vermelho" | "ambar" | "neutro";
 /** Como cada desfecho de consulta aparece (texto sempre presente: nada depende só de cor). */
 export const STATUS_CONSULTA: Record<StatusConsulta, { selo: string; resultado: string; tom: Tom }> = {
   respondida: { selo: "Resposta com evidências", resultado: "Respondida", tom: "verde" },
-  abstencao: { selo: "Sem evidência suficiente", resultado: "Sem evidência", tom: "ambar" },
+  abstencao: { selo: "Nenhum registro encontrado", resultado: "Sem registros", tom: "ambar" },
   esclarecimento: { selo: "Preciso de um detalhe", resultado: "Esclarecimento", tom: "ambar" },
   negada: { selo: "Acesso negado", resultado: "Bloqueada", tom: "vermelho" },
   erro: { selo: "Não foi possível responder", resultado: "Erro", tom: "vermelho" },
