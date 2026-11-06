@@ -8,5 +8,7 @@ __pycache__/
 .ruff_cache/
 node_modules/
 frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
 eval/reports/*.json
 .DS_Store
