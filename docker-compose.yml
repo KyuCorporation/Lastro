@@ -18,6 +18,10 @@ services:
     environment:
       DATABASE_URL: postgresql://lastro_app:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB}
     ports: ["8000:8000"]
+    volumes:
+      # Gabarito e contratos para os testes e o eval (o build só copia backend/).
+      - ./eval:/eval
+      - ./contracts:/contracts:ro
     depends_on:
       db: { condition: service_healthy }
 
