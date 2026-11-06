@@ -1,19 +1,36 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.core.config import get_settings
+from app.core.db import fechar_pool
+from app.core.errors import registrar_tratadores
 from app.core.health import db_disponivel
+from app.modules.auth.router import router as auth_router
+from app.modules.consulta.router import router as consulta_router
 
 settings = get_settings()
 
-app = FastAPI(title="Lastro API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    yield
+    fechar_pool()
+
+
+app = FastAPI(title="Lastro API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.cors_origin],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+registrar_tratadores(app)
+app.include_router(auth_router)
+app.include_router(consulta_router)
 
 
 class Saude(BaseModel):
@@ -24,5 +41,5 @@ class Saude(BaseModel):
 
 @app.get("/health", response_model=Saude)
 def health() -> Saude:
-    db = "ok" if db_disponivel(settings.database_url) else "indisponivel"
+    db = "ok" if db_disponivel() else "indisponivel"
     return Saude(status="ok" if db == "ok" else "degradado", db=db, llm=settings.llm_provider)

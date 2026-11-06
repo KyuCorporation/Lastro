@@ -15,9 +15,9 @@ ingest-sancoes:; $(DC) run --rm pipeline python -m lastro_pipeline.cli ingest sa
 ingest-qsa:    ; $(DC) run --rm pipeline python -m lastro_pipeline.cli ingest qsa
 sinais:        ; $(DC) run --rm pipeline python -m lastro_pipeline.cli sinais
 test:          test-db test-pipeline test-api
-test-db:       ; $(DC) run --rm api pytest -q app/tests/test_acesso.py
+test-db:       seed ; $(DC) run --rm api pytest -q app/tests/test_acesso.py
 test-pipeline: ; $(DC) run --rm pipeline pytest -q
-test-api:      ; $(DC) run --rm api pytest -q
+test-api:      seed ; $(DC) run --rm api pytest -q
 eval:          ; $(DC) run --rm -v $(PWD)/eval:/eval api python /eval/run_eval.py gabarito
 eval-ataques:  ; $(DC) run --rm -v $(PWD)/eval:/eval api python /eval/run_eval.py ataques
 lint:          ; cd backend && ruff check . && cd ../pipeline && ruff check . && cd ../frontend && npm run lint

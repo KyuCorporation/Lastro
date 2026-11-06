@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore")
 
     database_url: str
+    jwt_secret: str
+    jwt_exp_minutes: int = 480
     cors_origin: str = "http://localhost:5173"
     llm_provider: str = "mock"
 
