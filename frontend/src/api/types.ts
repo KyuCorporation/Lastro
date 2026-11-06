@@ -70,3 +70,63 @@ export interface ConsultaSaida {
 }
 
 export const LIMITE_PERGUNTA = 500;
+
+/** GET /consultas: o que a RLS mostra (as próprias; auditor e admin veem o tenant). */
+export interface ConsultaListada {
+  id: string;
+  usuario_id: string;
+  carteira_id: string | null;
+  pergunta: string;
+  intent: string | null;
+  status: StatusConsulta;
+  criada_em: string;
+  recibo_id: string | null;
+}
+
+export type TipoValor = "moeda" | "data" | "inteiro" | "percentual" | "texto";
+
+/** Conteúdo do recibo (contracts/recibo.schema.json, v1). Só os campos que a interface usa. */
+export interface ConteudoRecibo {
+  versao: "v1";
+  consulta_id: string;
+  perfil: Perfil;
+  ufs_autorizadas: string[];
+  pergunta: string;
+  plano: { intent: string; parametros: Record<string, unknown> };
+  execucao: {
+    consulta_catalogo: string;
+    parametros_efetivos: Record<string, unknown>;
+    ufs_efetivas: string[];
+    n_linhas: number;
+    duracao_ms: number;
+  };
+  linhas: {
+    tabela: string;
+    id: string;
+    fonte_id: string;
+    id_origem: string;
+    url_origem: string | null;
+    coletado_em: string;
+    hash_conteudo: string;
+  }[];
+  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string }>;
+  fontes: { fonte_id: string; nome: string; coletado_em: string; execucao_id: string | null; sintetico?: boolean }[];
+  resposta_final: string;
+  verificacao: { status: "aprovado" | "fallback" | "abstencao" | "negado"; motivos?: string[] };
+  ia: {
+    provedor?: string;
+    modelo?: string;
+    versao_prompt_planejador?: string;
+    versao_prompt_redator?: string;
+    planejador_por_regras?: boolean;
+  };
+  criado_em: string;
+}
+
+/** GET /recibos/{id} */
+export interface Recibo {
+  id: string;
+  conteudo: ConteudoRecibo;
+  hash: string;
+  criado_em: string;
+}

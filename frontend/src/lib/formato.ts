@@ -31,3 +31,24 @@ const NOMES_TABELAS: Record<string, string> = {
 export function nomeTabela(tabela: string): string {
   return NOMES_TABELAS[tabela] ?? tabela;
 }
+
+/** "2027-01-14" ou ISO com hora → "14/01/2027" (sem mudar o dia por fuso). */
+export function dataCurta(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+/** Hora local de Recife, "08:12". */
+export function hora(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Recife" });
+}
+
+/** String decimal da API ("1250000.00") → "R$ 1.250.000,00". */
+export function moeda(decimal: string): string {
+  const n = Number(decimal);
+  if (!Number.isFinite(n)) return decimal;
+  // Espaço comum no lugar do não separável: o mesmo texto que o backend escreve nas respostas.
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).replace(/\s/g, " ");
+}

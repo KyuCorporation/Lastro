@@ -57,5 +57,8 @@ export function consultasSimuladas(atrasoMs = 400): ApiConsultas {
       const pedeOutraUf = /alagoas/i.test(entrada.pergunta) || /\bAL\b/.test(entrada.pergunta);
       return { consulta_id, ...(pedeOutraUf ? negada() : respondida()) };
     },
+    async listar() {
+      return [];
+    },
   };
 }

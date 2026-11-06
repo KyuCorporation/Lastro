@@ -73,15 +73,46 @@ def fora_de_escopo(motivo: str) -> PlanoConsulta:
 _CERCA = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
 
 
+def _normalizar(dados: dict) -> dict:
+    """Corrige só o que é formato, sem mudar o sentido do plano.
+
+    - `versao` ausente vira "v1"; `parametros` ausente vira objeto vazio.
+    - Parâmetro nulo ou vazio é ignorado.
+    - CNPJ com máscara perde a pontuação (se não sobrarem 14 dígitos, a validação reprova como antes).
+    - UF vai para maiúsculas, sem espaço.
+    - Parâmetro conhecido que a intent não usa (ex.: `dias` num resumo, `uf` numa sanção) é descartado.
+    Campo fora do contrato (ex.: `tenant_id`, `sql`) não é tocado: a validação continua reprovando.
+    """
+    dados = {**dados}
+    dados.setdefault("versao", "v1")
+    params = dados.get("parametros")
+    if params is None:
+        params = {}
+    if not isinstance(params, dict):
+        return dados
+    limpos = {k: v for k, v in params.items() if v is not None and not (isinstance(v, str) and not v.strip())}
+    if isinstance(limpos.get("cnpj"), str):
+        limpos["cnpj"] = re.sub(r"\D", "", limpos["cnpj"])
+    if isinstance(limpos.get("uf"), str):
+        limpos["uf"] = limpos["uf"].strip().upper()
+    intent = INTENTS.get(dados.get("intent")) if isinstance(dados.get("intent"), str) else None
+    if intent is not None:
+        aceitos = set(intent.obrigatorios) | set(intent.opcionais)
+        conhecidos = set(Parametros.model_fields)
+        limpos = {k: v for k, v in limpos.items() if k in aceitos or k not in conhecidos}
+    dados["parametros"] = limpos
+    return dados
+
+
 def validar_plano(bruto: str) -> PlanoConsulta:
-    """Valida a saída da LLM. Qualquer desvio do contrato vira PlanoInvalido."""
+    """Valida a saída da LLM. Formato é normalizado; desvio de sentido ou do contrato vira PlanoInvalido."""
     texto = _CERCA.sub(r"\1", bruto)
     try:
         dados = json.loads(texto)
         if not isinstance(dados, dict):
             raise PlanoInvalido("o plano não é um objeto JSON")
-        if faltando := {"versao", "intent", "parametros"} - dados.keys():
-            raise PlanoInvalido(f"campos obrigatórios ausentes: {sorted(faltando)}")
-        return PlanoConsulta.model_validate(dados, strict=False)
+        if "intent" not in dados:
+            raise PlanoInvalido("campo obrigatório ausente: intent")
+        return PlanoConsulta.model_validate(_normalizar(dados), strict=False)
     except (json.JSONDecodeError, ValidationError) as exc:
         raise PlanoInvalido(str(exc)) from exc
