@@ -12,6 +12,7 @@ from app.core.errors import registrar_tratadores
 from app.core.health import db_disponivel
 from app.modules.auth.router import router as auth_router
 from app.modules.consulta.router import router as consulta_router
+from app.modules.fontes.router import router as fontes_router
 from app.modules.recibos.router import router as recibos_router
 
 settings = get_settings()
@@ -34,6 +35,7 @@ registrar_tratadores(app)
 app.include_router(auth_router)
 app.include_router(consulta_router)
 app.include_router(recibos_router)
+app.include_router(fontes_router)
 
 
 class Saude(BaseModel):
