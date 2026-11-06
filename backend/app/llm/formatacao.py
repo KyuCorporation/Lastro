@@ -53,12 +53,14 @@ def formatar(valor: object, tipo: TipoValor) -> str:
     return str(valor)
 
 
-def valor_cru(valor: object) -> str:
-    """Valor para o recibo: decimal como string, data em ISO 8601."""
+def valor_cru(valor: object, tipo: TipoValor | None = None) -> str:
+    """Valor para o recibo: decimal como string (dinheiro e percentual com 2 casas), data em ISO 8601."""
     if valor is None:
         return ""
     if isinstance(valor, date | datetime):
         return valor.isoformat()
+    if tipo in ("moeda", "percentual") and isinstance(valor, Decimal | int):
+        return format(Decimal(valor).quantize(Decimal("0.01"), ROUND_HALF_UP), "f")
     if isinstance(valor, Decimal):
         return format(valor, "f")
     return str(valor)
