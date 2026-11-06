@@ -196,7 +196,8 @@ Rodar `make test` depois do `make demo` grava as consultas de teste no históric
 | `POST /consultas` de ponta a ponta com recibo e auditoria; `GET /consultas`, `GET /recibos/{id}` | pronto |
 | `GET /recibos/{id}/verificar`: selo íntegro ou alterado pelo hash canônico (T15) | pronto |
 | Interface: consulta, recibo, acesso, auditoria e fontes | pronto |
-| Verificação da cadeia de auditoria (`/auditoria/verificar`), sinais, carteiras e fila, dossiê, eval | pendente |
+| Sinais `sancao_direta`, `penhasco` e `concentracao` por UF (`make sinais`, T17) | pronto |
+| Verificação da cadeia de auditoria (`/auditoria/verificar`), carteiras e fila, dossiê, eval | pendente |
 
 ## Problemas comuns
 
