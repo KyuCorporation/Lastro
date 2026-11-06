@@ -5,7 +5,8 @@ FastAPI conectada como `lastro_app` (sem BYPASSRLS). Toda rota autenticada usa a
 ```
 app/
   main.py            # cria o app, inclui routers, CORS, handler de erro padrão (contracts/api.md)
-  core/              # config.py, db.py (sessão com contexto), security.py (JWT, bcrypt), errors.py, logging.py
+  core/              # config.py, db.py (sessão com contexto), security.py (JWT, bcrypt), errors.py,
+                     # relogio.py (hoje em PE, trocável nos testes), tipos.py (Dinheiro como string decimal)
   modules/
     auth/            # login e /me
     policy/          # contexto de acesso e permissão por perfil (SPEC §6.2)
@@ -13,8 +14,8 @@ app/
     consulta/        # orquestra: planejador → validação → executor → redator → verificador → recibo → auditoria
     recibos/         # hash canônico e verificação
     auditoria/       # gravação e verificação da cadeia
-    carteiras/       # carteiras e fila
-    fornecedores/    # dossiê
+    carteiras/       # POST/GET /carteiras e GET /carteiras/{id}/fila; prioridade.py (SPEC §9)
+    fornecedores/    # GET /fornecedores/{cnpj}/dossie (404 se nada visível no escopo)
     sinais/          # leitura de sinais (cálculo fica na pipeline)
     alertas/         # alertas por evento (opcional)
     metricas/        # lê eval/reports
@@ -23,3 +24,10 @@ app/
 ```
 
 Padrão por módulo: `router.py`, `service.py`, `queries.py`, `schemas.py`, `tests/`.
+
+## Fila da carteira
+
+Prioridade = soma dos pesos dos sinais visíveis (forte 10, atenção 3, info 1) × `max(1, log10(1 + valor exposto))`,
+sendo o valor exposto o valor dos contratos vigentes nas UFs do usuário. O piso 1 é o único ajuste à fórmula do
+SPEC §9: sem ele, um sancionado sem contrato vigente teria prioridade 0. A partir de R$ 9,00 de exposição a
+fórmula é a do SPEC. Detalhes em `modules/carteiras/prioridade.py`.

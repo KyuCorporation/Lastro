@@ -11,7 +11,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -22,6 +22,7 @@ from psycopg.types.json import Jsonb
 from app.core.contexto import ContextoAcesso
 from app.core.db import sessao
 from app.core.errors import ErroApi
+from app.core.relogio import hoje_recife
 from app.llm import planejador, redator
 from app.llm.plano import PlanoConsulta
 from app.llm.providers import ProvedorLLM
@@ -37,8 +38,6 @@ from app.modules.recibos.montagem import IA, DadosRecibo, Execucao, StatusVerifi
 
 log = logging.getLogger("lastro.consulta")
 
-FUSO_RECIFE = timezone(timedelta(hours=-3))  # Pernambuco não tem horário de verão
-
 MENSAGEM_FORA_DO_CATALOGO = (
     "Não consigo responder isso com as fontes do Lastro. Pergunte sobre contratos, pagamentos ou sanções de "
     "um fornecedor, informando o CNPJ."
@@ -52,10 +51,6 @@ MENSAGEM_TEMPO_ESGOTADO = "A consulta demorou além do limite. Tente de novo em 
 
 # Motivos do verificador que indicam texto de fonte tentando mandar no redator (injeção armazenada).
 MOTIVOS_DE_ATAQUE = frozenset({"vazamento", "uf_fora_do_escopo", "url_fora_do_resultado"})
-
-
-def hoje_recife() -> date:
-    return datetime.now(FUSO_RECIFE).date()
 
 
 @dataclass(frozen=True)

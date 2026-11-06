@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.tipos import TextoSemNulo
+
 StatusConsulta = Literal["respondida", "abstencao", "esclarecimento", "negada", "erro"]
 
 LIMITE_LISTAGEM_PADRAO = 50
@@ -13,7 +15,7 @@ LIMITE_LISTAGEM_MAXIMO = 200
 
 
 class ConsultaEntrada(BaseModel):
-    pergunta: str = Field(min_length=1, max_length=500)
+    pergunta: TextoSemNulo = Field(min_length=1, max_length=500)
     carteira_id: UUID | None = None
 
     @field_validator("pergunta")
