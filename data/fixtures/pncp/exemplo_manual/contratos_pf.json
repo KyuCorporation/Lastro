@@ -1,0 +1,14 @@
+{
+ "data": [
+  {
+   "numeroControlePNCP": "99000005000181-2-000001/2026",
+   "orgaoEntidade": {"cnpj": "99000005000181", "razaoSocial": "MUNICÍPIO EXEMPLO (SINTÉTICO)", "poderId": "E", "esferaId": "M"},
+   "unidadeOrgao": {"ufNome": "Alagoas", "ufSigla": "AL", "municipioNome": "Exemplo", "codigoUnidade": "1", "nomeUnidade": "PREFEITURA EXEMPLO (SINTÉTICO)", "codigoIbge": "2700000"},
+   "anoContrato": 2026, "sequencialContrato": 1,
+   "tipoPessoa": "PF", "niFornecedor": "12345678909", "nomeRazaoSocialFornecedor": "PESSOA FÍSICA SINTÉTICA",
+   "objetoContrato": "Contrato com pessoa física (deve ser descartado)",
+   "valorGlobal": 1000.0, "dataAssinatura": "2026-10-01", "dataVigenciaInicio": "2026-10-01", "dataVigenciaFim": "2026-12-31"
+  }
+ ],
+ "totalRegistros": 1, "totalPaginas": 1, "numeroPagina": 1, "paginasRestantes": 0, "empty": false
+}
