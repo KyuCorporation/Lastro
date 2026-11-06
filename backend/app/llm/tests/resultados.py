@@ -79,7 +79,7 @@ def resumo(vazio: bool = False) -> ResultadoConsulta:
          "valor_contratado": Decimal("150000.00"), "valor_vigente": Decimal("100000.00"), "n_pagamentos": 1,
          "valor_pago": Decimal("40000.00")},
     ]  # fmt: skip
-    soma = lambda k: sum((g[k] for g in grupos), Decimal(0))  # noqa: E731
+    soma = lambda k: sum((g[k] for g in grupos), Decimal(0))
     return ResultadoConsulta(
         intent="resumo_fornecedor",
         versao="resumo_fornecedor@v1",

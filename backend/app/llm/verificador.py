@@ -14,7 +14,7 @@ from app.llm.regras import normalizar, ufs_mencionadas
 
 MARCADOR = re.compile(r"\{\{\s*(v\d+)\s*\}\}")
 NUMERO = re.compile(r"\d+(?:[.,/-]\d+)*")
-URL = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|br|org|net|gov|io)\b", re.I)
+URL = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|br|org|net|gov|io)\b", re.IGNORECASE)
 VAZAMENTO = re.compile(
     r"instruc(?:ao|oes) (?:do sistema|anteriores|que recebi)|\bprompt\b"
     r"|minhas regras|regras (?:acima|do sistema)"

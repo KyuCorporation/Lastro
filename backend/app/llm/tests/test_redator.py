@@ -104,8 +104,8 @@ def test_texto_externo_nao_fecha_a_marcacao():
     ("valor", "tipo", "esperado"),
     [
         (Decimal("1234567.5"), "moeda", "R$ 1.234.567,50"),
-        (Decimal("0"), "moeda", "R$ 0,00"),
-        (Decimal("25"), "percentual", "25,00%"),
+        (Decimal(0), "moeda", "R$ 0,00"),
+        (Decimal(25), "percentual", "25,00%"),
         (12345, "inteiro", "12.345"),
         (date(2027, 1, 5), "data", "05/01/2027"),
         (None, "moeda", "não informado"),
