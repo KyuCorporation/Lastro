@@ -9,6 +9,8 @@ TipoValor = Literal["moeda", "data", "inteiro", "percentual", "texto"]
 
 
 def _milhar(inteiro: str) -> str:
+    if inteiro.startswith("-"):
+        return "-" + _milhar(inteiro[1:])
     grupos = []
     while len(inteiro) > 3:
         inteiro, grupo = inteiro[:-3], inteiro[-3:]
@@ -21,6 +23,16 @@ def _decimal_br(valor: Decimal) -> str:
     sinal = "-" if q < 0 else ""
     inteiro, centavos = f"{abs(q):.2f}".split(".")
     return f"{sinal}{_milhar(inteiro)},{centavos}"
+
+
+def _data_br(valor: object) -> str:
+    if isinstance(valor, str):  # ISO 8601 vindo de JSON
+        try:
+            valor = datetime.fromisoformat(valor)
+        except ValueError:
+            return valor
+    d = valor.date() if isinstance(valor, datetime) else valor
+    return d.strftime("%d/%m/%Y") if isinstance(d, date) else str(d)
 
 
 def formatar_cnpj(cnpj: str) -> str:
@@ -37,8 +49,7 @@ def formatar(valor: object, tipo: TipoValor) -> str:
     if tipo == "inteiro":
         return _milhar(str(int(valor)))
     if tipo == "data":
-        d = valor.date() if isinstance(valor, datetime) else valor
-        return d.strftime("%d/%m/%Y") if isinstance(d, date) else str(d)
+        return _data_br(valor)
     return str(valor)
 
 
