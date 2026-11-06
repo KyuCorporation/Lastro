@@ -1,4 +1,4 @@
--- resumo_fornecedor@v1 — pagamentos usados no resumo, com proveniência
+-- resumo_fornecedor@v2 — pagamentos usados no resumo, com proveniência
 select p.id, p.fonte_id, p.id_origem, p.url_origem, p.coletado_em, p.hash_conteudo, p.arquivo_bruto_id,
        p.uf, p.orgao_id, o.nome as orgao_nome, p.contrato_id, p.data_pagamento, p.valor, p.descricao,
        count(*) over () as total_linhas

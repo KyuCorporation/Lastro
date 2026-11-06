@@ -11,6 +11,7 @@ from app.llm.verificador import verificar
 PE = ("PE",)
 NAO_VAZIOS = [
     resultados.resumo(),
+    resultados.resumo(empenhado="25000.00"),
     resultados.vigentes(),
     resultados.vencendo(),
     resultados.pagamentos(),
@@ -19,7 +20,7 @@ NAO_VAZIOS = [
 ]
 
 
-@pytest.mark.parametrize("resultado", NAO_VAZIOS, ids=lambda r: r.intent)
+@pytest.mark.parametrize("resultado", NAO_VAZIOS, ids=lambda r: f"{r.intent}-{r.totais.get('n_empenhos', 0)}")
 def test_modelo_deterministico_passa_no_verificador(resultado):
     m = montar_material(resultado)
     anos = {v.year for k, v in resultado.parametros.items() if k.startswith("data_")}

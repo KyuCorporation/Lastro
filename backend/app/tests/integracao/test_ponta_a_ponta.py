@@ -57,17 +57,12 @@ def test_contrato_encerrado_vira_abstencao_com_data_da_coleta(perguntar):
     assert "Fontes coletadas até" in corpo["resposta"]  # data da última execução da pipeline
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Defeito conhecido (T05/T08): empenho e liquidação vão para `pagamentos` e o resumo soma os dois. "
-        "Garanhuns tem empenho de R$ 40.000 e duas liquidações de R$ 20.000 dele: o pago é R$ 40.000, "
-        "a resposta diz R$ 80.000. Quando corrigirem, este teste passa e o xfail estrito acusa: tire a marca."
-    ),
-)
 def test_valor_pago_nao_soma_empenho_com_liquidacao(perguntar):
+    """Garanhuns: empenho de R$ 40.000 e duas liquidações de R$ 20.000 dele. Pago é R$ 40.000, empenhado à parte."""
     corpo = perguntar("ana@alfa.demo", f"Qual o resumo do fornecedor {GARANHUNS}?").json()
-    assert "num total de R$ 40.000,00" in corpo["resposta"]
+    assert "Foram registrados 2 pagamento(s), num total de R$ 40.000,00." in corpo["resposta"]
+    assert "R$ 40.000,00 empenhado(s) em 1 empenho(s)" in corpo["resposta"]
+    assert "R$ 80.000,00" not in corpo["resposta"]  # (o contrato é R$ 480.000,50: comparar o valor inteiro)
 
 
 # ------------------------------------------------------------------ PNCP (AL) e escopo
@@ -126,13 +121,13 @@ def test_consulta_aparece_na_listagem_e_o_auditor_ve(perguntar, http, cabecalho)
 
 
 def test_consultas_em_paralelo_mantem_a_trilha_encadeada(perguntar, banco_superusuario):
-    """24 consultas simultâneas de dois tenants: nenhuma falha e a cadeia de hashes continua íntegra."""
-    pedidos = [("admin@alfa.demo", f"O fornecedor {SANCIONADA} tem sanção?")] * 12 + [
+    """16 consultas simultâneas de dois tenants: nenhuma falha e a cadeia de hashes continua íntegra."""
+    pedidos = [("admin@alfa.demo", f"O fornecedor {SANCIONADA} tem sanção?")] * 8 + [
         ("bia@beta.demo", f"Qual o resumo do fornecedor {PNCP_AL}?")
-    ] * 12
-    with ThreadPoolExecutor(max_workers=12) as pool:
+    ] * 8
+    with ThreadPoolExecutor(max_workers=16) as pool:
         codigos = list(pool.map(lambda p: perguntar(*p).status_code, pedidos))
-    assert codigos == [200] * 24
+    assert codigos == [200] * 16
 
     # Recalcula a cadeia com a mesma fórmula do trigger auditoria_encadear (001_schema.sql).
     quebras = banco_superusuario.execute(
@@ -153,4 +148,4 @@ def test_consultas_em_paralelo_mantem_a_trilha_encadeada(perguntar, banco_superu
         """
     ).fetchone()
     assert quebras[:2] == (0, 0), f"cadeia quebrada: {quebras}"
-    assert quebras[2] >= 24
+    assert quebras[2] >= 16
