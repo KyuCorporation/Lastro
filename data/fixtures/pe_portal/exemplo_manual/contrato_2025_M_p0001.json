@@ -1,0 +1,23 @@
+{
+ "resposta": {
+  "status": "OK",
+  "conteudo": [
+   {
+    "AnoReferencia": 2025,
+    "Esfera": "M",
+    "CodigoMunicipio": "2606002",
+    "Municipio": "GARANHUNS",
+    "CodigoUG": "1146",
+    "NomeUG": "PREFEITURA EXEMPLO DE GARANHUNS (SINTÉTICO)",
+    "NumeroContrato": "045/2025",
+    "CpfCnpj": "99000002000148",
+    "NomeContratado": "TRANSPORTES EXEMPLO BETA LTDA (SINTÉTICO)",
+    "Objeto": "Transporte escolar da zona rural",
+    "ValorContrato": 480000.5,
+    "DataAssinatura": "2025-03-10",
+    "DataInicioVigencia": "2025-03-10",
+    "DataFimVigencia": "2026-03-09"
+   }
+  ]
+ }
+}
