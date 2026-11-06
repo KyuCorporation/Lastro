@@ -24,5 +24,8 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["app"]
-markers = ["rede: testes que acessam a internet (não rodam por padrão)"]
-addopts = "-m 'not rede'"
+markers = [
+  "rede: testes que acessam a internet (não rodam por padrão)",
+  "integracao: sistema de pé e com dados da pipeline (make demo; rodam com make test-integracao)",
+]
+addopts = "-m 'not rede and not integracao'"
