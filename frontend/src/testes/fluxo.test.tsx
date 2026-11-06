@@ -17,7 +17,7 @@ async function entrarComo(email: string) {
 describe("login", () => {
   it("sem sessão, qualquer rota leva ao login", async () => {
     montarApp({ rota: "/recibos/x" });
-    expect(await screen.findByRole("heading", { name: "Entrar no Lastro" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar no KYU" })).toBeInTheDocument();
   });
 
   it("senha errada mostra a mensagem da API e não entra", async () => {
@@ -33,8 +33,9 @@ describe("login", () => {
   it("login válido guarda o token e mostra usuário, tenant e UFs", async () => {
     const { token } = montarApp();
     await entrarComo("ana@alfa.demo");
-    expect(await screen.findByRole("heading", { name: "Consulta" })).toBeInTheDocument();
-    expect(screen.getByText(/Ana \(analista\) · Analista · Cliente Alfa/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Consulta inteligente" })).toBeInTheDocument();
+    expect(screen.getByText("Ana (analista)")).toBeInTheDocument();
+    expect(screen.getByText("Analista de risco · Cliente Alfa")).toBeInTheDocument();
     expect(screen.getByLabelText("Estados autorizados: PE")).toBeInTheDocument();
     expect(token.ler()).toBe("token-ana@alfa.demo");
   });
@@ -44,11 +45,20 @@ describe("login", () => {
     expect(await screen.findByText("Sua sessão expirou. Entre novamente.")).toBeInTheDocument();
   });
 
+  it("depois de sair, o próximo login começa na consulta, não na tela do usuário anterior", async () => {
+    montarApp({ rota: "/acesso" });
+    let usuario = await entrarComo("ana@alfa.demo");
+    expect(await screen.findByRole("heading", { name: "Controle de acesso por perfil" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Sair" }));
+    usuario = await entrarComo("gil@alfa.demo");
+    expect(await screen.findByRole("heading", { name: "Consulta inteligente" })).toBeInTheDocument();
+  });
+
   it("sair apaga o token", async () => {
     const { token } = montarApp();
     const usuario = await entrarComo("ana@alfa.demo");
     await usuario.click(await screen.findByRole("button", { name: "Sair" }));
-    expect(await screen.findByRole("heading", { name: "Entrar no Lastro" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar no KYU" })).toBeInTheDocument();
     expect(token.ler()).toBeNull();
   });
 });
@@ -58,9 +68,9 @@ describe("consulta", () => {
     const { api } = montarApp();
     const usuario = await entrarComo("ana@alfa.demo");
     await usuario.click(await screen.findByRole("button", { name: /vencem nos próximos 6 meses/ }));
-    await usuario.click(screen.getByRole("button", { name: "Perguntar" }));
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
 
-    const resultado = await screen.findByRole("region", { name: "Resposta" });
+    const resultado = await screen.findByRole("region", { name: "Resposta com evidências" });
     expect(api.consultas.criar).toHaveBeenCalledWith({
       pergunta: "Quais contratos do CNPJ 99.999.999/0001-91 vencem nos próximos 6 meses?",
     });
@@ -75,7 +85,7 @@ describe("consulta", () => {
       "href",
       RESPOSTA_ANA.citacoes[0].url_origem,
     );
-    expect(within(resultado).getByRole("link", { name: "Ver recibo" })).toHaveAttribute("href", "/recibos/recibo-1");
+    expect(within(resultado).getByRole("link", { name: "Ver evidências" })).toHaveAttribute("href", "/recibos/recibo-1");
     expect(within(resultado).queryByRole("note")).not.toBeInTheDocument(); // dado real: sem selo sintético
   });
 
@@ -91,11 +101,11 @@ describe("consulta", () => {
     });
     montarApp({ api });
     const usuario = await entrarComo("ana@alfa.demo");
-    await usuario.type(await screen.findByLabelText("Sua pergunta"), "Quanto recebeu em Alagoas?");
-    await usuario.click(screen.getByRole("button", { name: "Perguntar" }));
+    await usuario.type(await screen.findByLabelText("Pergunta em linguagem natural"), "Quanto recebeu em Alagoas?");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
     const resultado = await screen.findByRole("region", { name: "Acesso negado" });
     expect(resultado).toHaveTextContent("Você não tem acesso a dados de AL.");
-    expect(within(resultado).queryByRole("link", { name: "Ver recibo" })).not.toBeInTheDocument();
+    expect(within(resultado).queryByRole("link", { name: "Ver evidências" })).not.toBeInTheDocument();
   });
 
   it("negação de escopo da API (403 ESCOPO_NEGADO) aparece no painel de acesso negado", async () => {
@@ -106,8 +116,8 @@ describe("consulta", () => {
     });
     montarApp({ api });
     const usuario = await entrarComo("ana@alfa.demo");
-    await usuario.type(await screen.findByLabelText("Sua pergunta"), "Quanto recebeu em Alagoas?");
-    await usuario.click(screen.getByRole("button", { name: "Perguntar" }));
+    await usuario.type(await screen.findByLabelText("Pergunta em linguagem natural"), "Quanto recebeu em Alagoas?");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
     const resultado = await screen.findByRole("region", { name: "Acesso negado" });
     expect(resultado).toHaveTextContent("Você não tem acesso a dados de AL.");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument(); // não é erro: é a regra funcionando
@@ -116,8 +126,8 @@ describe("consulta", () => {
   it("resposta sintética mostra o selo", async () => {
     montarApp({ api: apiFalsa({ consulta: async () => ({ ...RESPOSTA_ANA, sintetico: true }) }) });
     const usuario = await entrarComo("ana@alfa.demo");
-    await usuario.type(await screen.findByLabelText("Sua pergunta"), "x");
-    await usuario.click(screen.getByRole("button", { name: "Perguntar" }));
+    await usuario.type(await screen.findByLabelText("Pergunta em linguagem natural"), "x");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
     expect(await screen.findByRole("note")).toHaveTextContent("dado sintético");
   });
 
@@ -129,8 +139,8 @@ describe("consulta", () => {
     });
     montarApp({ api });
     const usuario = await entrarComo("ana@alfa.demo");
-    await usuario.type(await screen.findByLabelText("Sua pergunta"), "x");
-    await usuario.click(screen.getByRole("button", { name: "Perguntar" }));
+    await usuario.type(await screen.findByLabelText("Pergunta em linguagem natural"), "x");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
     const alerta = await screen.findByRole("alert");
     expect(alerta).toHaveTextContent("Limite de 30 consultas por minuto.");
     expect(alerta).toHaveTextContent("rid-9");
@@ -140,16 +150,16 @@ describe("consulta", () => {
     montarApp();
     await entrarComo("gil@alfa.demo");
     expect(await screen.findByRole("note")).toHaveTextContent("não faz consultas em linguagem natural");
-    expect(screen.queryByLabelText("Sua pergunta")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Pergunta em linguagem natural")).not.toBeInTheDocument();
   });
 
   it("sessão que cai no meio volta para o login", async () => {
     const api = apiFalsa();
     const { sessao } = montarApp({ api });
     await entrarComo("ana@alfa.demo");
-    await screen.findByRole("heading", { name: "Consulta" });
+    await screen.findByRole("heading", { name: "Consulta inteligente" });
     act(() => sessao.perder());
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entrar no Lastro" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entrar no KYU" })).toBeInTheDocument());
     expect(screen.getByText("Sua sessão expirou. Entre novamente.")).toBeInTheDocument();
   });
 });
