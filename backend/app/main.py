@@ -14,6 +14,7 @@ from app.modules.auditoria.router import router as auditoria_router
 from app.modules.auth.router import router as auth_router
 from app.modules.carteiras.router import router as carteiras_router
 from app.modules.consulta.router import router as consulta_router
+from app.modules.fontes.router import router as fontes_router
 from app.modules.fornecedores.router import router as fornecedores_router
 from app.modules.recibos.router import router as recibos_router
 
@@ -40,6 +41,7 @@ app.include_router(recibos_router)
 app.include_router(carteiras_router)
 app.include_router(fornecedores_router)
 app.include_router(auditoria_router)
+app.include_router(fontes_router)
 
 
 class Saude(BaseModel):
