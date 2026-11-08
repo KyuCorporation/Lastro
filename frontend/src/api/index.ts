@@ -5,14 +5,22 @@
 import { consultasSimuladas } from "./adaptadores/consultasSimuladas";
 import type { Http } from "./http";
 import type {
+  CarteiraCriada,
+  CarteiraEntrada,
+  CarteiraListada,
   ConsultaEntrada,
   ConsultaListada,
   ConsultaSaida,
+  Dossie,
+  EventoAuditoria,
+  Fila,
   Fonte,
   LoginEntrada,
   LoginSaida,
   Recibo,
   Usuario,
+  VerificacaoCadeia,
+  VerificacaoRecibo,
 } from "./types";
 
 export interface ApiAuth {
@@ -28,6 +36,23 @@ export interface ApiConsultas {
 
 export interface ApiRecibos {
   obter(id: string): Promise<Recibo>;
+  /** GET /recibos/{id}/verificar: recalcula o hash no servidor. */
+  verificar(id: string): Promise<VerificacaoRecibo>;
+}
+
+export interface ApiCarteiras {
+  listar(): Promise<CarteiraListada[]>;
+  criar(entrada: CarteiraEntrada): Promise<CarteiraCriada>;
+  fila(id: string): Promise<Fila>;
+}
+
+export interface ApiFornecedores {
+  dossie(cnpj: string): Promise<Dossie>;
+}
+
+export interface ApiAuditoria {
+  listar(limite?: number): Promise<EventoAuditoria[]>;
+  verificar(): Promise<VerificacaoCadeia>;
 }
 
 export interface ApiFontes {
@@ -39,6 +64,9 @@ export interface Api {
   consultas: ApiConsultas;
   recibos: ApiRecibos;
   fontes: ApiFontes;
+  carteiras: ApiCarteiras;
+  fornecedores: ApiFornecedores;
+  auditoria: ApiAuditoria;
 }
 
 export function criarApiAuth(http: Http): ApiAuth {
@@ -58,6 +86,26 @@ export function criarApiConsultas(http: Http): ApiConsultas {
 export function criarApiRecibos(http: Http): ApiRecibos {
   return {
     obter: (id) => http.get<Recibo>(`/recibos/${encodeURIComponent(id)}`),
+    verificar: (id) => http.get<VerificacaoRecibo>(`/recibos/${encodeURIComponent(id)}/verificar`),
+  };
+}
+
+export function criarApiCarteiras(http: Http): ApiCarteiras {
+  return {
+    listar: () => http.get<CarteiraListada[]>("/carteiras"),
+    criar: (entrada) => http.post<CarteiraCriada>("/carteiras", entrada),
+    fila: (id) => http.get<Fila>(`/carteiras/${encodeURIComponent(id)}/fila`),
+  };
+}
+
+export function criarApiFornecedores(http: Http): ApiFornecedores {
+  return { dossie: (cnpj) => http.get<Dossie>(`/fornecedores/${encodeURIComponent(cnpj)}/dossie`) };
+}
+
+export function criarApiAuditoria(http: Http): ApiAuditoria {
+  return {
+    listar: (limite = 100) => http.get<EventoAuditoria[]>(`/auditoria?limite=${encodeURIComponent(limite)}`),
+    verificar: () => http.get<VerificacaoCadeia>("/auditoria/verificar"),
   };
 }
 
@@ -76,5 +124,8 @@ export function criarApi(http: Http, opcoes: OpcoesApi = {}): Api {
     consultas: opcoes.consultasSimuladas ? consultasSimuladas() : criarApiConsultas(http),
     recibos: criarApiRecibos(http),
     fontes: criarApiFontes(http),
+    carteiras: criarApiCarteiras(http),
+    fornecedores: criarApiFornecedores(http),
+    auditoria: criarApiAuditoria(http),
   };
 }

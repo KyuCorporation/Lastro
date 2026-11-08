@@ -5,7 +5,21 @@ import App from "../App";
 import { Provedores } from "../Provedores";
 import type { Api } from "../api";
 import { ErroApi } from "../api/http";
-import type { ConsultaListada, ConsultaSaida, Fonte, Recibo, Usuario } from "../api/types";
+import type {
+  CarteiraCriada,
+  CarteiraEntrada,
+  CarteiraListada,
+  ConsultaListada,
+  ConsultaSaida,
+  Dossie,
+  EventoAuditoria,
+  Fila,
+  Fonte,
+  Recibo,
+  Usuario,
+  VerificacaoCadeia,
+  VerificacaoRecibo,
+} from "../api/types";
 import { criarSessao, type ArmazenamentoToken } from "../auth/sessao";
 import { FUTURO_ROUTER } from "../config/ambiente";
 
@@ -114,6 +128,80 @@ export const HISTORICO: ConsultaListada[] = [
     intent: "fora_de_escopo", status: "abstencao", criada_em: "2026-11-06T11:15:00Z", recibo_id: null },
 ];
 
+export const CARTEIRAS: CarteiraListada[] = [
+  { id: "cart-1", nome: "Homologação 2026", finalidade: "homologacao", n_itens: 2, criada_em: "2026-11-05T10:00:00Z" },
+];
+
+export const FILA: Fila = {
+  carteira: { id: "cart-1", nome: "Homologação 2026", finalidade: "homologacao", criada_em: "2026-11-05T10:00:00Z" },
+  itens: [
+    {
+      cnpj: "99999999000191",
+      razao_social: "FORNECEDOR ALFA LTDA",
+      prioridade: 61.5,
+      valor_exposto: "1250000.00",
+      sinais: [
+        {
+          tipo: "sancao_direta",
+          gravidade: "forte",
+          explicacao: "Sanção vigente no CEIS até 10/05/2027.",
+          evidencias: [{ tabela: "sancoes", id: "s-1", url_origem: "https://portaldatransparencia.gov.br/sancoes/ceis/1" }],
+        },
+        {
+          tipo: "penhasco",
+          gravidade: "atencao",
+          explicacao: "62% do valor vigente termina em até 180 dias.",
+          evidencias: [{ tabela: "contratos", id: "ct-1", url_origem: null }],
+        },
+      ],
+    },
+    { cnpj: "11222333000181", razao_social: null, prioridade: 0, valor_exposto: "0.00", sinais: [] },
+  ],
+};
+
+export const DOSSIE: Dossie = {
+  fornecedor: { cnpj: "99999999000191", razao_social: "FORNECEDOR ALFA LTDA", uf_sede: "PE" },
+  resumo_por_uf: [
+    { uf: "PE", n_contratos: 3, valor_contratado: "1800000.00", valor_vigente: "1250000.00", n_pagamentos: 4,
+      valor_pago: "300000.00", valor_empenhado: "450000.00" },
+  ],
+  contratos_vigentes: [
+    { id: "ct-1", fonte_id: "pe_portal", id_origem: "ctr:2025:001",
+      url_origem: "https://sistemas.tcepe.tc.br/DadosAbertos/Contratos!json?AnoReferencia=2025",
+      coletado_em: "2026-11-06T09:00:00Z", uf: "PE", orgao_id: "o-1", orgao_nome: "Secretaria de Saúde",
+      objeto: "Limpeza hospitalar", valor_global: "1250000.00", data_assinatura: "2025-01-10",
+      vigencia_inicio: "2025-01-15", vigencia_fim: "2027-01-14" },
+  ],
+  vencendo_180d: [],
+  sancoes: [
+    { id: "s-1", fonte_id: "ceis", id_origem: "ceis:1", url_origem: "https://portaldatransparencia.gov.br/sancoes/ceis/1",
+      coletado_em: "2026-11-06T08:00:00Z", tipo: "Impedimento", orgao_sancionador: "Prefeitura do Recife",
+      uf_orgao: "PE", data_inicio: "2026-05-10", data_fim: "2027-05-10", fundamentacao: null, vigente: true },
+  ],
+  sinais: [
+    { id: "si-1", tipo: "sancao_direta", gravidade: "forte", uf: "PE", valor: null,
+      explicacao: "Sanção vigente no CEIS até 10/05/2027.",
+      evidencias: [{ tabela: "sancoes", id: "s-1", url_origem: "https://portaldatransparencia.gov.br/sancoes/ceis/1" }],
+      versao_regra: "v1", calculado_em: "2026-11-06T10:00:00Z" },
+  ],
+  socios: [{ socio_tipo: "PF", socio_exibicao: "***.456.789-** JOSÉ", fonte_id: "receita_qsa", coletado_em: "2026-11-06T07:00:00Z" }],
+  fontes: [
+    { fonte_id: "pe_portal", nome: "TCE-PE Dados Abertos", coletado_em: "2026-11-06T09:00:00Z", sintetico: false },
+    { fonte_id: "ceis", nome: "CEIS", coletado_em: "2026-11-06T08:00:00Z", sintetico: false },
+  ],
+};
+
+export const EVENTOS: EventoAuditoria[] = [
+  { seq: 12, usuario_id: ANA.id, evento: "consulta", detalhes: { intent: "resumo_fornecedor" },
+    criado_em: "2026-11-06T11:12:00Z", hash: "d".repeat(64) },
+  { seq: 11, usuario_id: ANA.id, evento: "negado", detalhes: { motivo: "uf_fora_do_escopo" },
+    criado_em: "2026-11-06T11:10:00Z", hash: "e".repeat(64) },
+];
+
+export const CADEIA_INTEGRA: VerificacaoCadeia = { integra: true, n_eventos: 12, primeiro_seq_quebrado: null };
+
+export const RECIBO_INTEGRO: VerificacaoRecibo = { integro: true, hash_gravado: "a".repeat(64), hash_recalculado: "a".repeat(64) };
+
 /** Backend falso: usuários por e-mail (senha demo123), resposta de consulta configurável. */
 export function apiFalsa(
   opcoes: {
@@ -121,6 +209,11 @@ export function apiFalsa(
     consulta?: () => Promise<ConsultaSaida>;
     recibo?: (id: string) => Promise<Recibo>;
     historico?: () => Promise<ConsultaListada[]>;
+    verificarRecibo?: (id: string) => Promise<VerificacaoRecibo>;
+    criarCarteira?: (entrada: CarteiraEntrada) => Promise<CarteiraCriada>;
+    fila?: (id: string) => Promise<Fila>;
+    dossie?: (cnpj: string) => Promise<Dossie>;
+    cadeia?: () => Promise<VerificacaoCadeia>;
   } = {},
 ) {
   const usuarios = opcoes.usuarios ?? { "ana@alfa.demo": ANA, "gil@alfa.demo": GIL, "caio@alfa.demo": CAIO };
@@ -151,6 +244,26 @@ export function apiFalsa(
             return RECIBO_ANA;
           }),
       ),
+      verificar: vi.fn(opcoes.verificarRecibo ?? (async () => RECIBO_INTEGRO)),
+    },
+    carteiras: {
+      listar: vi.fn(async () => CARTEIRAS),
+      criar: vi.fn(
+        opcoes.criarCarteira ??
+          (async (e: CarteiraEntrada) => ({ id: "cart-nova", nome: e.nome, finalidade: e.finalidade, n_itens: e.cnpjs.length, cnpjs_invalidos: [] })),
+      ),
+      fila: vi.fn(
+        opcoes.fila ??
+          (async (id: string) => {
+            if (id !== FILA.carteira.id) throw new ErroApi(404, "NAO_ENCONTRADO", "Carteira não encontrada.", "rid-404");
+            return FILA;
+          }),
+      ),
+    },
+    fornecedores: { dossie: vi.fn(opcoes.dossie ?? (async () => DOSSIE)) },
+    auditoria: {
+      listar: vi.fn(async () => EVENTOS),
+      verificar: vi.fn(opcoes.cadeia ?? (async () => CADEIA_INTEGRA)),
     },
   };
   return api;
