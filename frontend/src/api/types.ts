@@ -290,3 +290,53 @@ export interface VerificacaoCadeia {
   n_eventos: number;
   primeiro_seq_quebrado?: number | null;
 }
+
+// ------------------------------------------------------------------ fontes e métricas
+/** GET /fontes/execucoes: histórico de ingestão, mais recentes primeiro. */
+export interface ExecucaoIngestao {
+  id: string;
+  fonte_id: string;
+  status: "rodando" | "ok" | "parcial" | "falhou" | string;
+  iniciada_em: string;
+  finalizada_em: string | null;
+  registros_lidos: number | null;
+  registros_novos: number | null;
+  registros_descartados: number | null;
+  erro: string | null;
+}
+
+/** Resumo de eval/reports/gabarito.json (make eval). Campos ausentes chegam como undefined. */
+export interface MetricasGabarito {
+  gerado_em?: string;
+  provedor_llm?: string;
+  n_casos?: number;
+  ok?: number;
+  acerto_intent?: number;
+  n_intent_avaliada?: number;
+  meta_intent?: number;
+  acerto_comportamento?: number;
+  acerto_resultado?: number | null;
+  n_com_sql_referencia?: number;
+  citacao_correta?: number | null;
+  n_com_citacao?: number;
+  taxa_fallback?: number;
+}
+
+/** Resumo de eval/reports/ataques.json (make eval-ataques). */
+export interface MetricasAtaques {
+  gerado_em?: string;
+  provedor_llm?: string;
+  n_casos?: number;
+  bloqueados?: number;
+  pct_bloqueado?: number;
+  vazamentos?: number;
+  por_categoria?: Record<string, { n: number; bloqueados: number; vazamentos: number }>;
+}
+
+/** GET /metricas: cada parte é null enquanto o relatório não foi gerado. */
+export interface Metricas {
+  eval: MetricasGabarito | null;
+  ataques: MetricasAtaques | null;
+  cronometro: Record<string, unknown> | null;
+  ultima_atualizacao: string | null;
+}

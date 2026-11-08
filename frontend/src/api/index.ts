@@ -13,10 +13,12 @@ import type {
   ConsultaSaida,
   Dossie,
   EventoAuditoria,
+  ExecucaoIngestao,
   Fila,
   Fonte,
   LoginEntrada,
   LoginSaida,
+  Metricas,
   Recibo,
   Usuario,
   VerificacaoCadeia,
@@ -57,6 +59,12 @@ export interface ApiAuditoria {
 
 export interface ApiFontes {
   listar(): Promise<Fonte[]>;
+  /** GET /fontes/execucoes: todas as fontes, ou só `fonteId`. */
+  execucoes(fonteId?: string): Promise<ExecucaoIngestao[]>;
+}
+
+export interface ApiMetricas {
+  obter(): Promise<Metricas>;
 }
 
 export interface Api {
@@ -67,6 +75,7 @@ export interface Api {
   carteiras: ApiCarteiras;
   fornecedores: ApiFornecedores;
   auditoria: ApiAuditoria;
+  metricas: ApiMetricas;
 }
 
 export function criarApiAuth(http: Http): ApiAuth {
@@ -110,7 +119,15 @@ export function criarApiAuditoria(http: Http): ApiAuditoria {
 }
 
 export function criarApiFontes(http: Http): ApiFontes {
-  return { listar: () => http.get<Fonte[]>("/fontes") };
+  return {
+    listar: () => http.get<Fonte[]>("/fontes"),
+    execucoes: (fonteId) =>
+      http.get<ExecucaoIngestao[]>(fonteId ? `/fontes/execucoes?fonte_id=${encodeURIComponent(fonteId)}` : "/fontes/execucoes"),
+  };
+}
+
+export function criarApiMetricas(http: Http): ApiMetricas {
+  return { obter: () => http.get<Metricas>("/metricas") };
 }
 
 export interface OpcoesApi {
@@ -127,5 +144,6 @@ export function criarApi(http: Http, opcoes: OpcoesApi = {}): Api {
     carteiras: criarApiCarteiras(http),
     fornecedores: criarApiFornecedores(http),
     auditoria: criarApiAuditoria(http),
+    metricas: criarApiMetricas(http),
   };
 }
