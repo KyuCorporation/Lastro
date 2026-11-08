@@ -1,7 +1,7 @@
 # frontend/ — interface
 
 Vite + React 18 + TypeScript (`strict`), TanStack Query, React Router 6 e Tailwind. Visual e telas seguem o design
-da KYU (marca, cores e as telas numeradas: 01 a 05 do design, 06 e 07 do N2 no mesmo estilo).
+da KYU (marca, cores e as telas numeradas: 01 a 05 do design, 06 a 08 do N2 no mesmo estilo).
 
 ## Telas
 
@@ -14,7 +14,8 @@ da KYU (marca, cores e as telas numeradas: 01 a 05 do design, 06 e 07 do N2 no m
 | 04 Auditoria de consultas | `/auditoria` | `GET /consultas` (o que a RLS mostra), com filtros. Auditor e admin veem também a cadeia: selo de `GET /auditoria/verificar` e os 20 eventos mais recentes de `GET /auditoria`. Gestor não vê o item no menu: a API responderia 403 |
 | 06 Carteiras e fila | `/carteiras`, `/carteiras/:id` | `GET` e `POST /carteiras` (colagem de CNPJs; só analista e admin criam), `GET /carteiras/{id}/fila`: ordem por prioridade, regra aplicada, sinais com gravidade em texto, explicação e links das evidências |
 | 07 Dossiê do fornecedor | `/fornecedores/:cnpj` | `GET /fornecedores/{cnpj}/dossie`: resumo por UF, sinais, contratos vigentes e vencendo, sanções, sócios (gestor vê o aviso), fontes. Cada linha com link para a origem |
-| 05 Fonte e catálogo | `/fontes` | Conteúdo de `docs/catalogo-fontes.md`, sem contagens (`GET /fontes` ainda não existe) |
+| 05 Fonte e catálogo | `/fontes` | `GET /fontes` (última coleta de cada fonte) e `GET /fontes/execucoes` (últimas 20 coletas: lidos, novos, descartados, situação e erro), mais o catálogo de `docs/catalogo-fontes.md` |
+| 08 Métricas de qualidade | `/metricas` | `GET /metricas` (relatórios de `make eval` e `make eval-ataques`): cada número com a meta do SPEC §14.6 e se foi atingida, em texto. Relatório ausente vira aviso com o comando |
 
 Cores em `tailwind.config.js` (`kyu-*`), classes comuns em `src/index.css` (`cartao`, `botao-primario`, `foco`),
 marca em `src/components/LogoKyu.tsx` e `public/favicon.svg`.
@@ -60,8 +61,8 @@ src/
   features/auditoria/   # CadeiaAuditoria: selo da cadeia e eventos
   components/           # Moldura (lateral + topo), LogoKyu, Selo, LinkOrigem (só http/https), TituloPagina, MensagemErro, SeloSintetico, Carregando
   lib/                  # destaques.ts, extenso.ts (leitor de tela), formato.ts, apresentacao.ts (rótulos de perfil, UF, status)
-  pages/                # Login, Consulta, Recibo, Acesso, Auditoria, Fontes, Carteiras, Fila, Dossie
-  testes/               # montar.tsx (Api falsa + app em memória), fluxo.test.tsx, telas.test.tsx, telas_n2.test.tsx
+  pages/                # Login, Consulta, Recibo, Acesso, Auditoria, Fontes, Carteiras, Fila, Dossie, Metricas
+  testes/               # montar.tsx (Api falsa + app em memória), fluxo.test.tsx, telas.test.tsx, telas_n2.test.tsx, fontes_metricas.test.tsx
 ```
 
 Endpoint novo: tipo em `api/types.ts` → função em `api/index.ts` (campo novo em `Api`) → hook em
