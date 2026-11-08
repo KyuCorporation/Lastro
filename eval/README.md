@@ -1,6 +1,6 @@
 # eval/ — avaliação
 
-- `gabarito/perguntas.yaml`: 100 perguntas. **O `sql_referencia` é escrito por outra pessoa ou outro agente que não o autor do catálogo.** Senão o teste vira circular. (T20, ainda não implementado no harness.)
+- `gabarito/perguntas.yaml`: 100 perguntas (60 responder, 15 abster, 10 esclarecer, 15 negar, aproximadamente) sobre os dados das fixtures do `make demo`. **O `sql_referencia` é escrito por outra pessoa ou outro agente que não o autor do catálogo.** Senão o teste vira circular. Hoje só a G001 tem; nos demais casos o harness mede intent, comportamento e citação, mas não o resultado.
 - `ataques/ataques.yaml`: suíte de ataques (T21), 58 casos em 11 categorias: injeção direta, injeção armazenada
   (fornecedor envenenado de `db/seeds/020_demo_ataque.sql`), outra UF, outro tenant, IDOR, extração do prompt, SQL
   no parâmetro, entrada inválida, perfil, autenticação (token ausente, adulterado, `alg: none`, segredo errado,

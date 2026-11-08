@@ -44,7 +44,10 @@ FORA_DO_PERMITIDO = re.compile(
 # Assuntos do catálogo, em ordem de prioridade.
 ASSUNTOS: list[tuple[str, re.Pattern[str]]] = [
     ("socios_sancionados", re.compile(r"\bsoci[oa]s?\b|quadro societario")),
-    ("sancoes_fornecedor", re.compile(r"sanc|sancion|\bceis\b|\bcnep\b|inidone|punid|impedid")),
+    (
+        "sancoes_fornecedor",
+        re.compile(r"sanc|sancion|\bceis\b|\bcnep\b|inidone|punid|punic|penalidad|impedi"),
+    ),
     ("contratos_vencendo", re.compile(r"\bvenc|terminam|\btermina\b|\bacaba|expira")),
     ("contratos_vigentes", re.compile(r"vigent|em vigor|\bativos?\b|em andamento|em execucao")),
     ("pagamentos_periodo", re.compile(r"pagament|\bpag[oa]s?\b|\bpagou|liquidac|empenh")),
@@ -52,6 +55,9 @@ ASSUNTOS: list[tuple[str, re.Pattern[str]]] = [
     ("resumo_fornecedor", re.compile(r"resum|receb|\btotal\b|\bvalor|historico|panorama|faturou")),
 ]
 
+PEDE_RESUMO = re.compile(r"\bresum|panorama")
+RECEBIMENTO = re.compile(r"receb|\bpag")
+SOBRE_CONTRATOS = re.compile(r"contrat|objeto")
 DOMINIO = re.compile(r"gast|govern|contrat|fornecedor|empresa|cnpj|pag|receb|licitac|despesa|orgao|valor")
 # Em ordem: "objeto" tem prioridade, então em "contratos com objeto de X" o termo é X.
 _TERMO = r"\s+(?:de\s+|do\s+|da\s+)?(?P<termo>[a-z0-9 ]{2,80})"
@@ -174,14 +180,24 @@ def planejar_por_regras(pergunta: str, hoje: date) -> PlanoConsulta:
         return esclarecer(PERGUNTA_CARTEIRA)
 
     assunto = next((intent for intent, padrao in ASSUNTOS if padrao.search(t)), None)
+    if PEDE_RESUMO.search(t):  # "resumo de contratos e pagamentos" é resumo, não pagamentos sem período
+        assunto = "resumo_fornecedor"
+    elif assunto == "resumo_fornecedor" and RECEBIMENTO.search(t) and extrair_periodo(t, hoje):
+        assunto = "pagamentos_periodo"  # "quanto recebeu entre X e Y" pede o período, não o histórico todo
 
-    busca = next((m for padrao in BUSCAS if (m := padrao.search(t))), None)
+    # Busca textual só quando a pergunta fala de contrato ou objeto ("um poema sobre o agreste" não é busca).
+    busca = None
+    if SOBRE_CONTRATOS.search(t):
+        busca = next((m for padrao in BUSCAS if (m := padrao.search(t))), None)
     if assunto is None and cnpj.valor is None and (m := busca):
         termo = _sem_estado_no_fim(m.group("termo"))
         if len(termo) >= 2:
             return PlanoConsulta(
                 intent="busca_objeto", parametros=Parametros(termo=termo[:80].strip(), uf=uf)
             )
+
+    if assunto is None and cnpj.valor and DOMINIO.search(t):
+        assunto = "resumo_fornecedor"  # pergunta geral sobre um CNPJ válido: o resumo é a resposta útil
 
     if assunto is None:
         if DOMINIO.search(t) or cnpj.valor or cnpj.invalido:
