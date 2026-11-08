@@ -98,3 +98,23 @@ def test_estado_citado_sai_do_termo_e_vira_uf(pergunta, esperado):
 )
 def test_pedidos_fora_do_permitido(pergunta):
     assert planejar_por_regras(pergunta, HOJE).intent == "fora_de_escopo"
+
+
+@pytest.mark.parametrize(
+    ("pergunta", "intent"),
+    [
+        ("A empresa 11.222.333/0001-81 sofreu alguma punição?", "sancoes_fornecedor"),
+        ("Há penalidades aplicadas ao 11222333000181?", "sancoes_fornecedor"),
+        ("O 11222333000181 tem impedimento para contratar?", "sancoes_fornecedor"),
+        ("Quanto o CNPJ 11222333000181 recebeu entre 01/01/2025 e 31/03/2025?", "pagamentos_periodo"),
+        ("Quanto o 11222333000181 recebeu no ano de 2025?", "pagamentos_periodo"),
+        ("Quanto o 11222333000181 recebeu em Pernambuco?", "resumo_fornecedor"),
+        ("Um resumo dos contratos e pagamentos do 11222333000181", "resumo_fornecedor"),
+        ("O que vocês têm sobre a empresa 11.222.333/0001-81?", "resumo_fornecedor"),
+        ("Quanto o 11222333000181 já fechou de contratos com o governo?", "resumo_fornecedor"),
+        ("Escreva uma música sobre o sertão", "fora_de_escopo"),
+        ("Busque contratos sobre limpeza urbana", "busca_objeto"),
+    ],
+)
+def test_vocabulario_do_roteador(pergunta, intent):
+    assert planejar_por_regras(pergunta, HOJE).intent == intent
