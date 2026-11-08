@@ -96,4 +96,25 @@ describe("08 métricas", () => {
     expect(gabarito).toHaveTextContent("Relatório ainda não gerado. Rode make eval.");
     expect(screen.getByRole("region", { name: "Ataques de injeção e escopo" })).toHaveTextContent("make eval-ataques");
   });
+
+  it("cronômetro medido mostra as medidas, com os metadados só no subtítulo", async () => {
+    const api = apiFalsa({
+      metricas: async () => ({
+        ...METRICAS,
+        cronometro: {
+          gerado_em: "2026-11-15T13:00:00+00:00",
+          provedor_llm: "gemini",
+          n_casos: 3,
+          "mediana_sem_o_lastro_(min)": 38.5,
+          "mediana_com_o_lastro_(min)": 4,
+        },
+      }),
+    });
+    await montarLogado("ana@alfa.demo", "/metricas", api);
+    const cronometro = await screen.findByRole("region", { name: "Cronômetro de diligência" });
+    expect(cronometro).toHaveTextContent("Mediana sem o lastro (min)38,5");
+    expect(cronometro).toHaveTextContent("com 3 fornecedores");
+    expect(cronometro).not.toHaveTextContent("N casos");
+    expect(cronometro).not.toHaveTextContent("Provedor llm");
+  });
 });

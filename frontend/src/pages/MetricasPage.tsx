@@ -176,8 +176,13 @@ function Ataques({ m }: { m: MetricasAtaques }) {
   );
 }
 
+// Metadados do relatório: vão para o subtítulo, não para a lista de medidas.
+const METADADOS = new Set(["gerado_em", "provedor_llm", "n_casos", "modo"]);
+
 function Cronometro({ dados }: { dados: Record<string, unknown> }) {
-  const campos = Object.entries(dados).filter(([, v]) => typeof v === "string" || typeof v === "number");
+  const campos = Object.entries(dados).filter(
+    ([k, v]) => !METADADOS.has(k) && (typeof v === "string" || typeof v === "number"),
+  );
   return (
     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-[max-content_1fr]">
       {campos.map(([k, v]) => (
@@ -196,6 +201,14 @@ function subtitulo(parte: { gerado_em?: string; provedor_llm?: string } | null, 
   return `Gerado por ${comando} ${quando} · ${nomeProvedor(parte.provedor_llm)}`;
 }
 
+function subtituloCronometro(c: Record<string, unknown> | null): string {
+  const base = "Tempo para analisar um fornecedor com e sem o Lastro.";
+  if (!c) return base;
+  const quando = typeof c.gerado_em === "string" ? ` Medido em ${dataHora(c.gerado_em)}` : "";
+  const n = typeof c.n_casos === "number" ? `, com ${plural(c.n_casos, "fornecedor", "fornecedores")}` : "";
+  return quando ? `${base}${quando}${n}.` : base;
+}
+
 function Conteudo({ m }: { m: Metricas }) {
   return (
     <>
@@ -205,8 +218,7 @@ function Conteudo({ m }: { m: Metricas }) {
       <Secao id="titulo-ataques" titulo="Ataques de injeção e escopo" subtitulo={subtitulo(m.ataques, "make eval-ataques")}>
         {m.ataques ? <Ataques m={m.ataques} /> : <NaoGerado comando="make eval-ataques" />}
       </Secao>
-      <Secao id="titulo-cronometro" titulo="Cronômetro de diligência"
-        subtitulo="Tempo para analisar um fornecedor com e sem o Lastro.">
+      <Secao id="titulo-cronometro" titulo="Cronômetro de diligência" subtitulo={subtituloCronometro(m.cronometro)}>
         {m.cronometro ? <Cronometro dados={m.cronometro} /> : <p className="text-kyu-suave">Ainda não medido.</p>}
       </Secao>
     </>
