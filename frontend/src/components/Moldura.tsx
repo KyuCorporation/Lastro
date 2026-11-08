@@ -27,6 +27,8 @@ export function Moldura({ children }: { children: ReactNode }) {
   const itens: ItemMenu[] = [
     // O recibo é aberto a partir da consulta: o menu continua marcando "Consulta" (tela 02 do design).
     { rotulo: "Consulta", para: "/", ativoEm: /^\/(recibos\/.*)?$/ },
+    // A fila e o dossiê são abertos a partir da carteira: o menu continua marcando "Carteiras".
+    { rotulo: "Carteiras", para: "/carteiras", ativoEm: /^\/(carteiras|fornecedores)(\/|$)/ },
     { rotulo: "Fontes e catálogo", para: "/fontes" },
     { rotulo: "Acesso", para: "/acesso" },
     ...(pode(usuario.perfil, "ver_historico") ? [{ rotulo: "Auditoria", para: "/auditoria" }] : []),

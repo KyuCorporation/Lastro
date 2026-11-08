@@ -52,3 +52,19 @@ export function moeda(decimal: string): string {
   // Espaço comum no lugar do não separável: o mesmo texto que o backend escreve nas respostas.
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 }).replace(/\s/g, " ");
 }
+
+/** "99999999000191" → "99.999.999/0001-91". Fora do formato, devolve como veio. */
+export function cnpj(digitos: string): string {
+  const d = digitos.replace(/\D/g, "");
+  return d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : digitos;
+}
+
+/** Número com vírgula decimal: 61.5 → "61,5". */
+export function decimal(n: number, casas = 1): string {
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: casas });
+}
+
+/** Link só para http(s): url_origem vem de fonte externa e não pode virar javascript: na tela. */
+export function urlSegura(url: string | null | undefined): string | null {
+  return url && /^https?:\/\//i.test(url) ? url : null;
+}
