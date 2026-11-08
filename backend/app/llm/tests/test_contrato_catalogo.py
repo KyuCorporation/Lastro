@@ -25,6 +25,8 @@ PARAMETROS = {
     "contratos_vencendo": {"cnpj": F1, "dias": 180},
     "pagamentos_periodo": {"cnpj": F1, "data_inicio": date(2025, 1, 1), "data_fim": date(2025, 12, 31)},
     "sancoes_fornecedor": {"cnpj": F1},
+    "orgaos_fornecedor": {"cnpj": F1},
+    "busca_objeto": {"termo": "limpeza tcat"},
 }
 
 
@@ -58,7 +60,8 @@ def test_resultado_real_vira_texto_sem_marcador_e_passa_no_verificador(intent, c
     deterministico = redigir("p", resultado, ufs_autorizadas=ctx_ana.ufs, provedor=None)
     assert deterministico.status == "aprovado"
     assert deterministico.texto and not MARCADOR.search(deterministico.texto)
-    assert "11.222.333/0001-81" in deterministico.texto
+    if CONSULTAS[intent].usa_cnpj:  # a busca por objeto é nacional: não tem fornecedor no texto
+        assert "11.222.333/0001-81" in deterministico.texto
 
     anos = {v.year for k, v in resultado.parametros.items() if k.startswith("data_")}
     v = verificar(

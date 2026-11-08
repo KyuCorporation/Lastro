@@ -215,18 +215,18 @@ select uf from contratos
 
 
 def test_caso_4_busca_textual_nao_atravessa_a_uf(dados_catalogo, ctx_ana, ctx_bia):
-    """O mesmo objeto ('Serviço de teste') existe em PE e em AL: cada um só acha o da própria UF."""
+    """ "Limpeza" existe em contratos de PE e de AL: cada um só acha o da própria UF."""
     with sessao(ctx_ana) as conn:
-        ufs_ana = {r[0] for r in conn.execute(BUSCA_TEXTUAL, {"termo": "serviço de teste"})}
+        ufs_ana = {r[0] for r in conn.execute(BUSCA_TEXTUAL, {"termo": "limpeza tcat"})}
     with sessao(ctx_bia) as conn:
-        ufs_bia = {r[0] for r in conn.execute(BUSCA_TEXTUAL, {"termo": "serviço de teste"})}
+        ufs_bia = {r[0] for r in conn.execute(BUSCA_TEXTUAL, {"termo": "limpeza tcat"})}
     assert ufs_ana == {"PE"}
     assert ufs_bia == {"AL"}
 
 
 def test_caso_4_busca_textual_sem_contexto_nao_acha_nada(dados_catalogo):
     with sessao(None) as conn:
-        assert conn.execute(BUSCA_TEXTUAL, {"termo": "serviço de teste"}).fetchall() == []
+        assert conn.execute(BUSCA_TEXTUAL, {"termo": "limpeza tcat"}).fetchall() == []
 
 
 # ====================================================================== caso 5
