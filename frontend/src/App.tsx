@@ -10,6 +10,7 @@ import { DossiePage } from "./pages/DossiePage";
 import { FilaPage } from "./pages/FilaPage";
 import { FontesPage } from "./pages/FontesPage";
 import { LoginPage } from "./pages/LoginPage";
+import { MetricasPage } from "./pages/MetricasPage";
 import { ReciboPage } from "./pages/ReciboPage";
 
 function Layout() {
@@ -28,7 +29,7 @@ function Layout() {
   );
 }
 
-/** Rotas das telas do design (01 a 05) e do N2 (06 carteiras e fila, 07 dossiê). Tela nova = uma <Route> dentro do Layout e uma página em pages/. */
+/** Rotas das telas do design (01 a 05) e do N2 (06 carteiras e fila, 07 dossiê, 08 métricas). Tela nova = uma <Route> dentro do Layout e uma página em pages/. */
 export default function App() {
   return (
     <Routes>
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/acesso" element={<AcessoPage />} />
         <Route path="/auditoria" element={<AuditoriaPage />} />
         <Route path="/fontes" element={<FontesPage />} />
+        <Route path="/metricas" element={<MetricasPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

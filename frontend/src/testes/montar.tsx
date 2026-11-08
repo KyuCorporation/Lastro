@@ -13,8 +13,10 @@ import type {
   ConsultaSaida,
   Dossie,
   EventoAuditoria,
+  ExecucaoIngestao,
   Fila,
   Fonte,
+  Metricas,
   Recibo,
   Usuario,
   VerificacaoCadeia,
@@ -128,6 +130,24 @@ export const HISTORICO: ConsultaListada[] = [
     intent: "fora_de_escopo", status: "abstencao", criada_em: "2026-11-06T11:15:00Z", recibo_id: null },
 ];
 
+export const EXECUCOES: ExecucaoIngestao[] = [
+  { id: "e2", fonte_id: "ceis", status: "ok", iniciada_em: "2026-11-06T12:04:00Z", finalizada_em: "2026-11-06T12:05:00Z",
+    registros_lidos: 14700, registros_novos: 14604, registros_descartados: 96, erro: null },
+  { id: "e3", fonte_id: "pncp", status: "falhou", iniciada_em: "2026-11-06T11:00:00Z", finalizada_em: "2026-11-06T11:01:00Z",
+    registros_lidos: 0, registros_novos: 0, registros_descartados: 0, erro: "FonteIndisponivel: 503 depois de 3 tentativas" },
+];
+
+export const METRICAS: Metricas = {
+  eval: { gerado_em: "2026-11-08T05:53:39+00:00", provedor_llm: "mock", n_casos: 100, ok: 100, acerto_intent: 100,
+    n_intent_avaliada: 80, meta_intent: 90, acerto_comportamento: 100, acerto_resultado: 100, n_com_sql_referencia: 1,
+    citacao_correta: 100, n_com_citacao: 42, taxa_fallback: 0 },
+  ataques: { gerado_em: "2026-11-08T06:10:00+00:00", provedor_llm: "mock", n_casos: 50, bloqueados: 49,
+    pct_bloqueado: 98, vazamentos: 0,
+    por_categoria: { direta: { n: 20, bloqueados: 20, vazamentos: 0 }, escopo: { n: 30, bloqueados: 29, vazamentos: 0 } } },
+  cronometro: null,
+  ultima_atualizacao: "2026-11-08T06:10:00+00:00",
+};
+
 export const CARTEIRAS: CarteiraListada[] = [
   { id: "cart-1", nome: "Homologação 2026", finalidade: "homologacao", n_itens: 2, criada_em: "2026-11-05T10:00:00Z" },
 ];
@@ -214,6 +234,7 @@ export function apiFalsa(
     fila?: (id: string) => Promise<Fila>;
     dossie?: (cnpj: string) => Promise<Dossie>;
     cadeia?: () => Promise<VerificacaoCadeia>;
+    metricas?: () => Promise<Metricas>;
   } = {},
 ) {
   const usuarios = opcoes.usuarios ?? { "ana@alfa.demo": ANA, "gil@alfa.demo": GIL, "caio@alfa.demo": CAIO };
@@ -235,7 +256,8 @@ export function apiFalsa(
       criar: vi.fn(opcoes.consulta ?? (async () => RESPOSTA_ANA)),
       listar: vi.fn(opcoes.historico ?? (async () => HISTORICO)),
     },
-    fontes: { listar: vi.fn(async () => FONTES) },
+    fontes: { listar: vi.fn(async () => FONTES), execucoes: vi.fn(async () => EXECUCOES) },
+    metricas: { obter: vi.fn(opcoes.metricas ?? (async () => METRICAS)) },
     recibos: {
       obter: vi.fn(
         opcoes.recibo ??
