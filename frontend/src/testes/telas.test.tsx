@@ -23,6 +23,7 @@ describe("moldura", () => {
       "Consulta",
       "Carteiras",
       "Fontes e catálogo",
+      "Métricas",
       "Acesso",
       "Auditoria",
     ]);

@@ -30,6 +30,7 @@ export function Moldura({ children }: { children: ReactNode }) {
     // A fila e o dossiê são abertos a partir da carteira: o menu continua marcando "Carteiras".
     { rotulo: "Carteiras", para: "/carteiras", ativoEm: /^\/(carteiras|fornecedores)(\/|$)/ },
     { rotulo: "Fontes e catálogo", para: "/fontes" },
+    { rotulo: "Métricas", para: "/metricas" },
     { rotulo: "Acesso", para: "/acesso" },
     ...(pode(usuario.perfil, "ver_historico") ? [{ rotulo: "Auditoria", para: "/auditoria" }] : []),
   ];
