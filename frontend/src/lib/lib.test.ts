@@ -1,5 +1,7 @@
 import { dividirEmTrechos } from "./destaques";
 import { inteiroPorExtenso, moedaPorExtenso } from "./extenso";
+import { cnpj, urlSegura } from "./formato";
+import { separarCnpjs } from "../features/carteiras/hooks";
 
 describe("extenso", () => {
   it.each([
@@ -50,5 +52,28 @@ describe("destaques", () => {
   it("mantém o texto inteiro ao juntar os trechos", () => {
     const texto = "Sem números aqui, só texto.";
     expect(dividirEmTrechos(texto)).toEqual([{ tipo: "texto", texto }]);
+  });
+});
+
+describe("formatos do N2", () => {
+  it("formata CNPJ com 14 dígitos e devolve o resto como veio", () => {
+    expect(cnpj("99999999000191")).toBe("99.999.999/0001-91");
+    expect(cnpj("123")).toBe("123");
+  });
+
+  it("só aceita link http(s) vindo de fonte externa", () => {
+    expect(urlSegura("https://pncp.gov.br/x")).toBe("https://pncp.gov.br/x");
+    expect(urlSegura("javascript:alert(1)")).toBeNull();
+    expect(urlSegura("about:blank#teste")).toBeNull();
+    expect(urlSegura(null)).toBeNull();
+  });
+
+  it("separa CNPJs colados por linha, vírgula, ponto e vírgula ou espaço", () => {
+    expect(separarCnpjs(" 99.999.999/0001-91,11222333000181\n\n123 ; 456 ")).toEqual([
+      "99.999.999/0001-91",
+      "11222333000181",
+      "123",
+      "456",
+    ]);
   });
 });

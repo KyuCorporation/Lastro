@@ -5,7 +5,7 @@ import { MensagemErro } from "../components/MensagemErro";
 import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
 import { moeda, nomesFontes, temDadoSintetico, valorPrincipal, valoresMoeda } from "../features/recibo/leitura";
-import { useRecibo } from "../features/recibo/useRecibo";
+import { useRecibo, useVerificacaoRecibo } from "../features/recibo/useRecibo";
 import { nomeIntent } from "../lib/apresentacao";
 import { dataHora, nomeFonte, nomeTabela } from "../lib/formato";
 
@@ -22,6 +22,26 @@ const VERIFICACAO: Record<string, string> = {
   abstencao: "sem registros nas fontes autorizadas",
   negado: "negado",
 };
+
+/** Selo de integridade: o servidor recalcula o sha256 do conteúdo gravado e compara com o hash guardado. */
+function SeloIntegridade({ id }: { id: string }) {
+  const v = useVerificacaoRecibo(id);
+  let tom: "verde" | "vermelho" | "neutro" = "neutro";
+  let texto = "Verificando a integridade…";
+  if (v.isError) texto = "Não foi possível verificar a integridade agora";
+  else if (v.data?.integro) {
+    tom = "verde";
+    texto = "Íntegro · hash recalculado confere com o gravado";
+  } else if (v.data) {
+    tom = "vermelho";
+    texto = "Alterado depois de gravado · hash recalculado não confere";
+  }
+  return (
+    <p role="status" aria-label="Integridade do recibo" aria-live="polite">
+      <Selo tom={tom}>{texto}</Selo>
+    </p>
+  );
+}
 
 /** Tela 02 do design: recibo de evidências de uma resposta (GET /recibos/{id}). */
 export function ReciboPage() {
@@ -67,9 +87,12 @@ export function ReciboPage() {
             {sintetico && " · inclui registro sintético de teste"}
           </p>
         </div>
-        <Selo tom="verde">
-          {n} registro{n === 1 ? "" : "s"} relacionado{n === 1 ? "" : "s"}
-        </Selo>
+        <div className="flex flex-col items-end gap-2">
+          <Selo tom="verde">
+            {n} registro{n === 1 ? "" : "s"} relacionado{n === 1 ? "" : "s"}
+          </Selo>
+          <SeloIntegridade id={r.id} />
+        </div>
       </section>
 
       <section aria-labelledby="titulo-registros" className="cartao p-6">

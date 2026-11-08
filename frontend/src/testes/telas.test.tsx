@@ -21,6 +21,7 @@ describe("moldura", () => {
     const menu = screen.getByRole("navigation", { name: "Principal" });
     expect(within(menu).getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Consulta",
+      "Carteiras",
       "Fontes e catálogo",
       "Acesso",
       "Auditoria",

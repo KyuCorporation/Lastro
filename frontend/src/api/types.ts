@@ -143,3 +143,150 @@ export interface Recibo {
   hash: string;
   criado_em: string;
 }
+
+/** GET /recibos/{id}/verificar: `integro=false` quando conteúdo ou hash mudaram depois de gravados. */
+export interface VerificacaoRecibo {
+  integro: boolean;
+  hash_gravado: string;
+  hash_recalculado: string;
+}
+
+// ------------------------------------------------------------------ carteiras e fila
+export type Finalidade = "homologacao" | "monitoramento" | "renovacao";
+
+/** POST /carteiras: CNPJs com ou sem máscara; os inválidos voltam em `cnpjs_invalidos`. */
+export interface CarteiraEntrada {
+  nome: string;
+  finalidade: Finalidade;
+  cnpjs: string[];
+}
+
+export interface CarteiraCriada {
+  id: string;
+  nome: string;
+  finalidade: Finalidade;
+  n_itens: number;
+  cnpjs_invalidos: string[];
+}
+
+/** GET /carteiras */
+export interface CarteiraListada {
+  id: string;
+  nome: string;
+  finalidade: Finalidade;
+  n_itens: number;
+  criada_em: string;
+}
+
+export type Gravidade = "forte" | "atencao" | "info";
+
+/** Linha de origem que sustenta um sinal. */
+export interface Evidencia {
+  tabela?: string;
+  id?: string;
+  url_origem?: string | null;
+  [campo: string]: unknown;
+}
+
+export interface SinalFila {
+  tipo: string;
+  gravidade: Gravidade;
+  explicacao: string;
+  evidencias: Evidencia[];
+}
+
+export interface ItemFila {
+  cnpj: string;
+  razao_social: string | null;
+  prioridade: number;
+  valor_exposto: string;
+  sinais: SinalFila[];
+}
+
+/** GET /carteiras/{id}/fila: itens já ordenados por prioridade. */
+export interface Fila {
+  carteira: { id: string; nome: string; finalidade: Finalidade; criada_em: string };
+  itens: ItemFila[];
+}
+
+// ------------------------------------------------------------------ dossiê
+interface Proveniencia {
+  id: string;
+  fonte_id: string;
+  id_origem: string;
+  url_origem: string | null;
+  coletado_em: string;
+}
+
+export interface ContratoDossie extends Proveniencia {
+  uf: string;
+  orgao_id: string | null;
+  orgao_nome: string | null;
+  objeto: string | null;
+  valor_global: string | null;
+  data_assinatura: string | null;
+  vigencia_inicio: string | null;
+  vigencia_fim: string | null;
+}
+
+export interface SancaoDossie extends Proveniencia {
+  tipo: string | null;
+  orgao_sancionador: string | null;
+  uf_orgao: string | null;
+  data_inicio: string | null;
+  data_fim: string | null;
+  fundamentacao: string | null;
+  vigente: boolean;
+}
+
+export interface SinalDossie {
+  id: string;
+  tipo: string;
+  gravidade: Gravidade;
+  uf: string | null;
+  valor: string | null;
+  explicacao: string;
+  evidencias: Evidencia[];
+  versao_regra: string;
+  calculado_em: string;
+}
+
+export interface ResumoUf {
+  uf: string;
+  n_contratos: number;
+  valor_contratado: string;
+  valor_vigente: string;
+  n_pagamentos: number;
+  valor_pago: string;
+  valor_empenhado: string;
+}
+
+/** GET /fornecedores/{cnpj}/dossie. `socios` é null para o perfil que não vê sócios (gestor). */
+export interface Dossie {
+  fornecedor: { cnpj: string; razao_social: string | null; uf_sede: string | null };
+  resumo_por_uf: ResumoUf[];
+  contratos_vigentes: ContratoDossie[];
+  vencendo_180d: ContratoDossie[];
+  sancoes: SancaoDossie[];
+  sinais: SinalDossie[];
+  socios: { socio_tipo: "PF" | "PJ"; socio_exibicao: string; fonte_id: string; coletado_em: string }[] | null;
+  fontes: { fonte_id: string; nome: string; coletado_em: string; sintetico: boolean }[];
+}
+
+// ------------------------------------------------------------------ auditoria
+/** GET /auditoria (auditor e admin): eventos encadeados por hash. */
+export interface EventoAuditoria {
+  seq: number;
+  usuario_id: string | null;
+  evento: string;
+  detalhes: Record<string, unknown> | null;
+  criado_em: string;
+  hash: string;
+}
+
+/** GET /auditoria/verificar */
+export interface VerificacaoCadeia {
+  integra: boolean;
+  n_eventos: number;
+  primeiro_seq_quebrado?: number | null;
+}
