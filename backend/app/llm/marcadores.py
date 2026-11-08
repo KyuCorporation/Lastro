@@ -18,6 +18,8 @@ from app.llm.texto_externo import dado_nao_confiavel
 from app.modules.catalogo.executor import ResultadoConsulta
 from app.modules.catalogo.registry import CONSULTAS
 
+# SPEC §9: o sinal `concentracao` dispara quando o maior órgão responde por 70% ou mais.
+LIMIAR_CONCENTRACAO = 70
 LIMITE_REGISTROS_TEXTO = 5
 
 # Compatibilidade: nome usado antes da quarentena ir para texto_externo.py.
@@ -292,6 +294,59 @@ def _sancoes(r: ResultadoConsulta) -> Material:
         for s in linhas[:LIMITE_REGISTROS_TEXTO]
     )
     return m.material(modelo, False, registros)
+
+
+@modelo_da_intent("orgaos_fornecedor")
+def _orgaos(r: ResultadoConsulta) -> Material:
+    m, t, ranking = _Montador(), r.totais, r.conjuntos["ranking"]
+    cnpj = _cnpj(m, r)
+    n_o = m.add(t["n_orgaos"], "inteiro", "número de órgãos contratantes", "count(orgaos)")
+    valor = m.add(t["valor_total"], "moeda", "valor contratado somado", "sum(contratos.valor_global)")
+    ufs = _ufs_marcador(m, r)
+    if not ranking:
+        modelo = f"Não encontrei contratos do fornecedor {cnpj} nas fontes autorizadas para você ({ufs})."
+        return m.material(modelo, True)
+    maior = m.add(
+        t["maior_orgao"], "texto", "nome do órgão com maior valor", "ranking[0].orgao_nome", essencial=False
+    )
+    pct = m.add(
+        t["maior_participacao"],
+        "percentual",
+        "participação do maior órgão no valor contratado",
+        "ranking[0].participacao",
+    )
+    orgaos = _p(t["n_orgaos"], "órgão", "órgãos")
+    modelo = (
+        f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem contratos com {n_o} {orgaos}, "
+        f"somando {valor}. O maior é {maior}, com {pct} do valor."
+    )
+    if t["maior_participacao"] is not None and t["maior_participacao"] >= LIMIAR_CONCENTRACAO:
+        modelo += " Concentração em um só órgão é um sinal para investigar."
+    registros = tuple(
+        f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
+        for g in ranking[:LIMITE_REGISTROS_TEXTO]
+    )
+    return m.material(modelo, False, registros)
+
+
+@modelo_da_intent("busca_objeto")
+def _busca(r: ResultadoConsulta) -> Material:
+    m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
+    termo = m.add(r.parametros["termo"], "texto", "termo pesquisado", "parametros.termo", essencial=False)
+    n = m.add(t["n_contratos"], "inteiro", "número de contratos encontrados", "count(contratos)")
+    valor = m.add(t["valor_total"], "moeda", "valor somado dos contratos encontrados", "sum(valor_global)")
+    ufs = _ufs_marcador(m, r)
+    if not linhas:
+        modelo = f"Não encontrei contratos com objeto relacionado a {termo} nas fontes autorizadas para você ({ufs})."
+        return m.material(modelo, True)
+    contratos = _p(t["n_contratos"], "contrato", "contratos")
+    modelo = (
+        f"Encontrei {n} {contratos} com objeto relacionado a {termo} nas fontes autorizadas para você ({ufs}), "
+        f"somando {valor}."
+    )
+    if t["n_contratos"] > len(linhas):
+        modelo += " Os mais relevantes estão citados abaixo."
+    return m.material(modelo, False, _registros_contratos(linhas))
 
 
 if faltando := intents_sem_modelo():

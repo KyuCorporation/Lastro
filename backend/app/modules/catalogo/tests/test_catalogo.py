@@ -24,6 +24,7 @@ N1_COM_SQL = {
     "pagamentos_periodo",
     "sancoes_fornecedor",
 }
+N2_COM_SQL = {"orgaos_fornecedor", "busca_objeto"}
 
 
 def plano(intent: str, **parametros) -> PlanoConsulta:
@@ -50,7 +51,7 @@ def test_cnpjs_sinteticos_sao_validos():
 
 
 def test_registro_cobre_as_intents_n1_e_os_arquivos_existem():
-    assert set(CONSULTAS) == N1_COM_SQL
+    assert set(CONSULTAS) == N1_COM_SQL | N2_COM_SQL
     assert set(CONSULTAS) <= set(INTENTS)
     for consulta in CONSULTAS.values():
         for conjunto in consulta.conjuntos:
@@ -203,6 +204,6 @@ def test_intents_sem_consulta(intent, ctx_ana):
         executar(PlanoConsulta(intent=intent), ctx_ana, HOJE)
 
 
-def test_intent_n2_ainda_sem_sql(ctx_ana):
+def test_intent_n3_ainda_sem_sql(ctx_ana):
     with pytest.raises(IntentSemConsulta):
-        executar(PlanoConsulta(intent="orgaos_fornecedor", parametros=Parametros(cnpj=F1)), ctx_ana, HOJE)
+        executar(PlanoConsulta(intent="socios_sancionados", parametros=Parametros(cnpj=F1)), ctx_ana, HOJE)

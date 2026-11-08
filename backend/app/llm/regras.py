@@ -98,6 +98,20 @@ def extrair_uf(original: str, normalizado: str) -> str | None:
     return None
 
 
+# "merenda escolar em pernambuco": o estado vira o parâmetro `uf`, não parte do termo da busca textual.
+_ESTADO_NO_FIM = re.compile(
+    r"\s+(?:em|no|na|do|da|de)\s+(?:estado\s+d[eo]\s+)?(?:"
+    + "|".join(sorted(ESTADOS, key=len, reverse=True))
+    + "|"
+    + "|".join(uf.lower() for uf in sorted(UFS))
+    + r")\s*$"
+)
+
+
+def _sem_estado_no_fim(termo: str) -> str:
+    return _ESTADO_NO_FIM.sub("", termo.strip()).strip()
+
+
 def ufs_mencionadas(texto: str) -> set[str]:
     """Todas as UFs citadas no texto, por nome ou por sigla em maiúsculas."""
     t = normalizar(texto)
@@ -163,7 +177,7 @@ def planejar_por_regras(pergunta: str, hoje: date) -> PlanoConsulta:
 
     busca = next((m for padrao in BUSCAS if (m := padrao.search(t))), None)
     if assunto is None and cnpj.valor is None and (m := busca):
-        termo = m.group("termo").strip()
+        termo = _sem_estado_no_fim(m.group("termo"))
         if len(termo) >= 2:
             return PlanoConsulta(
                 intent="busca_objeto", parametros=Parametros(termo=termo[:80].strip(), uf=uf)

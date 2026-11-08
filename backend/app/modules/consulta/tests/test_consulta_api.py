@@ -197,10 +197,10 @@ def test_fornecedor_sem_registros_e_abstencao_que_nao_inventa(api, autenticar):
 
 
 def test_intent_sem_sql_ainda_e_abstencao(api, autenticar, com_ambiente):
-    plano = {"versao": "v1", "intent": "orgaos_fornecedor", "parametros": {"cnpj": "11222333000181"}}
+    plano = {"versao": "v1", "intent": "socios_sancionados", "parametros": {"cnpj": "11222333000181"}}
     com_ambiente(provedor=ProvedorFalso(plano=plano))
     corpo = api.post(
-        "/consultas", json={"pergunta": "Órgãos do 11222333000181"}, headers=autenticar("ana@alfa.demo")
+        "/consultas", json={"pergunta": "Sócios do 11222333000181"}, headers=autenticar("ana@alfa.demo")
     )
     assert corpo.json()["status"] == "abstencao"
     assert "ainda não está disponível" in corpo.json()["resposta"]

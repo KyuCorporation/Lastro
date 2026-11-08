@@ -33,12 +33,16 @@ ORGAOS = [
     ("demo_sintetico:TCAT-AL1", "Secretaria Teste AL 1", "AL", "estadual"),
 ]
 
-# (id_origem, uf, orgao, valor, vigencia_fim)
+# (id_origem, uf, orgao, valor, vigencia_fim, objeto). A palavra "tcat" nos objetos isola a busca textual
+# (busca_objeto é nacional) dos contratos reais que estiverem carregados no mesmo banco.
 CONTRATOS = [
-    ("TCAT-C1", "PE", "demo_sintetico:TCAT-PE1", "100000.00", d(60)),  # vigente, vence em 60 dias
-    ("TCAT-C2", "PE", "demo_sintetico:TCAT-PE2", "300000.00", d(400)),  # vigente, longe de vencer
-    ("TCAT-C3", "PE", "demo_sintetico:TCAT-PE1", "50000.00", d(-10)),  # encerrado
-    ("TCAT-C4", "AL", "demo_sintetico:TCAT-AL1", "70000.00", d(30)),  # vigente em AL
+    # vence em 60 dias
+    ("TCAT-C1", "PE", "demo_sintetico:TCAT-PE1", "100000.00", d(60), "Limpeza predial das escolas tcat"),
+    ("TCAT-C2", "PE", "demo_sintetico:TCAT-PE2", "300000.00", d(400), "Fornecimento de merenda escolar tcat"),
+    # encerrado
+    ("TCAT-C3", "PE", "demo_sintetico:TCAT-PE1", "50000.00", d(-10), "Limpeza urbana e coleta de lixo tcat"),
+    # vigente em AL
+    ("TCAT-C4", "AL", "demo_sintetico:TCAT-AL1", "70000.00", d(30), "Limpeza hospitalar tcat"),
 ]
 
 # (id_origem, uf, orgao, data, valor)
@@ -71,7 +75,7 @@ INSERIR_ORGAO = "insert into orgaos (id, nome, uf, esfera) values (%s, %s, %s, %
 INSERIR_CONTRATO = """
 insert into contratos (fonte_id, id_origem, uf, orgao_id, fornecedor_cnpj, objeto, valor_global,
                        data_assinatura, vigencia_inicio, vigencia_fim, url_origem, coletado_em, hash_conteudo)
-values ('demo_sintetico', %s, %s, %s, %s, 'Serviço de teste', %s, %s, %s, %s, %s, now(), %s)
+values ('demo_sintetico', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now(), %s)
 """
 INSERIR_PAGAMENTO = """
 insert into pagamentos (fonte_id, id_origem, uf, orgao_id, fornecedor_cnpj, data_pagamento, valor,
@@ -100,10 +104,22 @@ def dados_catalogo():
             conn.execute(comando)
         conn.execute(INSERIR_FORNECEDORES, (F1, "FORNECEDOR TESTE UM LTDA", F2, "FORNECEDOR TESTE DOIS LTDA"))
         conn.cursor().executemany(INSERIR_ORGAO, ORGAOS)
-        for id_origem, uf, orgao, valor, fim in CONTRATOS:
+        for id_origem, uf, orgao, valor, fim, objeto in CONTRATOS:
             conn.execute(
                 INSERIR_CONTRATO,
-                (id_origem, uf, orgao, F1, valor, d(-500), d(-500), fim, _url(id_origem), _hash(id_origem)),
+                (
+                    id_origem,
+                    uf,
+                    orgao,
+                    F1,
+                    objeto,
+                    valor,
+                    d(-500),
+                    d(-500),
+                    fim,
+                    _url(id_origem),
+                    _hash(id_origem),
+                ),
             )
         for id_origem, uf, orgao, data, valor in PAGAMENTOS:
             conn.execute(

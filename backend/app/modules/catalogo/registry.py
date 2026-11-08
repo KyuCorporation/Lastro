@@ -1,6 +1,6 @@
 """Consultas executáveis do catálogo: intent → versão e conjuntos de SQL (`sql/<intent>.<conjunto>.sql`).
 
-Só as intents N1 com SQL estão aqui. `fora_de_escopo` e `esclarecer` não consultam o banco.
+Intents N1 e as N2 `orgaos_fornecedor` e `busca_objeto`. `fora_de_escopo` e `esclarecer` não consultam o banco.
 """
 
 from dataclasses import dataclass
@@ -29,6 +29,7 @@ class ConsultaCatalogo:
     # Conjuntos com linhas citáveis (têm proveniência). Os demais são derivados delas.
     citaveis: tuple[str, ...]
     usa_uf: bool = True
+    usa_cnpj: bool = True
 
     @property
     def id_versao(self) -> str:
@@ -49,6 +50,8 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
         ConsultaCatalogo("contratos_vencendo", "v1", ("linhas",), ("linhas",)),
         ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
         ConsultaCatalogo("sancoes_fornecedor", "v1", ("linhas",), ("linhas",), usa_uf=False),
+        ConsultaCatalogo("orgaos_fornecedor", "v1", ("ranking", "contratos"), ("contratos",)),
+        ConsultaCatalogo("busca_objeto", "v1", ("linhas",), ("linhas",), usa_cnpj=False),
     ]
 }
 
