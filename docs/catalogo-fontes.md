@@ -87,6 +87,14 @@ Consequência: o arquivo do bronze e o `sha256` em `arquivos_brutos` são os da 
 
 **Pagamentos:** a leitura de dinheiro que saiu vem de empenho e liquidação. Os sinais por UF (`concentracao`, `penhasco`) usam a data da liquidação.
 
+**Por que `EmpenhoPagamento` não é carregado** (avaliado em 15/11/2026 com a Prefeitura de Garanhuns, exercício de 2025: 48.731 pagamentos e 21.301 liquidações):
+
+- **Somaria em dobro.** O catálogo e os sinais tratam como "pago" tudo o que não é empenho (`id_origem` sem `emp:`). Todo empenho com pagamento tinha liquidação, e o total pago foi 97,6% do liquidado. Gravar os dois dobraria o valor pago, a menos que as consultas do catálogo, os sinais e o gabarito mudassem.
+- **Não há identificador do pagamento.** Os campos são empenho, tipo, data, valor e dados bancários (banco, agência, conta, cheque). Empenho + data + valor + tipo se repete; só os dados bancários distinguem os registros, e um `id_origem` feito deles não é estável.
+- **Só existe para municípios.** "Pago" passaria a significar pagamento nos municípios e liquidação no estado.
+
+Se o produto precisar da data efetiva de pagamento, a decisão é trocar a liquidação pelo pagamento nos municípios (e não somar os dois), com mudança no catálogo.
+
 **Sem sobreposição:** PE vem só desta fonte. O PNCP carrega as outras UFs (AL na demo), salvo `PNCP_PE_FALLBACK=true`.
 
 ## pncp — Portal Nacional de Contratações Públicas (detalhe)

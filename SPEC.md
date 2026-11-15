@@ -1,7 +1,8 @@
 # SPEC — Lastro: radar de risco de fornecedores, com recibo
 
 > Hack Garanhuns Tech 2026 · Desafio 1 (Portal Inteligente de Transparência com IA) · Equipe KYU
-> Versão 1.1 · 06/11/2026, 04h00 (fonte de PE passa a ser a API de dados abertos do TCE-PE) · Fonte da verdade do produto.
+> Versão 1.2 · 15/11/2026 (TCE-PE conferido na API real: coleta fatiada e resposta saneada antes do bronze) · Fonte da verdade do produto.
+> Versão 1.1 · 06/11/2026, 04h00 (fonte de PE passa a ser a API de dados abertos do TCE-PE).
 
 "Lastro" é o nome de trabalho. Pode ser trocado sem impacto no código.
 
@@ -28,7 +29,7 @@ Toda consulta respeita **estado, perfil e contexto** (a carteira e a finalidade)
 
 | ID | Requisito do desafio | Como o Lastro cumpre | Evidência na demo |
 |---|---|---|---|
-| R1 | Captura de ao menos um portal estadual | Conector da **API de dados abertos do TCE-PE** (contratos e empenhos/liquidações do estado e dos municípios de PE), com cada resposta bruta e seu hash guardados. Fonte oficial do estado | Tela de fontes mostra a execução, a data de coleta e o hash |
+| R1 | Captura de ao menos um portal estadual | Conector da **API de dados abertos do TCE-PE** (contratos do estado e dos municípios de PE; empenhos e liquidações do estado e dos municípios configurados), com cada resposta e seu hash guardados, já sem dado de pessoa física (§10, regra 7). Fonte oficial do estado | Tela de fontes mostra a execução, a data de coleta e o hash |
 | R2 | Normalização e catalogação | Esquema único (fornecedor, órgão, UF, contrato, pagamento) com proveniência por linha; catálogo de fontes e dicionário de dados | `docs/catalogo-fontes.md` e `docs/dicionario-dados.md`; tela de fontes |
 | R3 | Controle de acesso por estado e perfil | Contexto de acesso por requisição, aplicado por **Row-Level Security** no Postgres | Mesma pergunta, dois usuários, respostas diferentes |
 | R4 | LLM restrita aos dados autorizados | A LLM nunca toca o banco: escolhe uma consulta do catálogo; o backend executa sob RLS e entrega à LLM só o resultado autorizado | Pergunta pedindo outro estado é negada |
@@ -277,19 +278,22 @@ Calculados pela pipeline (`pipeline/sinais/`) **por fornecedor e por UF**, versi
 
 | Fonte | `fonte_id` | Acesso | Observações |
 |---|---|---|---|
-| Dados abertos do TCE-PE | `pe_portal` (id mantido; nome exibido: "TCE-PE Dados Abertos") | API REST em `https://sistemas.tcepe.tc.br/DadosAbertos/`, sem autenticação documentada | **Obrigatória (R1).** Só responde a **IP brasileiro**: a ingestão real roda na máquina da equipe, nunca em agente de nuvem (que usa fixtures). Cobre estado (`Esfera=E`) e municípios (`Esfera=M`), com filtros como `AnoReferencia`, `CodigoMunicipio` e `CpfCnpj`. Se a API cair ou bloquear, salvar respostas manualmente em `data/raw/pe/` e o conector lê delas (mesmo hash, mesma proveniência). **Pagamentos só existem para municípios**; para o estado, usar empenho e liquidação. Detalhes e mapeamento em `docs/catalogo-fontes.md` |
+| Dados abertos do TCE-PE | `pe_portal` (id mantido; nome exibido: "TCE-PE Dados Abertos") | API REST em `https://sistemas.tcepe.tc.br/DadosAbertos/`, sem autenticação documentada | **Obrigatória (R1).** Só responde a **IP brasileiro**: a ingestão real roda na máquina da equipe, nunca em agente de nuvem (que usa fixtures). Formato conferido na API real em 15/11/2026. Cobre estado (`Esfera=E`) e municípios (`Esfera=M`). A API **não pagina** e corta a resposta em 100 mil registros, por isso a coleta é fatiada (regra 6). Se a API cair ou bloquear, valem o cache em disco e a fixture; a leitura de respostas salvas à mão ainda não existe. O dinheiro que saiu é lido de **empenho e liquidação**, nas duas esferas; o método de pagamentos (só municípios) não é carregado, porque não tem identificador do pagamento e somaria em dobro com a liquidação. Detalhes e mapeamento em `docs/catalogo-fontes.md` |
 | PNCP | `pncp` | API REST pública, sem autenticação | **Sem sobreposição com o TCE-PE:** PE vem só do `pe_portal`; o PNCP carrega as outras UFs (AL na demo). Se o `pe_portal` falhar, `PNCP_PE_FALLBACK=true` carrega PE pelo PNCP. Ler a especificação OpenAPI em `https://pncp.gov.br/api/consulta/v3/api-docs` antes de codificar. Rotas podem dar 404 intermitente: retry com backoff e cache em disco |
 | CEIS e CNEP | `ceis`, `cnep` | Download de dados abertos do Portal da Transparência (ou API com chave) | O portal tem firewall que bloqueia clientes HTTP. Fallback: download manual para `data/raw/sancoes/` |
 | Quadro societário | `receita_qsa` | Consulta por CNPJ (por exemplo, Minha Receita) | Opcional. Consultar **apenas** fornecedores das carteiras e empresas sancionadas das UFs carregadas. Até 1 requisição por segundo, com cache |
 | Sintético de demo | `demo_sintetico` | Seed | Rotulado como sintético em todas as telas |
 
 Regras da pipeline:
-1. **Bronze:** todo arquivo ou resposta vai para `data/raw/<fonte>/<data>/` e para `arquivos_brutos` com sha256. Mesmo hash não reprocessa.
+1. **Bronze:** todo arquivo ou resposta vai para `data/raw/<fonte>/<data>/` e para `arquivos_brutos` com sha256. Mesmo hash não reprocessa. No `pe_portal`, o que é guardado é a resposta saneada (regra 7).
 2. **Normalização:** mapeamento campo a campo documentado em `docs/catalogo-fontes.md`. Descartar favorecido pessoa física. Normalizar CNPJ, datas e valores.
 3. **Qualidade:** completude, duplicidade, datas fora de faixa e queda de volume maior que 50% em relação à execução anterior (marca a execução como `parcial` e não apaga nada).
 4. **Execuções** sempre registradas em `execucoes_ingestao`, com contagens e erro.
-5. **Fixtures:** cada conector salva uma amostra pequena em `data/fixtures/<fonte>/`, usada nos testes e na demo offline. Para o `pe_portal`, quem tem IP brasileiro roda `ingest pe_portal --amostra 200` e comita o resultado; os agentes de nuvem só consomem a fixture.
-6. **Mapeamento do TCE-PE (hipótese até a amostra real; ajustar com ela):** contrato → `contratos`; empenho/liquidação → `pagamentos` (`id_origem` prefixado `emp:` ou `liq:`, tipo no campo `descricao`); unidade gestora ou município → `orgaos` (`esfera` estadual ou municipal); `CpfCnpj` com 11 dígitos → descartado e contado em `registros_descartados`. `uf` é sempre `PE`. Contratos de municípios do agreste (Garanhuns incluído) servem de caso local na demo.
+5. **Fixtures:** cada conector salva uma amostra pequena em `data/fixtures/<fonte>/`, usada nos testes e na demo offline. Para o `pe_portal`, a amostra real foi coletada em 15/11/2026 (só pessoa jurídica e só os campos usados); quem tem IP brasileiro a refaz com `ingest pe_portal --amostra 200`, e os agentes de nuvem só consomem a fixture.
+6. **TCE-PE, coleta e mapeamento** (conferidos na API real; campo a campo em `docs/catalogo-fontes.md`):
+   - **Coleta fatiada**, uma URL por fatia, cada uma com cache próprio: contratos por ano do contrato e esfera, desde `TCEPE_CONTRATOS_ANO_INICIAL` (contrato antigo pode estar vigente); despesas do estado por exercício (`TCEPE_ANOS`) e unidade gestora; despesas municipais por exercício e mês, só dos municípios de `TCEPE_MUNICIPIOS`. Fatia de exercício encerrado vale `TCEPE_CACHE_DIAS` no cache. Fatia que chega ao limite da API faz a execução falhar, em vez de gravar dado cortado.
+   - **Mapeamento:** contrato → `contratos` (`id_origem` = `ctr:<código do contrato>`; a API não informa a data de assinatura); empenho e liquidação → `pagamentos` (`id_origem` prefixado `emp:` ou `liq:`, tipo no campo `descricao`). A liquidação não traz o credor: herda o CNPJ e o órgão do empenho de mesma chave; a anulação entra com valor negativo. Unidade gestora → `orgaos` (`esfera` estadual ou municipal). `uf` é sempre `PE`. Contratos e despesas de Garanhuns servem de caso local na demo.
+7. **TCE-PE e dado pessoal (LGPD):** a API manda o CPF inteiro e o nome de contratados e credores pessoa física. A resposta é saneada **antes** de ir para o cache e para o bronze: registro de pessoa física ou sem CNPJ válido vira só um marcador (continua contado em `registros_descartados`), e CPF que apareça em nome ou texto livre de registro de pessoa jurídica é mascarado. Por isso o arquivo do bronze e o seu sha256 são os da resposta saneada, não os bytes exatos da fonte; `url_origem` continua sendo a chamada exata.
 
 ## 11. API
 
@@ -353,6 +357,6 @@ Zero vazamento entre UFs e tenants; ≥ 90% de acerto de intent; 100% das respos
 
 ## 15. Premissas e riscos
 
-**Premissas:** a API do PNCP segue respondendo (testada em 05/11); a API de dados abertos do TCE-PE responde (aberta no navegador pela equipe em 06/11; os nomes dos endpoints e campos ainda dependem da amostra); o portal do Governo de PE não oferece download, por isso não é a fonte; dados públicos podem ser reprocessados para fins de diligência, respeitando a LGPD.
+**Premissas:** a API do PNCP segue respondendo (testada em 05/11); a API de dados abertos do TCE-PE responde a IP brasileiro (formato conferido e amostra real coletada em 15/11); o portal do Governo de PE não oferece download, por isso não é a fonte; dados públicos podem ser reprocessados para fins de diligência, respeitando a LGPD.
 
-**Riscos:** API do TCE-PE restrita a IP brasileiro (mitigação: ingestão só na máquina da equipe, fixtures para os agentes, respostas salvas à mão como plano B); duplicidade de contratos entre TCE-PE e PNCP (mitigação: PE só pelo TCE-PE); firewall do Portal da Transparência bloqueando CEIS/CNEP (mitigação: download manual); limite da API de quadro societário (mitigação: escopo restrito e cache); LLM fora do ar na demo (mitigação: mock e fallback determinístico).
+**Riscos:** API do TCE-PE restrita a IP brasileiro (mitigação: ingestão só na máquina da equipe, fixtures para os agentes, cache em disco); API do TCE-PE corta a resposta em 100 mil registros (mitigação: coleta fatiada e falha explícita se uma fatia chegar ao limite; ainda não foi medido se alguma unidade gestora estadual chega a isso num exercício); duplicidade de contratos entre TCE-PE e PNCP (mitigação: PE só pelo TCE-PE); firewall do Portal da Transparência bloqueando CEIS/CNEP (mitigação: download manual); limite da API de quadro societário (mitigação: escopo restrito e cache); LLM fora do ar na demo (mitigação: mock e fallback determinístico).
