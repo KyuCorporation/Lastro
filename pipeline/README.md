@@ -32,7 +32,7 @@ lastro_pipeline/
   connectors/       # base.py (contrato), pe_portal.py, pncp.py, sancoes.py; __init__.py registra as fontes
   normalize/        # cnpj.py, valores.py e o mapeamento campo a campo de cada fonte
   quality/          # relatorio.py: completude, duplicidade, datas fora de faixa, queda de volume > 50%
-  sinais/           # regras.py (regras v1, puras) e calculo.py (lê fatos, grava sinais)
+  sinais/           # regras.py (regras v2, puras) e calculo.py (lê fatos, grava sinais)
 tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 ```
 
@@ -58,17 +58,18 @@ por isso as despesas são coletadas (e ficam na fixture) antes das liquidações
 
 ## Sinais (`make sinais`)
 
-Regras v1 do SPEC §9 em `sinais/regras.py`. Cada sinal tem `explicacao` em uma frase e `evidencias`
+Regras v2 do SPEC §9 em `sinais/regras.py`. Cada sinal tem `explicacao` em uma frase e `evidencias`
 (`[{tabela, id, url_origem}]`, até 50, as de maior valor). Linguagem: "sinal para investigar", nunca acusação.
 
 | Sinal | Regra | UF | Gravidade |
 |---|---|---|---|
 | `sancao_direta` | CNPJ com sanção vigente no CEIS ou CNEP (começou e não terminou; sem data final = vigente) | nula (nacional) | forte |
 | `penhasco` | ≥ 50% do valor dos contratos vigentes (`vigencia_fim >= hoje`) termina em até 180 dias | por UF | atenção |
-| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses | por UF | atenção |
+| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses, se o recebido na janela somar ao menos R$ 10 mil | por UF | atenção |
 
 - **Por UF:** penhasco e concentração usam só fatos da própria UF, para a RLS de `sinais` não vazar outra UF.
-- **Recebido** = pagamentos e liquidações; empenho (`id_origem` `emp:`) não conta, como no catálogo. Se a UF não
+- **Recebido** = pagamentos e liquidações; empenho (`id_origem` `emp:`) não conta, como no catálogo. Anulação de
+  liquidação (valor negativo, TCE-PE) abate do recebido e não entra como evidência. Se a UF não
   tem nenhum pagamento do fornecedor (o PNCP só traz contratos), usa o valor dos contratos assinados na janela, e a
   explicação diz isso. Órgão desconhecido entra no total, mas nunca como "o maior órgão".
 - **Recálculo idempotente:** o mesmo (fornecedor, UF, tipo) atualiza a mesma linha (o `id` não muda); sinal que
