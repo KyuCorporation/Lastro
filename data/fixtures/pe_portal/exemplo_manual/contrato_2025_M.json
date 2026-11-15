@@ -1,0 +1,29 @@
+{
+ "resposta": {
+  "status": "OK",
+  "tamanhoResultado": "1",
+  "limiteResultado": "100000",
+  "conteudo": [
+   {
+    "CodigoUG": "1146",
+    "SiglaUG": "PMG-EX",
+    "UnidadeGestora": "PREFEITURA EXEMPLO DE GARANHUNS (SINTÉTICO)",
+    "Municipio": "Garanhuns",
+    "Esfera": "M ",
+    "CodigoContrato": "90000045",
+    "NumeroContrato": "045",
+    "AnoContrato": "2025",
+    "TipoDocumento": "CNPJ",
+    "CPF_CNPJ": "99000002000148    ",
+    "NumeroDocumento": "99000002000148",
+    "NumeroDocumentoAjustado": "99000002000148",
+    "RazaoSocial": "TRANSPORTES EXEMPLO BETA LTDA (SINTÉTICO)",
+    "Objeto": "Transporte escolar da zona rural",
+    "Valor": "480000.50",
+    "Vigencia": "10/03/2025 a 09/03/2026",
+    "Estagio": "Fim de Vigência",
+    "Situacao": "Regular"
+   }
+  ]
+ }
+}

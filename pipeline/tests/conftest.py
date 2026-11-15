@@ -39,6 +39,8 @@ def settings(tmp_path: Path) -> Settings:
         tcepe_anos="2025",
         tcepe_esferas="E,M",
         tcepe_municipios="",
+        tcepe_ugs_estaduais="",
+        tcepe_contratos_ano_inicial=2025,
     )
 
 

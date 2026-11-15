@@ -17,7 +17,9 @@ AJUDA_FONTE = "pe_portal, pncp, sancoes (ceis + cnep), ceis, cnep ou todas"
 
 
 def _cliente(conector: Conector, settings: Settings) -> ClienteHttp:
-    return ClienteHttp(conector.fonte_id, settings.cache_dir, settings.requests_per_second)
+    return ClienteHttp(
+        conector.fonte_id, settings.cache_dir, settings.requests_per_second, timeout=settings.http_timeout
+    )
 
 
 def _gravar_amostra(conector: Conector, settings: Settings, linhas: int) -> None:
