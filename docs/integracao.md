@@ -60,7 +60,7 @@ o redator vai direto ao modelo determinístico: uma chamada só. O recibo regist
 
 ## O que ainda depende de pessoas
 
-- **Amostra real do TCE-PE** (R1): rodar em rede brasileira `python -m lastro_pipeline.cli ingest pe_portal --amostra 200`
-  e `pytest -m rede tests/test_pe_portal.py`; o conector foi escrito contra formato hipotético.
+- **Carga completa do TCE-PE** (R1): rodar `make ingest-pe` em rede brasileira. O conector e a amostra já foram
+  conferidos na API real (`pytest -m rede tests/test_pe_portal.py`).
 - **Gemini real**: nenhum teste chama o provedor de verdade. Com `LLM_PROVIDER=gemini` e a chave, fazer umas 20
   perguntas e conferir no recibo quantas saem `aprovado` e quantas `fallback`, e o tempo de cada uma.

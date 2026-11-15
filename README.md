@@ -206,7 +206,7 @@ Rodar `make test` depois do `make demo` grava as consultas de teste no históric
 |---|---|
 | RLS, migrations e seeds; matriz de acesso (§6.4) | pronto |
 | Login, `/me`, permissão por perfil, limite de 30 consultas por minuto | pronto |
-| Ingestão PNCP, CEIS, CNEP e TCE-PE (falta a amostra real do TCE-PE) | pronto |
+| Ingestão PNCP, CEIS, CNEP e TCE-PE (falta a primeira carga completa do TCE-PE) | pronto |
 | `POST /consultas` de ponta a ponta com recibo e auditoria; `GET /consultas`, `GET /recibos/{id}` | pronto |
 | `GET /recibos/{id}/verificar`: selo íntegro ou alterado pelo hash canônico (T15) | pronto |
 | Interface: consulta, recibo, acesso, auditoria e fontes | pronto |

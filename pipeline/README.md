@@ -5,7 +5,7 @@ Conecta como `lastro_ingest`. Roda por CLI (`python -m lastro_pipeline.cli ...`)
 ## Uso
 
 ```
-python -m lastro_pipeline.cli ingest pe_portal            # TCE-PE (só em rede brasileira)
+python -m lastro_pipeline.cli ingest pe_portal            # TCE-PE (só em rede brasileira; recorte em TCEPE_*)
 python -m lastro_pipeline.cli ingest pncp                 # PNCP: UFs de PNCP_UFS no período do .env
 python -m lastro_pipeline.cli ingest sancoes              # CEIS + CNEP (ou: ceis, cnep)
 python -m lastro_pipeline.cli ingest todas --offline      # tudo a partir de data/fixtures, sem rede
@@ -23,7 +23,8 @@ lastro_pipeline/
   cli.py            # typer: ingest <fonte> [--offline] [--amostra N], sinais
   config.py         # pydantic-settings (.env)
   modelos.py        # RespostaBruta, Orgao, Fornecedor, Contrato, Pagamento, Sancao, Descarte
-  http.py           # cliente comum: N req/s, retry com backoff, cache em disco do dia, User-Agent lastro-hackathon
+  http.py           # cliente comum: N req/s, retry com backoff, cache em disco (do dia, ou mais se o conector pedir),
+                    # tratamento do corpo antes do cache (saneamento), User-Agent lastro-hackathon
   bronze.py         # resposta bruta em data/raw/<fonte>/<data>/ e em arquivos_brutos (sha256 único por fonte)
   db.py             # SQL explícito: execucoes_ingestao e upsert por (fonte_id, id_origem) só se hash_conteudo mudou
   runner.py         # orquestra uma execução, igual para todas as fontes
@@ -44,6 +45,16 @@ tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 4. Em erro, os fatos não são gravados (transação única) e a execução fica `falhou`, com a mensagem em `erro`.
 
 Pessoa física (CPF, `tipoPessoa = PF`, `TIPO DE PESSOA = F`) é descartada e contada em `registros_descartados`.
+
+### TCE-PE (`pe_portal`)
+
+A API não pagina e corta em 100 mil registros, então a coleta é fatiada: contratos por ano e esfera (desde
+`TCEPE_CONTRATOS_ANO_INICIAL`), despesas do estado por unidade gestora, despesas dos municípios de
+`TCEPE_MUNICIPIOS` por mês. Fatia de exercício encerrado fica 30 dias no cache (`TCEPE_CACHE_DIAS`); fatia que
+bate no limite falha com `RecorteTruncado`. A resposta é saneada antes de ir para o cache e o bronze: pessoa
+física vira marcador e o CPF nunca é gravado. A liquidação não traz o credor; o conector o busca no empenho, e
+por isso as despesas são coletadas (e ficam na fixture) antes das liquidações. Formato, filtros e mapeamento em
+`docs/catalogo-fontes.md`.
 
 ## Sinais (`make sinais`)
 
