@@ -123,9 +123,16 @@ describe("07 dossiê do fornecedor", () => {
     expect(sinais).toHaveTextContent("Forte · Sanção vigente");
     expect(sinais).toHaveTextContent("regra v1");
     expect(screen.getByRole("region", { name: "Sócios" })).toHaveTextContent("***.456.789-** JOSÉ");
-    const fontes = screen.getByRole("region", { name: "Fontes consultadas" });
-    expect(fontes).toHaveTextContent("TCE-PE Dados Abertos");
-    expect(fontes).toHaveTextContent("CEIS");
+    const cobertura = screen.getByRole("region", { name: "Cobertura deste dossiê" });
+    expect(cobertura).toHaveTextContent("TCE-PE Dados Abertos");
+    expect(cobertura).toHaveTextContent("CEIS");
+    expect(cobertura).toHaveTextContent("Sinais calculados em 06/11/2026");
+    expect(cobertura).toHaveTextContent("Ausência de sinal não é atestado de regularidade");
+    // Liquidação não é pagamento: a tabela usa o nome certo e explica.
+    expect(within(resumo).getAllByRole("columnheader").map((c) => c.textContent)).toEqual([
+      "Estado", "Contratos", "Valor contratado", "Valor vigente", "Liquidações", "Valor liquidado", "Valor empenhado",
+    ]);
+    expect(resumo).toHaveTextContent("Liquidado: despesa reconhecida pelo órgão");
     expect(document.body.textContent).not.toMatch(PALAVRAS_PROIBIDAS);
   });
 
@@ -135,6 +142,30 @@ describe("07 dossiê do fornecedor", () => {
     await montarLogado("gil@alfa.demo", "/fornecedores/99999999000191", api);
     const socios = await screen.findByRole("region", { name: "Sócios" });
     expect(socios).toHaveTextContent("Seu perfil não acessa o quadro societário.");
+  });
+
+  it("sem sinais, o selo é neutro e não parece atestado", async () => {
+    const { DOSSIE } = await import("./montar");
+    const api = apiFalsa({ dossie: async () => ({ ...DOSSIE, sinais: [] }) });
+    await montarLogado("ana@alfa.demo", "/fornecedores/99999999000191", api);
+    const selo = await screen.findByText("Nenhum sinal nas fontes consultadas");
+    expect(selo.className).not.toMatch(/verde/);
+    const cobertura = screen.getByRole("region", { name: "Cobertura deste dossiê" });
+    expect(cobertura).toHaveTextContent("Ausência de sinal não é atestado de regularidade");
+    expect(cobertura).not.toHaveTextContent("Sinais calculados em");
+  });
+
+  it("fornecedor sem registros (404) vira aviso neutro, não erro", async () => {
+    const api = apiFalsa({
+      dossie: async () => {
+        throw new ErroApi(404, "NAO_ENCONTRADO", "Não há registros deste fornecedor nas fontes autorizadas para você.", "rid-404");
+      },
+    });
+    await montarLogado("ana@alfa.demo", "/fornecedores/11222333000181", api);
+    const aviso = await screen.findByRole("region", { name: "Sem registros deste fornecedor" });
+    expect(aviso).toHaveTextContent("11.222.333/0001-81");
+    expect(aviso).toHaveTextContent("nas fontes autorizadas para você");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("CNPJ inválido mostra o erro da API", async () => {
