@@ -234,3 +234,80 @@ describe("contexto por carteira na consulta (I5)", () => {
     expect(await screen.findByText("Carteira com finalidade Homologação")).toBeInTheDocument();
   });
 });
+
+describe("02 recibo: o que o SPEC §12 lista", () => {
+  const conteudo = RECIBO_ANA.conteudo;
+
+  it("mostra plano e parâmetros, fontes com a coleta e como a resposta foi produzida", async () => {
+    await montarLogado("ana@alfa.demo", "/recibos/recibo-1");
+    const plano = await screen.findByRole("region", { name: "Plano e parâmetros" });
+    expect(plano).toHaveTextContent("Contratos vencendo");
+    expect(plano).toHaveTextContent("contratos_vencendo@v1");
+    expect(plano).toHaveTextContent("CNPJ99.999.999/0001-91");
+    expect(plano).toHaveTextContent("Prazo em dias180");
+    expect(plano).toHaveTextContent("Data de referência06/11/2026");
+    expect(plano).toHaveTextContent("Estados consultadosPE");
+
+    const fontes = screen.getByRole("region", { name: "Fontes" });
+    expect(fontes).toHaveTextContent("TCE-PE Dados Abertos");
+    expect(fontes).toHaveTextContent("coletada em 06/11/2026");
+
+    const producao = screen.getByRole("region", { name: "Como a resposta foi produzida" });
+    expect(producao).toHaveTextContent("Planoregras do sistema, sem IA");
+    expect(producao).toHaveTextContent("Textoaprovado pelo verificador");
+    expect(producao).toHaveTextContent("planejador_v1");
+  });
+
+  it("resposta padrão mostra o motivo em português e o modelo que planejou", async () => {
+    const recibo = {
+      ...RECIBO_ANA,
+      conteudo: {
+        ...conteudo,
+        verificacao: { status: "fallback" as const, motivos: ["numero_fora_do_resultado", "motivo_novo"] },
+        ia: { provedor: "gemini", modelo: "gemini-3.6-flash", versao_prompt_planejador: "planejador_v1",
+          versao_prompt_redator: "redator_v2", planejador_por_regras: false },
+      },
+    };
+    await montarLogado("ana@alfa.demo", "/recibos/recibo-1", apiFalsa({ recibo: async () => recibo }));
+    const producao = await screen.findByRole("region", { name: "Como a resposta foi produzida" });
+    expect(producao).toHaveTextContent("Planomodelo gemini-3.6-flash");
+    expect(producao).toHaveTextContent("resposta padrão do sistema, com os valores do banco");
+    expect(producao).toHaveTextContent("o texto da IA trazia um número que não estava no resultado");
+    expect(producao).toHaveTextContent("motivo_novo"); // motivo sem tradução aparece como veio
+    expect(producao).toHaveTextContent("redator_v2");
+  });
+
+  it("consulta sem valor em reais destaca a contagem principal", async () => {
+    const recibo = {
+      ...RECIBO_ANA,
+      conteudo: {
+        ...conteudo,
+        valores: {
+          v1: { valor: "99.999.999/0001-91", tipo: "texto" as const, origem: "parametros.cnpj", significado: "CNPJ do fornecedor" },
+          v2: { valor: "2", tipo: "inteiro" as const, origem: "count(sancoes)", significado: "número de sanções registradas" },
+          v3: { valor: "1", tipo: "inteiro" as const, origem: "count(sancoes vigentes)", significado: "número de sanções vigentes" },
+        },
+      },
+    };
+    await montarLogado("ana@alfa.demo", "/recibos/recibo-1", apiFalsa({ recibo: async () => recibo }));
+    const destaque = await screen.findByRole("region", { name: "Número de sanções registradas" });
+    expect(destaque).toHaveTextContent("2");
+    expect(screen.queryByText("Sem valor em reais")).not.toBeInTheDocument();
+  });
+
+  it("link de origem fora de http(s) vira texto", async () => {
+    const linhas = [{ ...conteudo.linhas[0], url_origem: "javascript:alert(1)" }];
+    const recibo = { ...RECIBO_ANA, conteudo: { ...conteudo, linhas } };
+    await montarLogado("ana@alfa.demo", "/recibos/recibo-1", apiFalsa({ recibo: async () => recibo }));
+    const tabela = await screen.findByRole("table");
+    expect(within(tabela).queryByRole("link")).not.toBeInTheDocument();
+    expect(tabela).toHaveTextContent("Registro 01 · sem link público");
+  });
+
+  it("copia o selo e avisa em texto", async () => {
+    const { usuario } = await montarLogado("ana@alfa.demo", "/recibos/recibo-1");
+    await usuario.click(await screen.findByRole("button", { name: "Copiar selo" }));
+    expect(await screen.findByText("Selo copiado")).toBeInTheDocument();
+    expect(await navigator.clipboard.readText()).toBe(RECIBO_ANA.hash);
+  });
+});

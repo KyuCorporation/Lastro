@@ -2,7 +2,7 @@
 
 import type { ConteudoRecibo } from "../../api/types";
 import { NOME_FINALIDADE } from "../../lib/apresentacao";
-import { dataCurta, decimal, moeda } from "../../lib/formato";
+import { cnpj, dataCurta, decimal, moeda } from "../../lib/formato";
 
 export interface ValorDestacado {
   marcador: string;
@@ -113,3 +113,37 @@ export function nomesFontes(conteudo: ConteudoRecibo): string[] {
 }
 
 export { moeda };
+
+/** Destaque do recibo quando a consulta não tem valor em reais: a primeira contagem do resultado. */
+export function contagemPrincipal(conteudo: ConteudoRecibo): ValorRotulado | null {
+  const inteiros = new Set(
+    Object.entries(conteudo.valores ?? {})
+      .filter(([, v]) => v.tipo === "inteiro")
+      .map(([marcador]) => marcador),
+  );
+  return valoresDaResposta(conteudo).find((v) => inteiros.has(v.marcador)) ?? null;
+}
+
+const NOME_PARAMETRO: Record<string, string> = {
+  cnpj: "CNPJ",
+  ufs: "Estados consultados",
+  hoje: "Data de referência",
+  dias: "Prazo em dias",
+  data_inicio: "Início do período",
+  data_fim: "Fim do período",
+  termo: "Termo pesquisado",
+};
+
+function textoParametro(nome: string, valor: unknown): string {
+  if (Array.isArray(valor)) return valor.join(", ");
+  if (typeof valor !== "string") return String(valor);
+  if (nome === "cnpj") return cnpj(valor);
+  return /^\d{4}-\d{2}-\d{2}/.test(valor) ? dataCurta(valor) : valor;
+}
+
+/** Parâmetros efetivos da consulta do catálogo, com nome legível e na ordem em que foram gravados. */
+export function parametrosLegiveis(conteudo: ConteudoRecibo): { nome: string; texto: string }[] {
+  return Object.entries(conteudo.execucao.parametros_efetivos)
+    .filter(([, valor]) => valor !== null && valor !== undefined && valor !== "")
+    .map(([nome, valor]) => ({ nome: NOME_PARAMETRO[nome] ?? nome, texto: textoParametro(nome, valor) }));
+}
