@@ -92,16 +92,24 @@ def extrair_cnpj(texto: str) -> Cnpj:
     return Cnpj(None, invalido)
 
 
+_SIGLA = "|".join(sorted(UFS))
+SIGLA_QUALQUER = re.compile(rf"\b({_SIGLA})\b")
+# Sigla usada como lugar: depois de preposição ("em AL", "de SP", "AL e PE") ou de pontuação ("- AL", "(AL)",
+# "uf=AL", "uf":"AL"), e não seguida de um nome próprio ("MS Informática", "RN Construções" são empresas).
+SIGLA_EM_CONTEXTO = re.compile(
+    r"(?:(?<!\w)(?i:em|no|na|nos|nas|de|do|da|dos|das|para|pra|uf|estado|estados|e|ou)\s+|[-/(,=:\"']\s*)"
+    rf"({_SIGLA})\b(?!\s+[A-ZÀ-Ý][a-zà-ÿ])"
+)
+
+
 def extrair_uf(original: str, normalizado: str) -> str | None:
     for nome in sorted(ESTADOS, key=len, reverse=True):
         # "para" sem acento é também a preposição: só vale como Pará com artigo antes.
         padrao = r"\b(?:no|do|estado do) para\b" if nome == "para" else rf"\b{nome}\b"
         if re.search(padrao, normalizado):
             return ESTADOS[nome]
-    for sigla in re.findall(r"\b([A-Z]{2})\b", original):
-        if sigla in UFS:
-            return sigla
-    return None
+    achada = SIGLA_EM_CONTEXTO.search(original)
+    return achada.group(1) if achada else None
 
 
 # "merenda escolar em pernambuco": o estado vira o parâmetro `uf`, não parte do termo da busca textual.
@@ -118,8 +126,13 @@ def _sem_estado_no_fim(termo: str) -> str:
     return _ESTADO_NO_FIM.sub("", termo.strip()).strip()
 
 
-def ufs_mencionadas(texto: str) -> set[str]:
-    """Todas as UFs citadas no texto, por nome ou por sigla em maiúsculas."""
+def ufs_mencionadas(texto: str, *, siglas_em_contexto: bool = False) -> set[str]:
+    """Todas as UFs citadas no texto, por nome ou por sigla em maiúsculas.
+
+    `siglas_em_contexto=True` (guarda da pergunta) só conta a sigla usada como lugar, para o nome de uma empresa
+    ("MS Informática") não virar pedido de outro estado. O padrão é estrito (verificador): no texto do redator,
+    qualquer sigla fora do escopo reprova. O acesso não depende disto: o executor e a RLS barram a UF.
+    """
     t = normalizar(texto)
     achadas: set[str] = set()
     for nome in sorted(ESTADOS, key=len, reverse=True):
@@ -127,7 +140,8 @@ def ufs_mencionadas(texto: str) -> set[str]:
         if re.search(padrao, t):
             achadas.add(ESTADOS[nome])
             t = re.sub(padrao, " ", t)  # "mato grosso do sul" não conta também como "mato grosso"
-    achadas.update(s for s in re.findall(r"\b([A-Z]{2})\b", texto) if s in UFS)
+    siglas = SIGLA_EM_CONTEXTO if siglas_em_contexto else SIGLA_QUALQUER
+    achadas.update(siglas.findall(texto))
     return achadas
 
 
