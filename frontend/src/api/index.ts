@@ -1,8 +1,7 @@
 // Interface da API usada pelas telas. Telas nunca chamam fetch: recebem uma `Api` pelo ApiProvider.
-// Isso permite trocar a implementação (real, simulada, de teste) sem tocar nas telas.
+// Isso permite trocar a implementação (real ou de teste) sem tocar nas telas.
 // Tela nova = um módulo novo aqui (ex.: carteiras) + um campo em `Api`.
 
-import { consultasSimuladas } from "./adaptadores/consultasSimuladas";
 import type { Http } from "./http";
 import type {
   CarteiraCriada,
@@ -130,15 +129,10 @@ export function criarApiMetricas(http: Http): ApiMetricas {
   return { obter: () => http.get<Metricas>("/metricas") };
 }
 
-export interface OpcoesApi {
-  /** Troca POST /consultas pelo adaptador simulado (só para desenvolver a tela sem backend). */
-  consultasSimuladas?: boolean;
-}
-
-export function criarApi(http: Http, opcoes: OpcoesApi = {}): Api {
+export function criarApi(http: Http): Api {
   return {
     auth: criarApiAuth(http),
-    consultas: opcoes.consultasSimuladas ? consultasSimuladas() : criarApiConsultas(http),
+    consultas: criarApiConsultas(http),
     recibos: criarApiRecibos(http),
     fontes: criarApiFontes(http),
     carteiras: criarApiCarteiras(http),

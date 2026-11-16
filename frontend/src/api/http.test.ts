@@ -1,4 +1,3 @@
-import { consultasSimuladas } from "./adaptadores/consultasSimuladas";
 import { ErroApi, criarHttp } from "./http";
 
 function resposta(status: number, corpo?: unknown) {
@@ -53,16 +52,5 @@ describe("criarHttp", () => {
   it("erro sem corpo usa mensagem padrão em português", async () => {
     const http = criarHttp({ baseUrl: "", token: () => null, fetch: async () => resposta(500) });
     await expect(http.get("/x")).rejects.toMatchObject({ codigo: "ERRO_INTERNO", message: "Erro inesperado. Tente de novo." });
-  });
-});
-
-describe("consultasSimuladas", () => {
-  it("sempre marca a resposta como sintética", async () => {
-    const api = consultasSimuladas(0);
-    const r1 = await api.criar({ pergunta: "Contratos do CNPJ 99.999.999/0001-91" });
-    const r2 = await api.criar({ pergunta: "Quanto recebeu em Alagoas?" });
-    expect([r1.sintetico, r2.sintetico]).toEqual([true, true]);
-    expect([r1.status, r2.status]).toEqual(["respondida", "negada"]);
-    expect(r1.consulta_id).not.toBe(r2.consulta_id);
   });
 });

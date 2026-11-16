@@ -5,7 +5,6 @@ import { pode } from "../auth/permissoes";
 import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { TituloPagina } from "../components/TituloPagina";
-import { ambiente } from "../config/ambiente";
 import { useCarteiras } from "../features/carteiras/hooks";
 import { FormularioConsulta } from "../features/consulta/FormularioConsulta";
 import { ResultadoConsulta } from "../features/consulta/ResultadoConsulta";
@@ -16,7 +15,7 @@ import { useRecibo } from "../features/recibo/useRecibo";
 import { NOME_PERFIL } from "../lib/apresentacao";
 
 /** Tela 01 do design: consulta inteligente (SPEC §12, item 2). */
-export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simulado?: boolean }) {
+export function ConsultaPage() {
   const { usuario } = useAuth();
   const consulta = useCriarConsulta();
   const recibo = useRecibo(consulta.data?.recibo_id);
@@ -52,10 +51,10 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
 
       <div aria-live="polite">
         {consulta.isPending && <Carregando texto="Consultando as fontes autorizadas para você…" />}
-        {negacao && <ResultadoConsulta resultado={negacao} simulado={false} ufs={usuario.ufs} />}
+        {negacao && <ResultadoConsulta resultado={negacao} ufs={usuario.ufs} />}
         {consulta.isError && !negacao && <MensagemErro erro={consulta.error} titulo="A consulta não foi concluída" />}
         {consulta.data && (
-          <ResultadoConsulta resultado={consulta.data} simulado={simulado} recibo={recibo.data} ufs={usuario.ufs} />
+          <ResultadoConsulta resultado={consulta.data} recibo={recibo.data} ufs={usuario.ufs} />
         )}
       </div>
 

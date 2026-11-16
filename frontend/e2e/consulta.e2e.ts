@@ -1,5 +1,5 @@
 // Passos da demo pela interface real, nas 5 telas do design: consulta, recibo, acesso, auditoria e fontes.
-// Dados: seeds de demo e `ingest todas --offline` (make demo). Nada é simulado: VITE_CONSULTAS_SIMULADAS=false.
+// Dados: seeds de demo e `ingest todas --offline` (make demo). Nada é simulado.
 
 import { expect, test, type Page } from "@playwright/test";
 
