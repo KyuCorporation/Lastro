@@ -33,6 +33,9 @@ class Marcador:
     tipo: TipoValor
     significado: str
     origem: str
+    # Radicais (sem acento) que precisam aparecer junto do marcador no texto do redator. Vazio = não cobrado
+    # (identificação e parâmetros da pergunta). O verificador usa para pegar valor com o sentido trocado.
+    ancoras: tuple[str, ...] = ()
 
     @property
     def texto(self) -> str:
@@ -59,10 +62,17 @@ class _Montador:
         self.essenciais: set[str] = set()
 
     def add(
-        self, valor: Any, tipo: TipoValor, significado: str, origem: str, *, essencial: bool = True
+        self,
+        valor: Any,
+        tipo: TipoValor,
+        significado: str,
+        origem: str,
+        *,
+        essencial: bool = True,
+        ancoras: tuple[str, ...] = (),
     ) -> str:
         mid = f"v{len(self.marcadores) + 1}"
-        self.marcadores[mid] = Marcador(mid, valor, tipo, significado, origem)
+        self.marcadores[mid] = Marcador(mid, valor, tipo, significado, origem, ancoras)
         if essencial:
             self.essenciais.add(mid)
         return "{{" + mid + "}}"
@@ -88,6 +98,18 @@ def modelo_da_intent(intent: str) -> Callable[[ModeloDaIntent], ModeloDaIntent]:
 
 def intents_sem_modelo() -> set[str]:
     return set(CONSULTAS) - set(_POR_INTENT)
+
+
+# ------------------------------------------------------------------ âncoras
+# Onde a intent tem mais de um valor do mesmo tipo (resumo: contratado, vigente, pago, empenhado), a âncora é
+# estreita, para um não passar pelo outro. Onde só há um valor em reais, "soma" e "total" também valem.
+A_CONTRATO = ("contrat",)
+A_VIGENTE = ("vigent", "vigor")
+A_PAGO = ("pag", "liquid", "receb", "desembols")
+A_EMPENHO = ("empenh", "reserv")
+A_VENCIMENTO = ("venc", "termin", "fim", "acab", "encerr", "expir")
+A_SANCAO = ("sanc", "puni", "penalid")
+A_VALOR_UNICO = ("contrat", "soma", "total", "valor")
 
 
 # ------------------------------------------------------------------ partes comuns
@@ -117,9 +139,13 @@ def _frase_empenho(m: _Montador, t: dict[str, Any]) -> str:
     if not t["n_empenhos"]:
         return ""
     v_e = m.add(
-        t["valor_empenhado"], "moeda", "valor empenhado (reservado, ainda não pago)", "sum(empenhos.valor)"
+        t["valor_empenhado"],
+        "moeda",
+        "valor empenhado (reservado, ainda não pago)",
+        "sum(empenhos.valor)",
+        ancoras=A_EMPENHO,
     )
-    n_e = m.add(t["n_empenhos"], "inteiro", "número de empenhos", "count(empenhos)")
+    n_e = m.add(t["n_empenhos"], "inteiro", "número de empenhos", "count(empenhos)", ancoras=A_EMPENHO)
     empenhos = _p(t["n_empenhos"], "empenho", "empenhos")
     return (
         f" Há ainda {v_e} empenhados em {n_e} {empenhos}: reserva no orçamento, que só conta como pago "
@@ -140,15 +166,35 @@ def _registros_contratos(linhas: list[dict]) -> tuple[str, ...]:
 def _resumo(r: ResultadoConsulta) -> Material:
     m, t = _Montador(), r.totais
     cnpj = _cnpj(m, r)
-    n_c = m.add(t["n_contratos"], "inteiro", "número de contratos", "count(contratos)")
-    v_c = m.add(t["valor_contratado"], "moeda", "valor contratado somado", "sum(contratos.valor_global)")
+    n_c = m.add(t["n_contratos"], "inteiro", "número de contratos", "count(contratos)", ancoras=A_CONTRATO)
+    v_c = m.add(
+        t["valor_contratado"],
+        "moeda",
+        "valor contratado somado",
+        "sum(contratos.valor_global)",
+        ancoras=A_CONTRATO,
+    )
     v_v = m.add(
-        t["valor_vigente"], "moeda", "valor dos contratos ainda vigentes", "sum(valor_global) vigentes"
+        t["valor_vigente"],
+        "moeda",
+        "valor dos contratos ainda vigentes",
+        "sum(valor_global) vigentes",
+        ancoras=A_VIGENTE,
     )
     n_p = m.add(
-        t["n_pagamentos"], "inteiro", "número de pagamentos (sem contar empenhos)", "count(pagamentos)"
+        t["n_pagamentos"],
+        "inteiro",
+        "número de pagamentos (sem contar empenhos)",
+        "count(pagamentos)",
+        ancoras=A_PAGO,
     )
-    v_p = m.add(t["valor_pago"], "moeda", "valor pago somado (sem contar empenhos)", "sum(pagamentos.valor)")
+    v_p = m.add(
+        t["valor_pago"],
+        "moeda",
+        "valor pago somado (sem contar empenhos)",
+        "sum(pagamentos.valor)",
+        ancoras=A_PAGO,
+    )
     ufs = _ufs_marcador(m, r)
     vazio = t["n_contratos"] == 0 and t["n_pagamentos"] == 0 and t["n_empenhos"] == 0
     if vazio:
@@ -174,13 +220,26 @@ def _resumo(r: ResultadoConsulta) -> Material:
 def _vigentes(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
-    n = m.add(t["n_contratos"], "inteiro", "número de contratos vigentes", "count(contratos vigentes)")
-    valor = m.add(t["valor_total"], "moeda", "valor somado dos contratos vigentes", "sum(valor_global)")
+    n = m.add(
+        t["n_contratos"],
+        "inteiro",
+        "número de contratos vigentes",
+        "count(contratos vigentes)",
+        ancoras=A_CONTRATO + A_VIGENTE,
+    )
+    valor = m.add(
+        t["valor_total"],
+        "moeda",
+        "valor somado dos contratos vigentes",
+        "sum(valor_global)",
+        ancoras=A_VALOR_UNICO + A_VIGENTE,
+    )
     proximo = m.add(
         min((c["vigencia_fim"] for c in linhas), default=None),
         "data",
         "data do próximo fim de vigência",
         "min(vigencia_fim)",
+        ancoras=A_VENCIMENTO,
     )
     ufs = _ufs_marcador(m, r)
     if not linhas:
@@ -201,13 +260,26 @@ def _vencendo(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
     dias = m.add(r.parametros["dias"], "inteiro", "prazo em dias", "parametros.dias", essencial=False)
-    n = m.add(t["n_contratos"], "inteiro", "número de contratos que vencem no prazo", "count(contratos)")
-    valor = m.add(t["valor_vencendo"], "moeda", "valor somado dos contratos que vencem", "sum(valor_global)")
+    n = m.add(
+        t["n_contratos"],
+        "inteiro",
+        "número de contratos que vencem no prazo",
+        "count(contratos)",
+        ancoras=A_CONTRATO + A_VENCIMENTO,
+    )
+    valor = m.add(
+        t["valor_vencendo"],
+        "moeda",
+        "valor somado dos contratos que vencem",
+        "sum(valor_global)",
+        ancoras=A_VALOR_UNICO + A_VENCIMENTO,
+    )
     primeiro = m.add(
         min((c["vigencia_fim"] for c in linhas), default=None),
         "data",
         "data do primeiro vencimento",
         "min(vigencia_fim)",
+        ancoras=A_VENCIMENTO,
     )
     ufs = _ufs_marcador(m, r)
     if not linhas:
@@ -227,6 +299,7 @@ def _vencendo(r: ResultadoConsulta) -> Material:
             "percentual",
             "parte do valor vigente que vence no prazo",
             "valor_vencendo / valor_vigente_total",
+            ancoras=A_VIGENTE + A_VENCIMENTO,
         )
         modelo += f" Isso é {pct} do valor vigente."
     modelo += f" O primeiro vence em {primeiro}."
@@ -246,9 +319,14 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
         "inteiro",
         "número de pagamentos no período (sem contar empenhos)",
         "count(pagamentos)",
+        ancoras=A_PAGO,
     )
     valor = m.add(
-        t["valor_total"], "moeda", "valor pago no período (sem contar empenhos)", "sum(pagamentos.valor)"
+        t["valor_total"],
+        "moeda",
+        "valor pago no período (sem contar empenhos)",
+        "sum(pagamentos.valor)",
+        ancoras=A_PAGO,
     )
     ufs = _ufs_marcador(m, r)
     if not linhas:
@@ -274,8 +352,14 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
 def _sancoes(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     cnpj = _cnpj(m, r)
-    n = m.add(t["n_sancoes"], "inteiro", "número de sanções registradas", "count(sancoes)")
-    vig = m.add(t["n_vigentes"], "inteiro", "número de sanções vigentes", "count(sancoes vigentes)")
+    n = m.add(t["n_sancoes"], "inteiro", "número de sanções registradas", "count(sancoes)", ancoras=A_SANCAO)
+    vig = m.add(
+        t["n_vigentes"],
+        "inteiro",
+        "número de sanções vigentes",
+        "count(sancoes vigentes)",
+        ancoras=(*A_VIGENTE, "ativ", "valend"),
+    )
     if not linhas:
         return m.material(f"Não encontrei sanções do fornecedor {cnpj} no CEIS nem no CNEP.", True)
     registradas = _p(t["n_sancoes"], "sanção registrada", "sanções registradas")
@@ -300,8 +384,14 @@ def _sancoes(r: ResultadoConsulta) -> Material:
 def _orgaos(r: ResultadoConsulta) -> Material:
     m, t, ranking = _Montador(), r.totais, r.conjuntos["ranking"]
     cnpj = _cnpj(m, r)
-    n_o = m.add(t["n_orgaos"], "inteiro", "número de órgãos contratantes", "count(orgaos)")
-    valor = m.add(t["valor_total"], "moeda", "valor contratado somado", "sum(contratos.valor_global)")
+    n_o = m.add(t["n_orgaos"], "inteiro", "número de órgãos contratantes", "count(orgaos)", ancoras=("orga",))
+    valor = m.add(
+        t["valor_total"],
+        "moeda",
+        "valor contratado somado",
+        "sum(contratos.valor_global)",
+        ancoras=A_VALOR_UNICO,
+    )
     ufs = _ufs_marcador(m, r)
     if not ranking:
         modelo = f"Não encontrei contratos do fornecedor {cnpj} nas fontes autorizadas para você ({ufs})."
@@ -314,6 +404,7 @@ def _orgaos(r: ResultadoConsulta) -> Material:
         "percentual",
         "participação do maior órgão no valor contratado",
         "ranking[0].participacao",
+        ancoras=("particip", "concentr", "maior", "parte", "valor"),
     )
     orgaos = _p(t["n_orgaos"], "órgão", "órgãos")
     modelo = (
@@ -333,8 +424,20 @@ def _orgaos(r: ResultadoConsulta) -> Material:
 def _busca(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
     termo = m.add(r.parametros["termo"], "texto", "termo pesquisado", "parametros.termo", essencial=False)
-    n = m.add(t["n_contratos"], "inteiro", "número de contratos encontrados", "count(contratos)")
-    valor = m.add(t["valor_total"], "moeda", "valor somado dos contratos encontrados", "sum(valor_global)")
+    n = m.add(
+        t["n_contratos"],
+        "inteiro",
+        "número de contratos encontrados",
+        "count(contratos)",
+        ancoras=(*A_CONTRATO, "encontr", "resultado"),
+    )
+    valor = m.add(
+        t["valor_total"],
+        "moeda",
+        "valor somado dos contratos encontrados",
+        "sum(valor_global)",
+        ancoras=A_VALOR_UNICO,
+    )
     ufs = _ufs_marcador(m, r)
     if not linhas:
         modelo = f"Não encontrei contratos com objeto relacionado a {termo} nas fontes autorizadas para você ({ufs})."
