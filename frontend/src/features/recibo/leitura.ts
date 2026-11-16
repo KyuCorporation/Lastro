@@ -1,6 +1,7 @@
 // Leituras do recibo para as telas. Tudo vem do backend: aqui só se escolhe e se formata.
 
 import type { ConteudoRecibo } from "../../api/types";
+import { NOME_FINALIDADE } from "../../lib/apresentacao";
 import { dataCurta, moeda } from "../../lib/formato";
 
 export interface ValorDestacado {
@@ -48,6 +49,14 @@ export function periodo(conteudo: ConteudoRecibo): string | null {
   }
   if (typeof p.hoje === "string") return `todo o histórico carregado até ${dataCurta(p.hoje)}`;
   return null;
+}
+
+/** "Carteira com finalidade Homologação", ou null quando a consulta foi feita sem carteira. */
+export function contextoCarteira(conteudo: ConteudoRecibo): string | null {
+  const c = conteudo.carteira;
+  if (!c) return null;
+  const nome = NOME_FINALIDADE[c.finalidade as keyof typeof NOME_FINALIDADE] ?? c.finalidade;
+  return `Carteira com finalidade ${nome}`;
 }
 
 export function consultouSancoes(conteudo: ConteudoRecibo): boolean {

@@ -15,8 +15,10 @@ function avisoInvalidos(invalidos: string[]): string {
   return `${invalidos.length} CNPJ${um ? "" : "s"} ignorado${um ? "" : "s"} por ser${um ? "" : "em"} inválido${um ? "" : "s"}: ${invalidos.join(", ")}`;
 }
 
-function Item({ item, posicao }: { item: ItemFila; posicao: number }) {
+function Item({ item, posicao, carteiraId }: { item: ItemFila; posicao: number; carteiraId: string }) {
   const nome = item.razao_social ?? "Razão social não informada";
+  const pergunta = `Qual o resumo do fornecedor ${cnpj(item.cnpj)}?`;
+  const consulta = `/?${new URLSearchParams({ carteira: carteiraId, pergunta }).toString()}`;
   return (
     <li aria-label={`Fornecedor ${posicao}: ${nome}`} className="cartao p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
@@ -37,9 +39,12 @@ function Item({ item, posicao }: { item: ItemFila; posicao: number }) {
       <div className="mt-4">
         <ListaSinais sinais={item.sinais} />
       </div>
-      <p className="mt-4">
+      <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
         <Link to={`/fornecedores/${item.cnpj}`} className="foco font-semibold text-kyu-laranja underline">
           Abrir dossiê<span className="sr-only"> de {nome}</span>
+        </Link>
+        <Link to={consulta} className="foco font-semibold text-kyu-laranja underline">
+          Perguntar sobre este fornecedor<span className="sr-only">: {nome}, no contexto desta carteira</span>
         </Link>
       </p>
     </li>
@@ -92,7 +97,7 @@ export function FilaPage() {
       ) : (
         <ol className="space-y-4">
           {itens.map((item, i) => (
-            <Item key={item.cnpj} item={item} posicao={i + 1} />
+            <Item key={item.cnpj} item={item} posicao={i + 1} carteiraId={carteira.id} />
           ))}
         </ol>
       )}
