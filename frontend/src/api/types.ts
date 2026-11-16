@@ -109,7 +109,8 @@ export interface ConteudoRecibo {
     coletado_em: string;
     hash_conteudo: string;
   }[];
-  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string }>;
+  /** `significado`: rótulo escrito pelo backend para o valor (recibos antigos não têm). */
+  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string; significado?: string }>;
   fontes: { fonte_id: string; nome: string; coletado_em: string; execucao_id: string | null; sintetico?: boolean }[];
   resposta_final: string;
   verificacao: { status: "aprovado" | "fallback" | "abstencao" | "negado"; motivos?: string[] };

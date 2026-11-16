@@ -1,7 +1,7 @@
 // Leituras do recibo para as telas. Tudo vem do backend: aqui só se escolhe e se formata.
 
 import type { ConteudoRecibo } from "../../api/types";
-import { dataCurta, moeda } from "../../lib/formato";
+import { dataCurta, decimal, moeda } from "../../lib/formato";
 
 export interface ValorDestacado {
   marcador: string;
@@ -23,6 +23,47 @@ export function valoresMoeda(conteudo: ConteudoRecibo): ValorDestacado[] {
     .filter(([, v]) => v.tipo === "moeda")
     .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
     .map(([marcador, v]) => ({ marcador, valor: v.valor, origem: v.origem ?? "" }));
+}
+
+/** Descrição de recibos sem `significado` (gravados antes de o backend mandar o rótulo). */
+export const DESCRICAO_ORIGEM: Record<string, string> = {
+  "sum(contratos.valor_global)": "soma do valor global dos contratos",
+  "sum(valor_global)": "soma do valor global dos contratos",
+  "sum(valor_global) vigentes": "soma do valor dos contratos vigentes",
+  "sum(pagamentos.valor)": "soma dos pagamentos",
+};
+
+export interface ValorRotulado {
+  marcador: string;
+  rotulo: string;
+  texto: string;
+}
+
+function maiuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function formatarValor(valor: string, tipo: string): string {
+  if (tipo === "moeda") return moeda(valor);
+  if (tipo === "data") return dataCurta(valor);
+  if (tipo === "percentual") return `${decimal(Number(valor), 2)}%`;
+  if (tipo === "inteiro" && Number.isFinite(Number(valor))) return Number(valor).toLocaleString("pt-BR");
+  return valor;
+}
+
+/**
+ * Valores que o código inseriu na resposta, com o rótulo escrito pelo backend, na ordem dos marcadores.
+ * Parâmetros da pergunta (CNPJ, estados, prazo, período) ficam de fora: não são resultado.
+ */
+export function valoresDaResposta(conteudo: ConteudoRecibo): ValorRotulado[] {
+  return Object.entries(conteudo.valores ?? {})
+    .filter(([, v]) => !(v.origem ?? "").startsWith("parametros."))
+    .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
+    .map(([marcador, v]) => {
+      const origem = v.origem ?? "";
+      const rotulo = v.significado?.trim() || DESCRICAO_ORIGEM[origem] || origem || marcador;
+      return { marcador, rotulo: maiuscula(rotulo), texto: formatarValor(v.valor, v.tipo) };
+    });
 }
 
 export function valorPrincipal(conteudo: ConteudoRecibo): ValorDestacado | null {

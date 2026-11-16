@@ -4,17 +4,10 @@ import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
-import { moeda, nomesFontes, temDadoSintetico, valorPrincipal, valoresMoeda } from "../features/recibo/leitura";
+import { DESCRICAO_ORIGEM, moeda, nomesFontes, temDadoSintetico, valorPrincipal, valoresMoeda } from "../features/recibo/leitura";
 import { useRecibo, useVerificacaoRecibo } from "../features/recibo/useRecibo";
 import { nomeIntent } from "../lib/apresentacao";
 import { dataHora, nomeFonte, nomeTabela } from "../lib/formato";
-
-const DESCRICAO_ORIGEM: Record<string, string> = {
-  "sum(contratos.valor_global)": "soma do valor global dos contratos",
-  "sum(valor_global)": "soma do valor global dos contratos",
-  "sum(valor_global) vigentes": "soma do valor dos contratos vigentes",
-  "sum(pagamentos.valor)": "soma dos pagamentos",
-};
 
 const VERIFICACAO: Record<string, string> = {
   aprovado: "aprovado pelo verificador",
