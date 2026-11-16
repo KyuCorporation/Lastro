@@ -149,3 +149,21 @@ def test_consultas_em_paralelo_mantem_a_trilha_encadeada(perguntar, banco_superu
     ).fetchone()
     assert quebras[:2] == (0, 0), f"cadeia quebrada: {quebras}"
     assert quebras[2] >= 16
+
+
+# ------------------------------------------------------------------ perguntas sugeridas da tela de consulta
+# As mesmas de frontend/src/features/consulta/perguntasSugeridas.ts (PE). Os CNPJs vêm da amostra real do TCE-PE
+# (data/fixtures/pe_portal/amostra): sugestão que a demo oferece tem de responder com dado.
+SUGESTOES_PE = [
+    "Qual o resumo do fornecedor 17.238.558/0001-02?",
+    "Quais contratos do CNPJ 17.238.558/0001-02 vencem nos próximos 6 meses?",
+    "Quais contratos vigentes o CNPJ 19.452.240/0001-55 tem?",
+    "Quais órgãos mais contratam o CNPJ 05.342.580/0001-19?",
+]
+
+
+@pytest.mark.parametrize("pergunta", SUGESTOES_PE)
+def test_sugestao_de_pe_responde_com_registros(perguntar, pergunta):
+    corpo = perguntar("ana@alfa.demo", pergunta).json()
+    assert corpo["status"] == "respondida", corpo["resposta"]
+    assert corpo["citacoes"] and all(c["fonte_id"] == "pe_portal" for c in corpo["citacoes"])
