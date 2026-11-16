@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import type { ItemFila } from "../api/types";
 import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
+import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
 import { useFila } from "../features/carteiras/hooks";
 import { ListaSinais } from "../features/sinais/ListaSinais";
@@ -19,6 +20,8 @@ function Item({ item, posicao, carteiraId }: { item: ItemFila; posicao: number; 
   const nome = item.razao_social ?? "Razão social não informada";
   const pergunta = `Qual o resumo do fornecedor ${cnpj(item.cnpj)}?`;
   const consulta = `/?${new URLSearchParams({ carteira: carteiraId, pergunta }).toString()}`;
+  // Nenhum dado visível para este CNPJ: o dossiê responderia "não encontrado".
+  const semRegistros = item.razao_social === null && item.sinais.length === 0 && Number(item.valor_exposto) === 0;
   return (
     <li aria-label={`Fornecedor ${posicao}: ${nome}`} className="cartao p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap">
@@ -36,18 +39,32 @@ function Item({ item, posicao, carteiraId }: { item: ItemFila; posicao: number; 
           </p>
         </div>
       </div>
-      <div className="mt-4">
-        <ListaSinais sinais={item.sinais} />
-      </div>
-      <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-        <Link to={`/fornecedores/${item.cnpj}`} className="foco font-semibold text-kyu-laranja underline">
-          Abrir dossiê<span className="sr-only"> de {nome}</span>
-        </Link>
-        <Link to={consulta} className="foco font-semibold text-kyu-laranja underline">
-          Perguntar sobre este fornecedor<span className="sr-only">: {nome}, no contexto desta carteira</span>
-        </Link>
-      </p>
+      {semRegistros ? (
+        <p className="mt-4">
+          <Selo tom="neutro">Sem registros nas fontes autorizadas para você</Selo>
+        </p>
+      ) : (
+        <>
+          <div className="mt-4">
+            <ListaSinais sinais={item.sinais} />
+          </div>
+          <Atalhos item={item} nome={nome} consulta={consulta} />
+        </>
+      )}
     </li>
+  );
+}
+
+function Atalhos({ item, nome, consulta }: { item: ItemFila; nome: string; consulta: string }) {
+  return (
+    <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+      <Link to={`/fornecedores/${item.cnpj}`} className="foco font-semibold text-kyu-laranja underline">
+        Abrir dossiê<span className="sr-only"> de {nome}</span>
+      </Link>
+      <Link to={consulta} className="foco font-semibold text-kyu-laranja underline">
+        Perguntar sobre este fornecedor<span className="sr-only">: {nome}, no contexto desta carteira</span>
+      </Link>
+    </p>
   );
 }
 
@@ -89,7 +106,8 @@ export function FilaPage() {
       <p className="cartao p-5 text-sm text-kyu-suave">
         Prioridade = soma do peso da gravidade × log10(1 + valor exposto). Pesos: forte 10, atenção 3, informativo 1.
         O fator de exposição vale no mínimo 1, para que uma sanção sem contrato vigente não vá para o fim da fila.
-        Valor exposto é o valor vigente do fornecedor nos estados do seu acesso.
+        Valor exposto é o valor vigente do fornecedor nos estados do seu acesso. Os sinais vêm do último cálculo da
+        base; a data de cada um está no dossiê.
       </p>
 
       {itens.length === 0 ? (
