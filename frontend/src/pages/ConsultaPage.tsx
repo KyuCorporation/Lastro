@@ -1,8 +1,11 @@
+import { useSearchParams } from "react-router-dom";
+
 import { useAuth } from "../auth/AuthProvider";
 import { pode } from "../auth/permissoes";
 import { MensagemErro } from "../components/MensagemErro";
 import { TituloPagina } from "../components/TituloPagina";
 import { ambiente } from "../config/ambiente";
+import { useCarteiras } from "../features/carteiras/hooks";
 import { FormularioConsulta } from "../features/consulta/FormularioConsulta";
 import { ResultadoConsulta } from "../features/consulta/ResultadoConsulta";
 import { negacaoComoResultado } from "../features/consulta/negacao";
@@ -16,6 +19,8 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
   const { usuario } = useAuth();
   const consulta = useCriarConsulta();
   const recibo = useRecibo(consulta.data?.recibo_id);
+  const carteiras = useCarteiras();
+  const [busca] = useSearchParams();
   if (!usuario) return null;
   const negacao = consulta.isError ? negacaoComoResultado(consulta.error) : null;
   const consulta_permitida = pode(usuario.perfil, "consultar");
@@ -28,9 +33,14 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
 
       {consulta_permitida ? (
         <FormularioConsulta
+          // Vindo da fila (?carteira=…&pergunta=…), o formulário começa preenchido.
+          key={busca.toString()}
           sugestoes={sugestoesPara(usuario.ufs)}
           enviando={consulta.isPending}
-          aoEnviar={(pergunta) => consulta.mutate({ pergunta })}
+          carteiras={carteiras.data}
+          carteiraInicial={busca.get("carteira") ?? ""}
+          perguntaInicial={busca.get("pergunta") ?? ""}
+          aoEnviar={(pergunta, carteira_id) => consulta.mutate(carteira_id ? { pergunta, carteira_id } : { pergunta })}
         />
       ) : (
         <p role="note" className="cartao p-5 text-kyu-texto">

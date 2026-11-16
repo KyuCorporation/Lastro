@@ -4,7 +4,15 @@ import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
-import { DESCRICAO_ORIGEM, moeda, nomesFontes, temDadoSintetico, valorPrincipal, valoresMoeda } from "../features/recibo/leitura";
+import {
+  DESCRICAO_ORIGEM,
+  contextoCarteira,
+  moeda,
+  nomesFontes,
+  temDadoSintetico,
+  valorPrincipal,
+  valoresMoeda,
+} from "../features/recibo/leitura";
 import { useRecibo, useVerificacaoRecibo } from "../features/recibo/useRecibo";
 import { nomeIntent } from "../lib/apresentacao";
 import { dataHora, nomeFonte, nomeTabela } from "../lib/formato";
@@ -151,6 +159,8 @@ export function ReciboPage() {
           <dd>{nomesFontes(c).join(" · ") || "nenhuma fonte citada"}</dd>
           <dt className="font-semibold">Pergunta</dt>
           <dd>{c.pergunta}</dd>
+          <dt className="font-semibold">Contexto</dt>
+          <dd>{contextoCarteira(c) ?? "Sem carteira"}</dd>
           <dt className="font-semibold">Consulta</dt>
           <dd>
             {nomeIntent(c.execucao.consulta_catalogo)} ({c.execucao.consulta_catalogo}) · escopo{" "}

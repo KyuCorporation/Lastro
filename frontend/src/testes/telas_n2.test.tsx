@@ -5,7 +5,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ErroApi } from "../api/http";
-import { apiFalsa, montarApp, tokenEmMemoria } from "./montar";
+import { RECIBO_ANA, apiFalsa, montarApp, tokenEmMemoria } from "./montar";
 
 async function montarLogado(email: string, rota = "/", api = apiFalsa()) {
   await api.auth.login({ email, senha: "demo123" });
@@ -190,5 +190,47 @@ describe("04 auditoria: cadeia de eventos", () => {
     await screen.findByRole("heading", { name: "Auditoria de consultas" });
     expect(screen.queryByRole("region", { name: "Cadeia de auditoria" })).not.toBeInTheDocument();
     expect(api.auditoria.verificar).not.toHaveBeenCalled();
+  });
+});
+
+describe("contexto por carteira na consulta (I5)", () => {
+  it("a consulta escolhe a carteira e envia carteira_id", async () => {
+    const { usuario, api } = await montarLogado("ana@alfa.demo");
+    const contexto = await screen.findByLabelText("Contexto da consulta");
+    expect(within(contexto).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Sem carteira",
+      "Homologação 2026 · Homologação",
+    ]);
+    await usuario.selectOptions(contexto, "cart-1");
+    await usuario.type(screen.getByLabelText("Pergunta em linguagem natural"), "Resumo do CNPJ 99.999.999/0001-91");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
+    await waitFor(() =>
+      expect(api.consultas.criar).toHaveBeenCalledWith({ pergunta: "Resumo do CNPJ 99.999.999/0001-91", carteira_id: "cart-1" }),
+    );
+  });
+
+  it("sem carteira escolhida, não manda carteira_id", async () => {
+    const { usuario, api } = await montarLogado("ana@alfa.demo");
+    await screen.findByLabelText("Contexto da consulta");
+    await usuario.type(screen.getByLabelText("Pergunta em linguagem natural"), "Resumo do CNPJ 99.999.999/0001-91");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
+    await waitFor(() => expect(api.consultas.criar).toHaveBeenCalledWith({ pergunta: "Resumo do CNPJ 99.999.999/0001-91" }));
+  });
+
+  it("a fila abre a consulta já com a carteira e a pergunta sobre o fornecedor", async () => {
+    const { usuario } = await montarLogado("ana@alfa.demo", "/carteiras/cart-1");
+    const [primeiro] = await screen.findAllByRole("listitem", { name: /fornecedor/i });
+    await usuario.click(within(primeiro).getByRole("link", { name: /Perguntar sobre este fornecedor/ }));
+    expect(await screen.findByLabelText("Pergunta em linguagem natural")).toHaveValue(
+      "Qual o resumo do fornecedor 99.999.999/0001-91?",
+    );
+    expect(await screen.findByLabelText("Contexto da consulta")).toHaveValue("cart-1");
+  });
+
+  it("o recibo mostra a carteira e a finalidade usadas como contexto", async () => {
+    const comCarteira = { ...RECIBO_ANA, conteudo: { ...RECIBO_ANA.conteudo, carteira: { id: "cart-1", finalidade: "homologacao" } } };
+    await montarLogado("ana@alfa.demo", "/recibos/recibo-1", apiFalsa({ recibo: async () => comCarteira }));
+    await screen.findByRole("heading", { name: "Recibo de evidências" });
+    expect(await screen.findByText("Carteira com finalidade Homologação")).toBeInTheDocument();
   });
 });
