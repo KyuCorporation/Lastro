@@ -69,6 +69,9 @@ def test_pergunta_vira_resposta_com_citacoes_recibo_e_auditoria(api, autenticar,
     evento, detalhes = _ultimo_evento(ctx_caio, corpo["consulta_id"])
     assert evento == "consulta"
     assert detalhes["recibo_id"] == corpo["recibo_id"] and detalhes["intent"] == "contratos_vencendo"
+    # O selo do recibo fica ancorado na trilha encadeada: trocar conteúdo e hash juntos no recibo não o apaga.
+    recibo = api.get(f"/recibos/{corpo['recibo_id']}", headers=autenticar("ana@alfa.demo")).json()
+    assert detalhes["recibo_hash"] == recibo["hash"] and len(recibo["hash"]) == 64
 
 
 def test_recibo_segue_o_contrato_e_o_hash_confere_depois_de_gravado(api, autenticar):

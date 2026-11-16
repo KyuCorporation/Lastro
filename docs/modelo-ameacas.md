@@ -30,7 +30,7 @@ Princípio geral: a defesa não depende de a LLM obedecer. Ela não acessa o ban
 | Autenticação | Token ausente, expirado, adulterado ou com algoritmo trocado | JWT HS256 com claims obrigatórias e expiração; senha com bcrypt; e-mail inexistente custa o mesmo bcrypt e dá o mesmo 401 que senha errada | A053–A057 (`autenticacao`); `modules/auth/tests/test_auth.py::test_senha_errada_e_email_inexistente_dao_o_mesmo_401`, `test_me_com_token_expirado_401` |
 | SQL injection | Parâmetro com SQL | SQL fixo e parametrizado; Pydantic na entrada; LLM sem SQL | A006, A044, A045 (`sql_param`) |
 | Entrada inválida | Bytes nulos, campos enormes, tipos errados | Pydantic (`TextoSemNulo`, limites de tamanho) → 422 | A046–A049 (`entrada_invalida`); `backend/app/tests/test_entrada_nula.py` |
-| Adulteração de registro | Alteração direta no banco depois da gravação | Recibo com hash verificável; auditoria encadeada; `lastro_app` sem `update`/`delete` em recibos e auditoria | `modules/recibos/tests/test_verificar.py`, `modules/auditoria/tests/` |
+| Adulteração de registro | Alteração direta no banco depois da gravação | Recibo com hash verificável; o mesmo hash gravado no evento da trilha (`detalhes.recibo_hash`); auditoria encadeada; `lastro_app` sem `update`/`delete` em recibos e auditoria | `modules/recibos/tests/test_verificar.py`, `modules/auditoria/tests/` |
 | Privilégio no banco | API com superusuário ou `BYPASSRLS` | Papéis `lastro_app` e `lastro_ingest` com `nobypassrls`; `force row level security` em todas as tabelas | `backend/app/tests/test_db.py` (sem contexto, zero linhas; contexto não passa para a próxima transação) |
 | Dado pessoal | CPF de favorecido, sócio pessoa física | Pipeline descarta pessoa física; sócio PF só como chave hash e exibição mascarada; logs sem pergunta, token ou senha | `pipeline/tests/test_ingestao.py::test_pessoa_fisica_nunca_chega_ao_banco` |
 | Fonte bloqueando ou fora | 403, firewall, 5xx | Bloqueio não é contornado (`FonteBloqueada`); a falha fica registrada e não apaga dados | `pipeline/tests/test_http.py::test_bloqueio_nao_e_contornado`, `test_resiliencia.py` |
@@ -39,5 +39,6 @@ Princípio geral: a defesa não depende de a LLM obedecer. Ela não acessa o ban
 
 - **Limite de taxa:** fica na memória do processo. Com mais de uma instância da API, cada uma conta separado.
 - **JWT:** sem revogação antes de expirar (480 min). Sair apaga o token só no navegador.
+- **Recibo e trilha:** quem escreve direto no banco pode trocar conteúdo e hash na linha do recibo, e `/recibos/{id}/verificar` continua dizendo "íntegro". O hash do recibo também fica no evento da trilha encadeada, e a tela do recibo compara os dois para auditor e admin. Apagar os últimos eventos da cadeia, ou reescrevê-la inteira como superusuário, não é detectado: falta publicar o hash da cabeça da cadeia fora do banco.
 - **Gabarito:** só 1 das 100 perguntas tem `sql_referencia` independente, então a métrica de "resultado" ainda mede pouco.
 - **Sinais e texto da fonte:** sinais e textos vindos da fonte são exibidos como dado na interface. A proteção ali é o React (sem HTML cru) e os links restritos a `http`/`https`.

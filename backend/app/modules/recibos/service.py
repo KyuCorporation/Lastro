@@ -1,8 +1,12 @@
 """Gravação, leitura e verificação de recibos.
 
 A gravação roda na mesma transação da consulta (`gravar(conn, ...)`). A verificação (T15) recalcula o hash
-canônico do conteúdo lido do banco e compara com o hash gravado junto: qualquer alteração posterior em uma das
-duas colunas, mesmo feita por quem tem acesso direto ao banco, aparece como "alterado".
+canônico do conteúdo lido do banco e compara com o hash gravado junto: alteração posterior em uma das duas
+colunas aparece como "alterado".
+
+Limite: quem escreve direto no banco pode trocar conteúdo e hash juntos, e essa verificação continua dizendo
+"íntegro". Por isso `gravar` devolve o hash, que a consulta grava também no evento da trilha de auditoria
+encadeada (`detalhes.recibo_hash`): a troca passa a exigir reescrever a cadeia.
 """
 
 import hmac
@@ -23,19 +27,26 @@ from app.modules.recibos.canonico import hash_recibo
 from app.modules.recibos.montagem import DadosRecibo, montar_conteudo
 
 
-def gravar(conn: psycopg.Connection, dados: DadosRecibo) -> UUID:
+@dataclass(frozen=True)
+class ReciboGravado:
+    id: UUID
+    hash: str
+
+
+def gravar(conn: psycopg.Connection, dados: DadosRecibo) -> ReciboGravado:
     conteudo = montar_conteudo(dados)
+    hash_ = hash_recibo(conteudo)
     linha = conn.execute(
         queries.INSERIR_RECIBO,
         {
             "consulta_id": dados.consulta_id,
             "conteudo": Jsonb(conteudo),
-            "hash": hash_recibo(conteudo),
+            "hash": hash_,
             "criado_em": dados.criado_em,
         },
     ).fetchone()
     assert linha is not None
-    return linha[0]
+    return ReciboGravado(linha[0], hash_)
 
 
 @dataclass(frozen=True)
