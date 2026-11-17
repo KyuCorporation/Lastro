@@ -18,6 +18,7 @@ from app.core.contexto import ContextoAcesso
 from app.core.db import sessao
 from app.core.errors import ErroApi
 from app.llm.plano import PlanoConsulta
+from app.modules.carteiras.prioridade import prioridade
 from app.modules.catalogo.registry import CONSULTAS, sql
 
 LIMITE_LINHAS = 200
@@ -57,10 +58,18 @@ def ufs_efetivas(uf_pedida: str | None, ctx: ContextoAcesso) -> tuple[str, ...]:
 
 
 def _parametros(
-    plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date, usa_uf: bool, usa_cnpj: bool = True
+    plano: PlanoConsulta,
+    ctx: ContextoAcesso,
+    hoje: date,
+    usa_uf: bool,
+    usa_cnpj: bool = True,
+    usa_carteira: bool = False,
 ) -> dict[str, Any]:
     p = plano.parametros
     params: dict[str, Any] = {"hoje": hoje, "limite": LIMITE_LINHAS + 1}
+    if usa_carteira:
+        # Obrigatório no plano (validado antes). A RLS de carteira_itens limita ao tenant da sessão.
+        params["carteira_id"] = p.carteira_id
     if usa_cnpj:
         if p.cnpj is None or not cnpj_valido(p.cnpj):
             raise ErroApi(422, "ENTRADA_INVALIDA", "CNPJ inválido: confira os 14 dígitos.")
@@ -134,14 +143,33 @@ def _totais(intent: str, conjuntos: dict[str, list[dict]], janelas: dict[str, di
         }
     if intent == "busca_objeto":
         return {"n_contratos": n, "valor_total": j.get("valor_total") or Decimal(0)}
+    if intent == "fila_carteira":
+        fila = conjuntos["fila"]
+        primeiro = fila[0] if fila and fila[0]["prioridade"] > 0 else None
+        return {
+            "n_fornecedores": len(fila),
+            "n_com_sinal": sum(1 for f in fila if f["gravidades"]),
+            "n_com_sinal_forte": sum(1 for f in fila if "forte" in f["gravidades"]),
+            "valor_exposto": sum((f["valor_exposto"] for f in fila), Decimal(0)),
+            "n_sancoes_vigentes": janelas.get("sancoes", {}).get("total_linhas", 0),
+            "primeiro_cnpj": primeiro["cnpj"] if primeiro else None,
+            "primeiro_tipos": tuple(primeiro["tipos"]) if primeiro else (),
+        }
     return {}
+
+
+def _ordenar_fila(fila: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Mesma prioridade e mesmo desempate da tela da fila (carteiras/service.py): prioridade, valor, CNPJ."""
+    for item in fila:
+        item["prioridade"] = prioridade(item["gravidades"], item["valor_exposto"])
+    return sorted(fila, key=lambda i: (-i["prioridade"], -i["valor_exposto"], i["cnpj"]))
 
 
 def executar(plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date) -> ResultadoConsulta:
     consulta = CONSULTAS.get(plano.intent)
     if consulta is None:
         raise IntentSemConsulta(plano.intent)
-    params = _parametros(plano, ctx, hoje, consulta.usa_uf, consulta.usa_cnpj)
+    params = _parametros(plano, ctx, hoje, consulta.usa_uf, consulta.usa_cnpj, consulta.usa_carteira)
 
     conjuntos: dict[str, list[dict[str, Any]]] = {}
     janelas: dict[str, dict[str, Any]] = {}
@@ -155,6 +183,8 @@ def executar(plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date) -> Resultado
                 linhas, truncado = linhas[:LIMITE_LINHAS], True
             janelas[nome] = _separar_totais(linhas)
             conjuntos[nome] = linhas
+    if "fila" in conjuntos:
+        conjuntos["fila"] = _ordenar_fila(conjuntos["fila"])
 
     efetivos = {k: v for k, v in params.items() if k != "limite"}
     return ResultadoConsulta(

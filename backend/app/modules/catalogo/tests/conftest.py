@@ -5,11 +5,15 @@ não grava fatos públicos e lastro_ingest não apaga.
 """
 
 import os
+from collections.abc import Iterator
 from datetime import date, timedelta
+from uuid import UUID
 
 import psycopg
 import pytest
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+from app.conftest import TENANT_ALFA
 
 HOJE = date(2026, 11, 6)
 F1 = "11222333000181"  # CNPJ sintético com dígitos verificadores válidos
@@ -152,3 +156,31 @@ def c2_rescindido(dados_catalogo):
     yield
     with _superusuario() as su:
         su.execute("update contratos set situacao = null where id_origem = 'TCAT-C2'")
+
+
+# Carteira do tenant alfa com F1 e F2, gravada direto (sem a API, que também geraria alertas).
+CARTEIRA_TCAT = UUID("00000000-0000-0000-0000-00000000ca71")
+_LIMPAR_CARTEIRA = [
+    "delete from alertas where carteira_id = %(id)s",
+    "delete from carteiras where id = %(id)s",
+]
+
+
+@pytest.fixture(scope="module")
+def carteira_tcat(dados_catalogo) -> Iterator[UUID]:
+    with _superusuario() as su:
+        for comando in _LIMPAR_CARTEIRA:
+            su.execute(comando, {"id": CARTEIRA_TCAT})
+        su.execute(
+            "insert into carteiras (id, tenant_id, nome, finalidade) "
+            "values (%s, %s, 'TCAT carteira', 'monitoramento')",
+            (CARTEIRA_TCAT, TENANT_ALFA),
+        )
+        su.cursor().executemany(
+            "insert into carteira_itens (carteira_id, tenant_id, fornecedor_cnpj) values (%s, %s, %s)",
+            [(CARTEIRA_TCAT, TENANT_ALFA, F1), (CARTEIRA_TCAT, TENANT_ALFA, F2)],
+        )
+    yield CARTEIRA_TCAT
+    with _superusuario() as su:
+        for comando in _LIMPAR_CARTEIRA:
+            su.execute(comando, {"id": CARTEIRA_TCAT})
