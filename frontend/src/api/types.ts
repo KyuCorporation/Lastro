@@ -91,6 +91,8 @@ export interface ConteudoRecibo {
   consulta_id: string;
   perfil: Perfil;
   ufs_autorizadas: string[];
+  /** Carteira escolhida como contexto da consulta (SPEC §3.3, I5). */
+  carteira?: { id: string; finalidade: string } | null;
   pergunta: string;
   plano: { intent: string; parametros: Record<string, unknown> };
   execucao: {

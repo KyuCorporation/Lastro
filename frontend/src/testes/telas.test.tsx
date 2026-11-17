@@ -130,10 +130,10 @@ describe("01 consulta inteligente", () => {
 });
 
 describe("02 recibo de evidências", () => {
-  it("mostra valor, registros com link de origem, total reproduzível e selo", async () => {
+  it("mostra valor, registros com link de origem, valores rotulados e selo", async () => {
     await montarLogado("ana@alfa.demo", "/recibos/recibo-1");
     await screen.findByRole("heading", { name: "Recibo de evidências" });
-    expect(screen.getByText("R$ 1.250.000,00")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Valor total identificado" })).toHaveTextContent("R$ 1.250.000,00");
     expect(screen.getByText("2 registros relacionados")).toBeInTheDocument();
 
     const tabela = screen.getByRole("table");
@@ -146,7 +146,10 @@ describe("02 recibo de evidências", () => {
     );
     expect(linhas[1]).toHaveTextContent("Registro 02 · sem link público");
 
-    expect(screen.getByText("Total reproduzível: soma do valor global dos contratos = R$ 1.250.000,00")).toBeInTheDocument();
+    const valores = screen.getByRole("region", { name: "Valores usados na resposta" });
+    expect(valores).toHaveTextContent("Valor somado dos contratos que vencem");
+    expect(valores).toHaveTextContent("R$ 1.250.000,00");
+    expect(screen.queryByText(/reproduzível/)).not.toBeInTheDocument(); // o recibo ainda não reexecuta a consulta
     expect(screen.getByText(RECIBO_ANA.hash)).toBeInTheDocument();
     expect(screen.getByText("aprovado pelo verificador")).toBeInTheDocument();
   });

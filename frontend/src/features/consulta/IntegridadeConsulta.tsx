@@ -1,7 +1,7 @@
 import type { ConsultaSaida, Recibo } from "../../api/types";
 import { Selo } from "../../components/Selo";
 import { nomeFonte } from "../../lib/formato";
-import { nomesFontes } from "../recibo/leitura";
+import { contextoCarteira, nomesFontes } from "../recibo/leitura";
 
 const VERIFICACAO: Record<string, string> = {
   aprovado: "Texto conferido pelo verificador",
@@ -31,6 +31,7 @@ export function IntegridadeConsulta({ resultado, recibo, ufs }: { resultado: Con
     ? nomesFontes(recibo.conteudo)
     : [...new Set(resultado.citacoes.map((c) => nomeFonte(c.fonte_id)))];
   const negada = resultado.status === "negada";
+  const contexto = recibo ? contextoCarteira(recibo.conteudo) : null;
 
   return (
     <section aria-labelledby={`integridade-${resultado.consulta_id}`} className="cartao p-6">
@@ -45,6 +46,13 @@ export function IntegridadeConsulta({ resultado, recibo, ufs }: { resultado: Con
       <p className="mt-1 text-lg font-bold text-kyu-texto">
         {fontes.length > 0 ? fontes.join(" · ") : negada ? "Nenhuma: a busca foi interrompida" : "Nenhum registro citado"}
       </p>
+
+      {contexto && (
+        <>
+          <h3 className="mt-5 text-sm font-semibold text-kyu-suave">Contexto</h3>
+          <p className="mt-1 text-kyu-texto">{contexto}</p>
+        </>
+      )}
 
       <h3 className="mt-5 text-sm font-semibold text-kyu-suave">Regras aplicadas</h3>
       <ul className="mt-2 space-y-2 text-kyu-texto">
