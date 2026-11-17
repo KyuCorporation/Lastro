@@ -301,8 +301,10 @@ def concentracao(
             (r for r in itens if r.orgao_id == orgao and r.valor > 0), key=lambda r: (-r.valor, str(r.id))
         )
         nome = _nome_curto(nomes_orgaos.get(orgao, orgao))
+        # No TCE-PE o "recebido" é a liquidação (despesa reconhecida), etapa anterior ao pagamento: o texto diz
+        # as duas coisas, como as respostas da consulta.
         medida = (
-            "do valor recebido"
+            "do valor liquidado ou pago"
             if base == "pagamentos"
             else "do valor contratado (a fonte não traz pagamentos)"
         )

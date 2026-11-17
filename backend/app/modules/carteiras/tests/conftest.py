@@ -21,7 +21,7 @@ VERSAO = "teste-t18"
 # (cnpj, uf, tipo, gravidade, explicacao)
 SINAIS = [
     (F1, None, "sancao_direta", "forte", "Consta 1 sanção vigente no CEIS."),
-    (F1, "PE", "concentracao", "atencao", "80,0% do valor recebido em PE vem de um único órgão."),
+    (F1, "PE", "concentracao", "atencao", "80,0% do valor liquidado ou pago em PE vem de um único órgão."),
     (F1, "AL", "penhasco", "atencao", "100,0% do valor vigente em AL termina em até 180 dias."),
     (F3, "AL", "penhasco", "atencao", "100,0% do valor vigente em AL termina em até 180 dias."),
 ]
