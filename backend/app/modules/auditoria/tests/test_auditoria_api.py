@@ -32,7 +32,8 @@ def test_auditor_lista_a_trilha_do_tenant(api, autenticar, evento_alfa):
     r = api.get("/auditoria", headers=autenticar("caio@alfa.demo"))
     assert r.status_code == 200
     eventos = r.json()
-    assert eventos[0]["seq"] == evento_alfa  # mais recente primeiro
+    # Mais recente primeiro: o login do próprio auditor (feito agora) e, logo antes, a negação da Ana.
+    assert eventos[0]["evento"] == "login" and eventos[1]["seq"] == evento_alfa
     assert set(eventos[0]) == {"seq", "usuario_id", "evento", "detalhes", "criado_em", "hash"}
     assert [e["seq"] for e in eventos] == sorted((e["seq"] for e in eventos), reverse=True)
 
@@ -113,9 +114,13 @@ def restaurar_evento(evento_alfa) -> Iterator[int]:
     ids=["detalhes", "hash"],
 )
 def test_adulterar_um_evento_quebra_a_cadeia_nele(api, autenticar, restaurar_evento, adulteracao):
+    # O login grava um evento na trilha. Feito depois da adulteração, ele se encadearia ao hash adulterado, e a
+    # restauração no fim do teste deixaria a cadeia quebrada de verdade. Por isso o login vem antes, e a
+    # verificação aponta o evento seguinte quando o hash do adulterado mudou.
+    cabecalho = autenticar("caio@alfa.demo")
     with _superusuario() as su:
         assert su.execute(adulteracao, (restaurar_evento,)).rowcount == 1
-    corpo = api.get("/auditoria/verificar", headers=autenticar("caio@alfa.demo")).json()
+    corpo = api.get("/auditoria/verificar", headers=cabecalho).json()
     assert corpo["integra"] is False
     assert corpo["primeiro_seq_quebrado"] == restaurar_evento
 

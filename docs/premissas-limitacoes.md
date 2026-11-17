@@ -27,7 +27,7 @@ Situação do código em 08/11/2026.
 - Nenhum processo cria alertas: `GET /alertas` existe, mas a tabela só recebe linhas nos testes.
 - O limite de 30 consultas por minuto fica na memória do processo da API.
 - O JWT vale 480 minutos e não tem revogação no servidor.
-- A auditoria não registra o login (o schema prevê o evento `login`).
+- A auditoria registra o login que deu certo. Tentativa com senha errada não entra: a trilha é por tenant e, sem sessão, não há tenant.
 
 **Avaliação**
 - Das 100 perguntas do gabarito, só a G001 tem `sql_referencia` escrita por alguém fora do catálogo (SPEC §14.1). As outras conferem intent, comportamento e citação, mas não o valor contra uma consulta independente.
