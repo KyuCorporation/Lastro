@@ -48,7 +48,8 @@ sinais_item as (
   select s.fornecedor_cnpj as cnpj,
          jsonb_agg(
            jsonb_build_object('tipo', s.tipo, 'gravidade', s.gravidade, 'explicacao', s.explicacao,
-                              'evidencias', s.evidencias)
+                              'evidencias', s.evidencias, 'calculado_em', s.calculado_em,
+                              'versao_regra', s.versao_regra)
            order by case s.gravidade when 'forte' then 0 when 'atencao' then 1 else 2 end, s.tipo, s.uf
          ) as lista
     from sinais s

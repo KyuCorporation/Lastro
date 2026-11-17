@@ -114,7 +114,8 @@ def test_fila_priorizada_com_sinais_so_das_ufs_do_usuario(cliente, autenticar, c
     assert [s["tipo"] for s in primeiro["sinais"]] == ["sancao_direta", "concentracao"]  # forte antes
     assert primeiro["prioridade"] == pytest.approx(13 * math.log10(400001), abs=1e-4)
     for s in primeiro["sinais"]:
-        assert set(s) == {"tipo", "gravidade", "explicacao", "evidencias"}
+        assert set(s) == {"tipo", "gravidade", "explicacao", "evidencias", "calculado_em", "versao_regra"}
+        assert s["versao_regra"] == "teste-t18" and s["calculado_em"].startswith("20")
 
     # F2 e F3 sem sinal visível para ana (o penhasco de F3 é de AL): prioridade 0, sem exposição
     assert {(i["cnpj"], i["prioridade"], i["valor_exposto"], tuple(i["sinais"])) for i in resto} == {

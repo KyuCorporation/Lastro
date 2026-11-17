@@ -22,6 +22,7 @@ class Acao(StrEnum):
     VER_CONSULTAS_TENANT = "ver_consultas_tenant"
     VER_AUDITORIA = "ver_auditoria"
     VER_SOCIOS = "ver_socios"
+    ATUALIZAR_ALERTA = "atualizar_alerta"
 
 
 TODOS: frozenset[Perfil] = frozenset({"analista", "gestor", "auditor", "admin"})
@@ -35,6 +36,7 @@ PERMISSOES: dict[Acao, frozenset[Perfil]] = {
     Acao.VER_CONSULTAS_TENANT: frozenset({"auditor", "admin"}),
     Acao.VER_AUDITORIA: frozenset({"auditor", "admin"}),
     Acao.VER_SOCIOS: frozenset({"analista", "auditor", "admin"}),
+    Acao.ATUALIZAR_ALERTA: frozenset({"analista", "admin"}),
 }
 
 

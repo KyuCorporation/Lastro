@@ -14,6 +14,7 @@ MATRIZ = [
     (Acao.VER_CONSULTAS_TENANT, False, False, True, True),
     (Acao.VER_AUDITORIA, False, False, True, True),
     (Acao.VER_SOCIOS, True, False, True, True),
+    (Acao.ATUALIZAR_ALERTA, True, False, False, True),
 ]
 
 

@@ -155,3 +155,64 @@ def test_sinal_que_deixou_de_valer_some_mas_o_alerta_guarda_o_que_ele_dizia(
     finally:
         with _superusuario() as su:
             su.execute("delete from sinais where id = %s", (sinal,))
+
+
+# ===================== PATCH /alertas/{id} (P4.4) =====================
+def _eventos_alerta(alerta_id: str) -> list[dict]:
+    with _superusuario() as su:
+        return [
+            d
+            for (d,) in su.execute(
+                "select detalhes from auditoria where evento = 'alerta_atualizado' and detalhes->>'alerta_id' = %s "
+                "order by seq",
+                (alerta_id,),
+            )
+        ]
+
+
+def test_analista_marca_como_visto_e_depois_resolve(cliente, autenticar, alertas):
+    ana = autenticar("ana@alfa.demo")
+    r = cliente.patch(f"/alertas/{alertas['PE']}", json={"status": "visto"}, headers=ana)
+    assert r.status_code == 200, r.text
+    assert r.json() == {"id": alertas["PE"], "status": "visto"}
+    r = cliente.patch(f"/alertas/{alertas['PE']}", json={"status": "resolvido"}, headers=ana)
+    assert r.json() == {"id": alertas["PE"], "status": "resolvido"}
+    assert [(e["de"], e["para"]) for e in _eventos_alerta(alertas["PE"])] == [
+        ("aberto", "visto"),
+        ("visto", "resolvido"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("inicial", "novo"), [("visto", "visto"), ("resolvido", "visto"), ("aberto", "aberto")]
+)
+def test_transicao_que_volta_atras_e_recusada(cliente, autenticar, alertas, inicial, novo):
+    with _superusuario() as su:
+        su.execute("update alertas set status = %s where id = %s", (inicial, alertas["PE"]))
+    r = cliente.patch(f"/alertas/{alertas['PE']}", json={"status": novo}, headers=autenticar("ana@alfa.demo"))
+    assert r.status_code == 422 and r.json()["erro"]["codigo"] == "ENTRADA_INVALIDA"
+
+
+def test_gestor_e_auditor_nao_mudam_o_alerta(cliente, autenticar, alertas):
+    for email in ("gil@alfa.demo", "caio@alfa.demo"):
+        r = cliente.patch(f"/alertas/{alertas['PE']}", json={"status": "visto"}, headers=autenticar(email))
+        assert r.status_code == 403 and r.json()["erro"]["codigo"] == "PERFIL_SEM_PERMISSAO"
+    assert _eventos_alerta(alertas["PE"]) == []
+
+
+def test_alerta_de_outro_tenant_responde_404(cliente, autenticar, alertas):
+    r = cliente.patch(
+        f"/alertas/{alertas['PE']}", json={"status": "visto"}, headers=autenticar("bia@beta.demo")
+    )
+    assert r.status_code == 404 and r.json()["erro"]["codigo"] == "NAO_ENCONTRADO"
+    with _superusuario() as su:
+        assert su.execute("select status from alertas where id = %s", (alertas["PE"],)).fetchone() == (
+            "aberto",
+        )
+
+
+def test_status_desconhecido_422(cliente, autenticar, alertas):
+    r = cliente.patch(
+        f"/alertas/{alertas['PE']}", json={"status": "apagado"}, headers=autenticar("ana@alfa.demo")
+    )
+    assert r.status_code == 422
