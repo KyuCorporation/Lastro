@@ -82,7 +82,7 @@ export function AuditoriaPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="04" titulo="Auditoria de consultas">
+      <TituloPagina titulo="Auditoria de consultas">
         Histórico de perguntas, validações de acesso, fontes recuperadas e decisões do sistema.
       </TituloPagina>
 

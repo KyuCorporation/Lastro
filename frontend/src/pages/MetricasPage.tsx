@@ -329,7 +329,7 @@ export function MetricasPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="08" titulo="Métricas de qualidade">
+      <TituloPagina titulo="Métricas de qualidade">
         Números gerados pela avaliação automática do repositório, sem edição manual.
         {metricas.data?.ultima_atualizacao && ` Última atualização em ${dataHora(metricas.data.ultima_atualizacao)}.`}
       </TituloPagina>

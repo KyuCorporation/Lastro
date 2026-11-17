@@ -60,7 +60,7 @@ export function LoginPage({ demo = ambiente.demo }: { demo?: boolean }) {
         </p>
       </div>
     <main className="mx-auto w-full max-w-md px-4 py-10 lg:py-16">
-      <h1 className="text-3xl font-bold text-kyu-texto">Entrar no KYU</h1>
+      <h1 className="text-3xl font-bold text-kyu-texto">Entrar no Lastro</h1>
       <p className="mt-1 text-kyu-suave">Radar de risco de fornecedores, com recibo.</p>
 
       {motivo === "expirou" && (

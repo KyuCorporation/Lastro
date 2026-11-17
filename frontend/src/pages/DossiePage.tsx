@@ -218,7 +218,7 @@ export function DossiePage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="07" titulo="Dossiê do fornecedor">
+      <TituloPagina titulo="Dossiê do fornecedor">
         Tudo o que as fontes autorizadas registram sobre o fornecedor, com o link de cada registro.
       </TituloPagina>
       {dossie.isPending ? (

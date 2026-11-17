@@ -234,7 +234,7 @@ export function CarteirasPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="06" titulo="Carteiras e fila">
+      <TituloPagina titulo="Carteiras e fila">
         Fornecedores agrupados por finalidade, com a fila de quem olhar primeiro.
       </TituloPagina>
 
