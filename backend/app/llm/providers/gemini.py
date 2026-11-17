@@ -36,9 +36,18 @@ class ProvedorGemini:
     def gerar(self, prompt: str, *, json: bool = False, timeout_s: float, temperatura: float = 0.0) -> str:
         sem_raciocinio = not self.raciocinio
         repetiu_5xx = False
+        inicio: float | None = None
         while True:
+            # A primeira tentativa usa o `timeout_s` inteiro; as repetições, só o que sobrou dele. Quem chama
+            # conta com esse teto (orçamento de tempo da consulta).
+            if inicio is None:
+                inicio, sobra = time.monotonic(), timeout_s
+            else:
+                sobra = timeout_s - (time.monotonic() - inicio)
+                if sobra < 1.0:
+                    raise ProvedorIndisponivel("tempo esgotado antes de repetir")
             config = self._config(
-                json=json, timeout_s=timeout_s, temperatura=temperatura, sem_raciocinio=sem_raciocinio
+                json=json, timeout_s=sobra, temperatura=temperatura, sem_raciocinio=sem_raciocinio
             )
             try:
                 resposta = self._cliente.models.generate_content(
