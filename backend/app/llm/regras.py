@@ -16,7 +16,7 @@ from app.modules.catalogo.intents import UFS
 PERGUNTA_CNPJ = "De qual fornecedor? Informe o CNPJ com 14 dígitos."
 PERGUNTA_CNPJ_INVALIDO = "O CNPJ informado não tem 14 dígitos. Pode conferir?"
 PERGUNTA_PERIODO = "Qual período? Por exemplo: em 2025, ou entre 01/01/2025 e 30/06/2025."
-PERGUNTA_CARTEIRA = "De qual carteira? Abra a carteira e pergunte por lá."
+PERGUNTA_CARTEIRA = 'De qual carteira? Escolha a carteira em "Contexto da consulta" e pergunte de novo.'
 PERGUNTA_GENERICA = (
     "Pode detalhar? Diga o CNPJ do fornecedor e o que quer saber (contratos, pagamentos, sanções)."
 )
@@ -179,7 +179,8 @@ def extrair_periodo(t: str, hoje: date) -> tuple[date, date] | None:
     return None
 
 
-def planejar_por_regras(pergunta: str, hoje: date) -> PlanoConsulta:
+def planejar_por_regras(pergunta: str, hoje: date, carteira_id: UUID | None = None) -> PlanoConsulta:
+    """`carteira_id`: a carteira escolhida como contexto da consulta (já conferida contra o tenant)."""
     t = normalizar(pergunta)
 
     if FORA_DO_PERMITIDO.search(t):
@@ -189,8 +190,10 @@ def planejar_por_regras(pergunta: str, hoje: date) -> PlanoConsulta:
     uf = extrair_uf(pergunta, t)
 
     if re.search(r"\bcarteira\b|\bfila\b", t):
-        if m := UUID_RE.search(pergunta):
-            return PlanoConsulta(intent="fila_carteira", parametros=Parametros(carteira_id=UUID(m.group())))
+        # A carteira escolhida como contexto da consulta vale mais que um identificador escrito na pergunta.
+        m = UUID_RE.search(pergunta)
+        if alvo := carteira_id or (UUID(m.group()) if m else None):
+            return PlanoConsulta(intent="fila_carteira", parametros=Parametros(carteira_id=alvo))
         return esclarecer(PERGUNTA_CARTEIRA)
 
     assunto = next((intent for intent, padrao in ASSUNTOS if padrao.search(t)), None)

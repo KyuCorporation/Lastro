@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 from functools import cache
 from pathlib import Path
+from uuid import UUID
 
 from app.llm.plano import PlanoConsulta, PlanoInvalido, validar_plano
 from app.llm.providers import ProvedorIndisponivel, ProvedorLLM
@@ -59,11 +60,17 @@ def planejar(
     provedor: ProvedorLLM | None,
     timeout_s: float = 20.0,
     restante: Callable[[], float] | None = None,
+    carteira_id: UUID | None = None,
 ) -> ResultadoPlanejamento:
     """`restante`: segundos que sobram no orçamento da consulta. Cada tentativa recebe no máximo isso, e sem
-    margem para uma tentativa o roteador por regras decide."""
+    margem para uma tentativa o roteador por regras decide.
+
+    `carteira_id`: a carteira escolhida como contexto da consulta. Não vai para o prompt; preenche o plano de
+    `fila_carteira` depois."""
     if provedor is None:
-        return ResultadoPlanejamento(planejar_por_regras(pergunta, hoje), True, VERSAO_PROMPT, None)
+        return ResultadoPlanejamento(
+            planejar_por_regras(pergunta, hoje, carteira_id), True, VERSAO_PROMPT, None
+        )
 
     prompt = montar_prompt(pergunta, ufs=ufs, hoje=hoje)
     for _ in range(TENTATIVAS):
@@ -73,11 +80,15 @@ def planejar(
         try:
             bruto = provedor.gerar(prompt, json=True, timeout_s=prazo, temperatura=0.0)
         except ProvedorIndisponivel:
-            return ResultadoPlanejamento(planejar_por_regras(pergunta, hoje), True, VERSAO_PROMPT, None)
+            return ResultadoPlanejamento(
+                planejar_por_regras(pergunta, hoje, carteira_id), True, VERSAO_PROMPT, None
+            )
         try:
-            return ResultadoPlanejamento(validar_plano(bruto), False, VERSAO_PROMPT, provedor.modelo)
+            return ResultadoPlanejamento(
+                validar_plano(bruto, carteira_id), False, VERSAO_PROMPT, provedor.modelo
+            )
         except PlanoInvalido:
             continue
     # Duas saídas fora do contrato, ou sem tempo para tentar: a pergunta não fica pior do que no modo mock (o roteador por regras decide,
     # e o recibo registra planejador_por_regras). O escopo continua vindo só da sessão.
-    return ResultadoPlanejamento(planejar_por_regras(pergunta, hoje), True, VERSAO_PROMPT, None)
+    return ResultadoPlanejamento(planejar_por_regras(pergunta, hoje, carteira_id), True, VERSAO_PROMPT, None)
