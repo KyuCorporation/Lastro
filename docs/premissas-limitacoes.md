@@ -23,7 +23,8 @@ Situação do código em 08/11/2026.
 - "Hoje" é o dia em Pernambuco (UTC−3) na API e na pipeline. As views de `db/migrations/003_views.sql` usam `current_date` do banco, que roda em UTC; o catálogo não usa essas views.
 
 **Consultas**
-- O catálogo cobre 7 intents. `fila_carteira` e `socios_sancionados` estão no contrato do plano, mas viram abstenção ("ainda não está disponível").
+- O catálogo cobre 8 intents. `socios_sancionados` está no contrato do plano, mas vira abstenção ("ainda não está disponível").
+- A finalidade da carteira (homologação, monitoramento, renovação) fica no recibo, mas ainda não muda a resposta de `fila_carteira`.
 - Perguntas fora do catálogo não são respondidas. Isso é deliberado (ADR-002), mas limita o que a pessoa pode perguntar.
 - A finalidade da carteira entra no recibo, mas não muda a resposta.
 - A busca por objeto ignora acento dos dois lados (`busca_objeto@v2`) e roda sem índice, o que basta no volume da demo; o índice sem acento depende de migration (extensão `unaccent`). Sem acento, palavras diferentes podem cair no mesmo radical: "médica" e "medicamentos" viram "medic".
@@ -54,6 +55,6 @@ Situação do código em 08/11/2026.
 ## Próximos passos
 
 1. Fazer a primeira carga completa do TCE-PE em rede brasileira (`make ingest-pe`) e medir o volume por unidade gestora.
-2. Implementar o SQL de `fila_carteira` e `socios_sancionados`, e o conector de quadro societário com o sinal de contágio.
+2. Implementar o SQL de `socios_sancionados`, e o conector de quadro societário com o sinal de contágio.
 3. Medir o cronômetro com 3 CNPJs e validar a hipótese com especialistas (T23).
 4. Rodar `make eval EVAL_LLM=gemini` e `make eval-ataques EVAL_LLM=gemini` e publicar os números ao lado dos do modo `mock`.

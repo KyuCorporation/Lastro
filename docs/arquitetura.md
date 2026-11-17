@@ -112,7 +112,7 @@ FastAPI, Pydantic v2 e psycopg 3, com SQL explícito e sem ORM. Cada módulo tem
 
 Intents com SQL: `resumo_fornecedor@v4`, `contratos_vigentes@v2`, `contratos_vencendo@v2`, `pagamentos_periodo@v2`, `sancoes_fornecedor@v2`, `orgaos_fornecedor@v2`, `busca_objeto@v2` (full-text em português no objeto do contrato).
 
-`fila_carteira` e `socios_sancionados` estão no contrato do plano, mas ainda não têm SQL: viram abstenção, com recibo.
+`socios_sancionados` está no contrato do plano, mas ainda não tem SQL: vira abstenção, com recibo. `fila_carteira` usa a carteira escolhida como contexto da consulta (`carteira_id` da requisição, já conferido contra o tenant), nunca uma escolhida pela LLM.
 
 Limites:
 - 30 consultas por minuto por usuário;
