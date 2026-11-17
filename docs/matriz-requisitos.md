@@ -33,7 +33,7 @@ Linhas do SPEC §3. A coluna Status diz o que o código faz hoje:
 | **I4** Auditoria encadeada | Trigger em `006_auditoria_seq_no_trigger.sql`, `GET /auditoria/verificar`; selo na tela 04 | `modules/auditoria/tests/test_auditoria_api.py`, `test_cadeia_concorrente.py` | Pronto |
 | **I5** Contexto por carteira e finalidade | `carteiras.finalidade`; `POST /consultas` aceita `carteira_id` e o recibo registra a carteira | `test_consulta_api.py::test_carteira_inexistente_ou_de_outro_tenant_e_404` | Parcial: a carteira entra no contexto e no recibo, mas a finalidade ainda não muda a resposta, e a intent `fila_carteira` não tem SQL |
 | **I6** Contágio por sócio | Coluna `sinais.tipo = 'contagio'` e tabela `socios` no schema; intent `socios_sancionados` no contrato | — | Não iniciado: sem conector de quadro societário, sem regra de contágio e sem SQL da intent |
-| **I7** Alertas por evento | Tabela `alertas`, `GET /alertas` | `modules/alertas/tests/test_alertas.py` (leitura e RLS) | Parcial: a leitura existe; nenhum processo cria alertas quando surge sanção ou sinal |
+| **I7** Alertas por evento | Migration 007, `alertas.service.gerar_da_carteira` (na criação da carteira e na fila), `GET /alertas`, seção "Alertas abertos" da tela 06 | `modules/alertas/tests/test_alertas.py` (geração, sem duplicar, UF, tenant, sinal vencido), `test_sinais_db.py`, `telas_n2.test.tsx` | Pronto: o alerta nasce quando alguém abre a fila ou cria a carteira, não no instante do cálculo |
 | **I8** Reuso entre clientes | Fatos públicos sem `tenant_id`, filtrados só por UF; dados privados sempre por tenant | `test_acesso.py` | Pronto |
 
 ## Requisitos transversais (SPEC §14)

@@ -1,6 +1,6 @@
 # Dicionário de dados
 
-Gerado a partir de `db/migrations/001_schema.sql` (com 002 a 006) e dos normalizadores da pipeline. O mapeamento campo a campo de cada fonte está em `docs/catalogo-fontes.md`. Este documento diz o que cada coluna guarda e qual regra a protege.
+Gerado a partir de `db/migrations/001_schema.sql` (com 002 a 007) e dos normalizadores da pipeline. O mapeamento campo a campo de cada fonte está em `docs/catalogo-fontes.md`. Este documento diz o que cada coluna guarda e qual regra a protege.
 
 Convenções:
 - dinheiro é `numeric(18,2)` no banco e string decimal na API (`"1234.56"`), nunca float;
@@ -168,7 +168,12 @@ Convenções:
 | `conteudo` | jsonb | Recibo conforme `contracts/recibo.schema.json` |
 | `hash` | char(64) | sha256 do JSON canônico de `conteudo`; `GET /recibos/{id}/verificar` recalcula |
 
-**`alertas`**: RLS por tenant. Status `aberto`, `visto`, `resolvido`. A API lê; nenhum processo cria alertas ainda.
+**`alertas`**: RLS por tenant. Status `aberto`, `visto`, `resolvido`. A API cria um alerta aberto para cada sinal de fornecedor da carteira que ainda não gerou alerta nela, quando a carteira é criada ou a fila é aberta (SPEC I7). Um alerta por sinal e carteira (índice único).
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `sinal_id` | uuid | Sinal que gerou o alerta. Fica nulo quando a pipeline apaga o sinal vencido (`on delete set null`, migration 007) |
+| `sinal_tipo`, `sinal_gravidade`, `sinal_uf`, `sinal_explicacao` | text, text, char(2), text | Cópia do sinal quando o alerta nasceu. `GET /alertas` mostra a cópia só se a UF dela está no escopo de quem lê, como a RLS de `sinais` |
 
 **`auditoria`**: imutável e encadeada por tenant.
 

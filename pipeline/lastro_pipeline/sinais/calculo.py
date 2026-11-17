@@ -123,7 +123,8 @@ def _parametros(sinal: Sinal) -> dict[str, Any]:
 
 
 def _apagar(conn: psycopg.Connection, sinal_id: UUID) -> bool:
-    """Apaga um sinal que deixou de valer. Se um alerta (T28) ainda aponta para ele, o banco recusa: fica."""
+    """Apaga um sinal que deixou de valer. Desde a migration 007 o alerta que aponta para ele fica com o vínculo nulo
+    e a cópia do sinal. A recusa por chave estrangeira só acontece num banco sem a 007: aí o sinal fica."""
     try:
         with conn.transaction():
             conn.execute(SQL_APAGAR, {"id": sinal_id})

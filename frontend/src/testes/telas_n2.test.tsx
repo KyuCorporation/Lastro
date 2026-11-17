@@ -47,6 +47,49 @@ describe("06 carteiras e fila", () => {
     expect(screen.getByRole("status")).toHaveTextContent("1 CNPJ ignorado por ser inválido: 123");
   });
 
+  it("alertas abertos: sinal, carteira e data; UF fora do escopo e sinal que deixou de valer", async () => {
+    const api = apiFalsa({
+      alertas: async () => [
+        {
+          id: "al-1",
+          carteira_id: "cart-1",
+          cnpj: "99999999000191",
+          sinal: { id: "s-1", tipo: "sancao_direta", gravidade: "forte", uf: null, explicacao: "Consta 1 sanção vigente no CEIS." },
+          status: "aberto",
+          criado_em: "2026-11-17T12:00:00Z",
+        },
+        {
+          id: "al-2",
+          carteira_id: "cart-1",
+          cnpj: "99999999000191",
+          sinal: { id: null, tipo: "penhasco", gravidade: "atencao", uf: "PE", explicacao: "75,0% do valor vigente em PE termina em até 180 dias." },
+          status: "aberto",
+          criado_em: "2026-11-16T12:00:00Z",
+        },
+        { id: "al-3", carteira_id: "cart-1", cnpj: "11222333000181", sinal: null, status: "aberto", criado_em: "2026-11-16T12:00:00Z" },
+      ],
+    });
+    await montarLogado("ana@alfa.demo", "/carteiras", api);
+    const tabela = await screen.findByRole("table", { name: "Alertas abertos do cliente" });
+    expect(api.alertas.listar).toHaveBeenCalledWith("aberto");
+    expect(screen.getByText(/3 sinais para investigar/)).toBeInTheDocument();
+    const linhas = within(tabela).getAllByRole("row").slice(1);
+    expect(within(linhas[0]).getByRole("link", { name: "99.999.999/0001-91" })).toHaveAttribute("href", "/fornecedores/99999999000191");
+    expect(linhas[0]).toHaveTextContent("Sanção vigente");
+    expect(linhas[0]).toHaveTextContent("Forte");
+    expect(within(linhas[0]).getByRole("link", { name: "Homologação 2026" })).toHaveAttribute("href", "/carteiras/cart-1");
+    expect(linhas[1]).toHaveTextContent("Deixou de valer no último cálculo dos sinais.");
+    expect(linhas[2]).toHaveTextContent("Sinal de UF fora do seu escopo");
+    expect(tabela.textContent).not.toMatch(PALAVRAS_PROIBIDAS);
+  });
+
+  it("sem alerta aberto, a seção não aparece", async () => {
+    const { api } = await montarLogado("ana@alfa.demo", "/carteiras");
+    await screen.findByRole("table", { name: /carteiras do cliente/i });
+    await waitFor(() => expect(api.alertas.listar).toHaveBeenCalled());
+    expect(screen.queryByRole("heading", { name: "Alertas abertos" })).not.toBeInTheDocument();
+  });
+
   it("gestor vê as carteiras, mas não o formulário de criação", async () => {
     const { api } = await montarLogado("gil@alfa.demo", "/carteiras");
     await screen.findByRole("table", { name: /carteiras do cliente/i });

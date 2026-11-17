@@ -11,7 +11,7 @@ LIMITE_ALERTAS = 200
 
 
 class SinalAlerta(BaseModel):
-    id: UUID
+    id: UUID | None  # nulo quando o sinal deixou de valer no último cálculo: o conteúdo é a cópia do alerta
     tipo: str
     gravidade: str
     uf: str | None

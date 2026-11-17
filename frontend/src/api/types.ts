@@ -206,6 +206,21 @@ export interface ItemFila {
   sinais: SinalFila[];
 }
 
+// ------------------------------------------------------------------ alertas
+
+export type StatusAlerta = "aberto" | "visto" | "resolvido";
+
+/** GET /alertas: sinal novo de fornecedor de carteira (SPEC I7). `sinal` nulo: UF fora do seu escopo. */
+export interface Alerta {
+  id: string;
+  carteira_id: string | null;
+  cnpj: string;
+  /** `id` nulo: o sinal deixou de valer no último cálculo; o texto é o que ele dizia quando o alerta nasceu. */
+  sinal: { id: string | null; tipo: string; gravidade: Gravidade; uf: string | null; explicacao: string } | null;
+  status: StatusAlerta;
+  criado_em: string;
+}
+
 /** GET /carteiras/{id}/fila: itens já ordenados por prioridade. */
 export interface Fila {
   carteira: { id: string; nome: string; finalidade: Finalidade; criada_em: string };
