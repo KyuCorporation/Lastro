@@ -28,7 +28,7 @@ Situação do código em 08/11/2026.
 - No modo `mock` (sem LLM), o planejador é um roteador por regras e o texto vem de modelos fixos por intent. As respostas ficam corretas e citadas, porém mais engessadas.
 
 **Plataforma**
-- Nenhum processo cria alertas: `GET /alertas` existe, mas a tabela só recebe linhas nos testes.
+- O alerta nasce quando alguém cria a carteira ou abre a fila depois de um novo cálculo de sinais, não no instante do cálculo: a pipeline não escreve em dados de tenant. Marcar o alerta como visto ainda não tem rota.
 - O limite de 30 consultas por minuto fica na memória do processo da API.
 - O JWT vale 480 minutos e não tem revogação no servidor.
 - A auditoria registra o login que deu certo. Tentativa com senha errada não entra: a trilha é por tenant e, sem sessão, não há tenant.
@@ -53,6 +53,5 @@ Situação do código em 08/11/2026.
 
 1. Fazer a primeira carga completa do TCE-PE em rede brasileira (`make ingest-pe`) e medir o volume por unidade gestora.
 2. Implementar o SQL de `fila_carteira` e `socios_sancionados`, e o conector de quadro societário com o sinal de contágio.
-3. Criar alertas quando uma nova sanção ou sinal atingir fornecedor de carteira.
-4. Medir o cronômetro com 3 CNPJs e validar a hipótese com especialistas (T23).
-5. Rodar `make eval EVAL_LLM=gemini` e `make eval-ataques EVAL_LLM=gemini` e publicar os números ao lado dos do modo `mock`.
+3. Medir o cronômetro com 3 CNPJs e validar a hipótese com especialistas (T23).
+4. Rodar `make eval EVAL_LLM=gemini` e `make eval-ataques EVAL_LLM=gemini` e publicar os números ao lado dos do modo `mock`.
