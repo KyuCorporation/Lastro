@@ -128,3 +128,36 @@ def vigentes() -> ResultadoConsulta:
         conjuntos={"linhas": linhas},
         totais={"n_contratos": 2, "valor_total": Decimal("400000.00")},
     )
+
+
+def orgaos(maior: str = "Secretaria de Saúde") -> ResultadoConsulta:
+    ranking = [
+        {"uf": "PE", "orgao_id": "pe_portal:1", "orgao_nome": maior, "esfera": "estadual", "n_contratos": 2,
+         "valor_contratado": Decimal("300000.00"), "participacao": Decimal("75.00")},
+        {"uf": "PE", "orgao_id": "pe_portal:2", "orgao_nome": "Secretaria de Educação", "esfera": "estadual",
+         "n_contratos": 1, "valor_contratado": Decimal("100000.00"), "participacao": Decimal("25.00")},
+    ]  # fmt: skip
+    return ResultadoConsulta(
+        intent="orgaos_fornecedor",
+        versao="orgaos_fornecedor@v1",
+        parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
+        conjuntos={"ranking": ranking, "contratos": [contrato("C1", "300000.00", date(2027, 1, 1), maior)]},
+        totais={
+            "n_orgaos": 2,
+            "n_contratos": 3,
+            "valor_total": Decimal("400000.00"),
+            "maior_orgao": maior,
+            "maior_participacao": Decimal("75.00"),
+        },
+    )
+
+
+def busca(termo: str = "limpeza") -> ResultadoConsulta:
+    linhas = [contrato("C1", "100000.00", date(2027, 1, 1))]
+    return ResultadoConsulta(
+        intent="busca_objeto",
+        versao="busca_objeto@v1",
+        parametros={"termo": termo, "hoje": HOJE, "ufs": ["PE"]},
+        conjuntos={"linhas": linhas},
+        totais={"n_contratos": 1, "valor_total": Decimal("100000.00")},
+    )

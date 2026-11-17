@@ -14,7 +14,7 @@ from datetime import date, datetime
 from typing import Any
 
 from app.llm.formatacao import TipoValor, formatar, formatar_cnpj
-from app.llm.texto_externo import dado_nao_confiavel
+from app.llm.texto_externo import dado_nao_confiavel, limpar
 from app.modules.catalogo.executor import ResultadoConsulta
 from app.modules.catalogo.registry import CONSULTAS
 
@@ -119,6 +119,18 @@ _LIQUIDACOES = "liquidações ou pagamentos"
 
 
 # ------------------------------------------------------------------ partes comuns
+LIMITE_TEXTO_DE_FONTE = 120
+
+
+def _texto_de_fonte(valor: Any) -> str | None:
+    """Texto de fonte (nome de órgão) ou do usuário (termo da busca) que vira valor de marcador.
+
+    O código insere esse valor depois do verificador, então ele não passa pelas regras de lá: sai daqui já sem
+    link, marcação, chaves e caractere de controle. Números ficam (nome de órgão pode ter) e não há regra de
+    vocabulário (nome oficial pode conter "corrupção", como numa secretaria de prevenção)."""
+    return None if valor is None else limpar(valor, limite=LIMITE_TEXTO_DE_FONTE, mascarar_numeros=False)
+
+
 def _p(n: int, singular: str, plural: str) -> str:
     """Concordância do texto pronto: o código sabe o valor, então escolhe a forma certa (nada de "contrato(s)")."""
     return singular if n == 1 else plural
@@ -402,7 +414,11 @@ def _orgaos(r: ResultadoConsulta) -> Material:
         modelo = f"Não encontrei contratos do fornecedor {cnpj} nas fontes autorizadas para você ({ufs})."
         return m.material(modelo, True)
     maior = m.add(
-        t["maior_orgao"], "texto", "nome do órgão com maior valor", "ranking[0].orgao_nome", essencial=False
+        _texto_de_fonte(t["maior_orgao"]),
+        "texto",
+        "nome do órgão com maior valor",
+        "ranking[0].orgao_nome",
+        essencial=False,
     )
     pct = m.add(
         t["maior_participacao"],
@@ -428,7 +444,13 @@ def _orgaos(r: ResultadoConsulta) -> Material:
 @modelo_da_intent("busca_objeto")
 def _busca(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
-    termo = m.add(r.parametros["termo"], "texto", "termo pesquisado", "parametros.termo", essencial=False)
+    termo = m.add(
+        _texto_de_fonte(r.parametros["termo"]),
+        "texto",
+        "termo pesquisado",
+        "parametros.termo",
+        essencial=False,
+    )
     n = m.add(
         t["n_contratos"],
         "inteiro",

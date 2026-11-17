@@ -17,6 +17,8 @@ NAO_VAZIOS = [
     resultados.pagamentos(),
     resultados.sancoes(),
     resultados.sancoes(vigente=False),
+    resultados.orgaos(),
+    resultados.busca(),
 ]
 
 
