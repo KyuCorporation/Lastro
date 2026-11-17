@@ -212,7 +212,7 @@ Rodar `make test` depois do `make demo` grava as consultas de teste no históric
 | Interface: consulta, recibo, acesso, auditoria e fontes | pronto |
 | Sinais `sancao_direta`, `penhasco` e `concentracao` por UF (`make sinais`, T17) | pronto |
 | Carteiras, fila priorizada por sinais e dossiê do fornecedor (`/carteiras`, `/fornecedores/{cnpj}/dossie`, T18) | pronto |
-| Suíte de ataques com harness (`make eval-ataques`, T21): 58 casos, zero vazamento | pronto |
+| Suíte de ataques com harness (`make eval-ataques`, T21): 63 casos, zero vazamento | pronto |
 | Auditoria e verificação da cadeia (`/auditoria`, `/auditoria/verificar`, T16) | pronto |
 | `/fontes`, `/fontes/execucoes`, `/alertas` e `/metricas`: todas as rotas de `contracts/api.md` | pronto |
 | Harness do gabarito (`make eval`): intent 100%, comportamento 85% com os 20 casos atuais | pronto |
