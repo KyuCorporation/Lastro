@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { useApi } from "../../api/ApiProvider";
 import type { ErroApi } from "../../api/http";
-import type { EventoAuditoria, VerificacaoCadeia } from "../../api/types";
+import type { CabecaCadeia, EventoAuditoria, VerificacaoCadeia } from "../../api/types";
 import { Carregando } from "../../components/Carregando";
 import { MensagemErro } from "../../components/MensagemErro";
 import { Selo } from "../../components/Selo";
@@ -29,6 +30,73 @@ function SeloCadeia({ v }: { v: VerificacaoCadeia }) {
     <Selo tom="vermelho">
       Cadeia alterada a partir do evento {v.primeiro_seq_quebrado ?? "?"} · {v.n_eventos} eventos conferidos
     </Selo>
+  );
+}
+
+/**
+ * Último evento da trilha (GET /auditoria/cabeca). Publicado fora do banco (ata, e-mail, repositório), torna
+ * detectável reescrever a trilha inteira ou cortar o fim dela: o hash publicado deixa de estar no evento dele.
+ */
+export function CabecaDaCadeia() {
+  const api = useApi();
+  const cabeca = useQuery<CabecaCadeia, ErroApi>({
+    queryKey: ["auditoria-cabeca"],
+    queryFn: () => api.auditoria.cabeca(),
+    staleTime: 0,
+    retry: false,
+  });
+  const [copiado, setCopiado] = useState<"sim" | "falhou" | null>(null);
+
+  async function copiar(hash: string) {
+    try {
+      await navigator.clipboard.writeText(hash);
+      setCopiado("sim");
+    } catch {
+      setCopiado("falhou");
+    }
+  }
+
+  return (
+    <section aria-labelledby="titulo-cabeca" className="cartao p-6">
+      <h2 id="titulo-cabeca" className="text-xl font-bold text-kyu-texto">
+        Cabeça da cadeia
+      </h2>
+      <p className="mt-1 text-sm text-kyu-suave">
+        Publique este hash fora do Lastro (ata, e-mail, repositório). Se alguém reescrever a trilha inteira ou apagar
+        o fim dela, o evento deste número deixa de ter este hash.
+      </p>
+      {cabeca.isPending ? (
+        <Carregando texto="Lendo a cabeça da cadeia…" />
+      ) : cabeca.isError ? (
+        <div className="mt-4">
+          <MensagemErro erro={cabeca.error} titulo="Não foi possível ler a cabeça da cadeia" />
+        </div>
+      ) : cabeca.data.hash === null ? (
+        <p className="mt-4 text-kyu-suave">A trilha ainda não tem eventos.</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <p>
+            <strong>Evento nº {cabeca.data.seq}</strong>
+            {cabeca.data.criado_em && <> · {dataHora(cabeca.data.criado_em)}</>} · {cabeca.data.n_eventos} eventos
+            na trilha
+          </p>
+          <p className="break-all rounded-md bg-kyu-cabecalho px-3 py-2 font-mono text-sm">{cabeca.data.hash}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              aria-label="Copiar o hash da cabeça"
+              className="botao-secundario"
+              onClick={() => void copiar(cabeca.data.hash!)}
+            >
+              Copiar hash
+            </button>
+            <span role="status" aria-live="polite" className="text-sm text-kyu-suave">
+              {copiado === "sim" ? "Hash copiado." : copiado === "falhou" ? "Não deu para copiar: selecione o texto." : ""}
+            </span>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
