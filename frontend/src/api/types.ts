@@ -257,6 +257,8 @@ export interface SancaoDossie extends Proveniencia {
   data_fim: string | null;
   fundamentacao: string | null;
   vigente: boolean;
+  /** Saiu do cadastro da CGU (revogada ou anulada): não é vigente, mesmo com data final no futuro. */
+  removida_em: string | null;
 }
 
 export interface SinalDossie {

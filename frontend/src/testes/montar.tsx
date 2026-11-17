@@ -205,7 +205,8 @@ export const DOSSIE: Dossie = {
   sancoes: [
     { id: "s-1", fonte_id: "ceis", id_origem: "ceis:1", url_origem: "https://portaldatransparencia.gov.br/sancoes/ceis/1",
       coletado_em: "2026-11-06T08:00:00Z", tipo: "Impedimento", orgao_sancionador: "Prefeitura do Recife",
-      uf_orgao: "PE", data_inicio: "2026-05-10", data_fim: "2027-05-10", fundamentacao: null, vigente: true },
+      uf_orgao: "PE", data_inicio: "2026-05-10", data_fim: "2027-05-10", fundamentacao: null, vigente: true,
+      removida_em: null },
   ],
   sinais: [
     { id: "si-1", tipo: "sancao_direta", gravidade: "forte", uf: "PE", valor: null,
