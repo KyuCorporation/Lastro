@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { Evidencia, Gravidade } from "../../api/types";
 import { LinkOrigem } from "../../components/LinkOrigem";
 import { Selo } from "../../components/Selo";
@@ -11,6 +13,35 @@ export interface SinalExibido {
   evidencias: Evidencia[];
   /** Só no dossiê: versão da regra que gerou o sinal. */
   versao_regra?: string;
+}
+
+/** Quantas evidências aparecem de início. Um sinal guarda até 50 e várias apontam para o mesmo recorte da fonte. */
+const EVIDENCIAS_VISIVEIS = 3;
+
+function Evidencias({ evidencias }: { evidencias: Evidencia[] }) {
+  const [aberto, setAberto] = useState(false);
+  const resto = evidencias.length - EVIDENCIAS_VISIVEIS;
+  const visiveis = aberto ? evidencias : evidencias.slice(0, EVIDENCIAS_VISIVEIS);
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+      <span className="text-kyu-suave">Evidências:</span>
+      {visiveis.map((e, j) => (
+        <LinkOrigem key={`${e.id ?? j}`} url={e.url_origem}>
+          {nomeTabela(e.tabela ?? "registro")} {j + 1}
+        </LinkOrigem>
+      ))}
+      {resto > 0 && (
+        <button
+          type="button"
+          aria-expanded={aberto}
+          onClick={() => setAberto(!aberto)}
+          className="foco rounded-md font-semibold text-kyu-laranja underline"
+        >
+          {aberto ? "mostrar menos" : `e mais ${resto} registro${resto === 1 ? "" : "s"}`}
+        </button>
+      )}
+    </p>
+  );
 }
 
 /** Sinais para investigar, cada um com gravidade em texto, a explicação e os links das linhas de origem. */
@@ -29,16 +60,7 @@ export function ListaSinais({ sinais, vazio = "Nenhum sinal para investigar." }:
               {s.versao_regra && <span className="text-sm text-kyu-suave">regra {s.versao_regra}</span>}
             </div>
             <p className="mt-2 text-kyu-texto">{s.explicacao}</p>
-            {s.evidencias.length > 0 && (
-              <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                <span className="text-kyu-suave">Evidências:</span>
-                {s.evidencias.map((e, j) => (
-                  <LinkOrigem key={`${e.id ?? j}`} url={e.url_origem}>
-                    {nomeTabela(e.tabela ?? "registro")} {j + 1}
-                  </LinkOrigem>
-                ))}
-              </p>
-            )}
+            {s.evidencias.length > 0 && <Evidencias evidencias={s.evidencias} />}
           </li>
         );
       })}

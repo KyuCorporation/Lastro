@@ -77,9 +77,25 @@ describe("06 carteiras e fila", () => {
       "/fornecedores/99999999000191",
     );
 
-    expect(itens[1]).toHaveTextContent("Nenhum sinal para investigar");
+    // CNPJ sem nenhum dado visível: diz isso em texto e não oferece um dossiê que daria "não encontrado".
+    expect(itens[1]).toHaveTextContent("Sem registros nas fontes autorizadas para você");
+    expect(within(itens[1]).queryByRole("link", { name: /Abrir dossiê/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Os sinais vêm do último cálculo da base/)).toBeInTheDocument();
     expect(screen.getByText(/peso da gravidade × log10\(1 \+ valor exposto\)/)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(PALAVRAS_PROIBIDAS);
+  });
+
+  it("sinal com muitas evidências mostra três e recolhe o resto", async () => {
+    const { FILA } = await import("./montar");
+    const evidencias = Array.from({ length: 10 }, (_, i) => ({
+      tabela: "contratos", id: `ct-${i}`, url_origem: `https://exemplo.gov.br/contrato/${i}`,
+    }));
+    const item = { ...FILA.itens[0], sinais: [{ ...FILA.itens[0].sinais[1], evidencias }] };
+    const api = apiFalsa({ fila: async () => ({ ...FILA, itens: [item] }) });
+    await montarLogado("ana@alfa.demo", "/carteiras/cart-1", api);
+    const [primeiro] = await screen.findAllByRole("listitem", { name: /fornecedor/i });
+    expect(within(primeiro).getByText("e mais 7 registros")).toBeInTheDocument();
+    expect(within(primeiro).getAllByRole("link", { name: /Contrato \d+/ })).toHaveLength(3);
   });
 
   it("carteira de outro cliente (404) mostra o erro, sem itens", async () => {
