@@ -43,7 +43,7 @@ Divergências:
 | G024, G025 | "Quanto o fornecedor 99.000.002/0001-48 recebeu entre …" | O recibo tem uma linha a mais: o empenho de 05/04/2025 | Leitura diferente. O sistema cita o empenho à parte ("reserva no orçamento, etapa anterior à liquidação") e não o soma ao recebido. A referência deixa o empenho fora do conjunto. |
 | G026 | "Resumo do fornecedor 99.000.002/0001-48" | O recibo tem o empenho a mais | Mesma leitura de G024. |
 | G043 | "Quando terminam os contratos do CNPJ 33.891.594/0001-27?" | O sistema responde que nada vence em 180 dias; a referência traz o contrato que ainda não terminou | Leitura diferente, com resposta pouco útil. Sem prazo na pergunta, o sistema aplica a janela padrão de 180 dias de `contratos_vencendo`, e a pergunta pede a data de término. |
-| G100 | "A maior parte do dinheiro … vem de um órgão só?" | O sistema usa só os contratos (1 linha); a referência soma contratos e liquidações (3 linhas) | Leitura diferente de "dinheiro": valor contratado ou recebido. |
+| G100 | "A maior parte do dinheiro … vem de um órgão só?" | O sistema usa só os contratos (1 linha); a referência soma contratos e liquidações (3 linhas) | Leitura diferente de "dinheiro": valor contratado ou recebido. **Divergência aceita, sem mexer na referência (depois desta rodada):** `orgaos_fornecedor` mede a concentração pelo valor contratado, e a resposta passa a dizer isso ("com X% do valor contratado"; "Concentração do valor contratado em um só órgão…"). O caso continua divergente no eval. Medir também o recebido por órgão, como o sinal `concentracao` da pipeline (SPEC §9), fica para uma versão nova da consulta. |
 
 Escolhas da referência que coincidiram com o sistema:
 - empenho não conta como recebido;
