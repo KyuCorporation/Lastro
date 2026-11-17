@@ -15,9 +15,9 @@ from app.llm.redator import redigir
 from app.llm.verificador import MARCADOR, verificar
 from app.modules.catalogo.executor import executar
 from app.modules.catalogo.registry import CONSULTAS
-from app.modules.catalogo.tests.conftest import F1, F2, HOJE
+from app.modules.catalogo.tests.conftest import CARTEIRA_TCAT, F1, F2, HOJE
 
-pytestmark = pytest.mark.usefixtures("dados_catalogo")
+pytestmark = pytest.mark.usefixtures("dados_catalogo", "carteira_tcat")
 
 PARAMETROS = {
     "resumo_fornecedor": {"cnpj": F1},
@@ -27,6 +27,7 @@ PARAMETROS = {
     "sancoes_fornecedor": {"cnpj": F1},
     "orgaos_fornecedor": {"cnpj": F1},
     "busca_objeto": {"termo": "limpeza tcat"},
+    "fila_carteira": {"carteira_id": CARTEIRA_TCAT},
 }
 
 

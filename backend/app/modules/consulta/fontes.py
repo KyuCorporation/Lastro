@@ -10,7 +10,10 @@ from app.modules.consulta import queries
 from app.modules.recibos.montagem import Fonte
 
 # Fontes que cada intent consulta (para a data da última coleta na abstenção).
-FONTES_DA_INTENT: dict[str, tuple[str, ...]] = {"sancoes_fornecedor": ("ceis", "cnep")}
+FONTES_DA_INTENT: dict[str, tuple[str, ...]] = {
+    "sancoes_fornecedor": ("ceis", "cnep"),
+    "fila_carteira": ("pe_portal", "pncp", "ceis", "cnep"),
+}
 FONTES_PADRAO = ("pe_portal", "pncp")
 
 
