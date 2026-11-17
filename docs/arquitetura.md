@@ -110,7 +110,7 @@ FastAPI, Pydantic v2 e psycopg 3, com SQL explícito e sem ORM. Cada módulo tem
 5. **Verificador** (`llm/verificador.py`): reprova número, CNPJ, URL ou UF fora do resultado, marcador desconhecido, texto de prompt e linguagem de acusação. A reprovação troca o texto pelo modelo determinístico.
 6. **Gravação:** consulta, recibo e eventos de auditoria entram numa transação só. O recibo (`contracts/recibo.schema.json`) traz pergunta, plano, parâmetros efetivos, linhas citadas com hash, fontes, valores, verificação e versões dos prompts. O `hash` é o sha256 do JSON canônico.
 
-Intents com SQL: `resumo_fornecedor@v3`, `contratos_vigentes@v1`, `contratos_vencendo@v1`, `pagamentos_periodo@v2`, `sancoes_fornecedor@v2`, `orgaos_fornecedor@v2`, `busca_objeto@v2` (full-text em português no objeto do contrato).
+Intents com SQL: `resumo_fornecedor@v4`, `contratos_vigentes@v2`, `contratos_vencendo@v2`, `pagamentos_periodo@v2`, `sancoes_fornecedor@v2`, `orgaos_fornecedor@v2`, `busca_objeto@v2` (full-text em português no objeto do contrato).
 
 `fila_carteira` e `socios_sancionados` estão no contrato do plano, mas ainda não têm SQL: viram abstenção, com recibo.
 

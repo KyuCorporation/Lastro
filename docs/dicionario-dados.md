@@ -1,6 +1,6 @@
 # Dicionário de dados
 
-Gerado a partir de `db/migrations/001_schema.sql` (com 002 a 008) e dos normalizadores da pipeline. O mapeamento campo a campo de cada fonte está em `docs/catalogo-fontes.md`. Este documento diz o que cada coluna guarda e qual regra a protege.
+Gerado a partir de `db/migrations/001_schema.sql` (com 002 a 009) e dos normalizadores da pipeline. O mapeamento campo a campo de cada fonte está em `docs/catalogo-fontes.md`. Este documento diz o que cada coluna guarda e qual regra a protege.
 
 Convenções:
 - dinheiro é `numeric(18,2)` no banco e string decimal na API (`"1234.56"`), nunca float;
@@ -88,7 +88,8 @@ Convenções:
 | `fornecedor_cnpj` | char(14) → `fornecedores` | | |
 | `objeto` | text | Descrição do objeto | Base da busca textual |
 | `valor_global` | numeric(18,2) | Valor global (PNCP: `valorGlobal`, senão `valorInicial`) | Decimal, nunca float |
-| `data_assinatura`, `vigencia_inicio`, `vigencia_fim` | date | | "Vigente" = `vigencia_fim >= hoje` |
+| `data_assinatura`, `vigencia_inicio`, `vigencia_fim` | date | | "Vigente" = `vigencia_fim >= hoje` e `situacao` nula ou "Regular" |
+| `situacao` | text | `Situacao` do TCE-PE ("Regular", "Concluído", "Rescindido por Acordo Entre as Partes", "Suspenso por Decisão Administrativa"); nula no PNCP (migration 009) | Concluído, rescindido ou suspenso não é vigente, mesmo com data final no futuro |
 | `objeto_tsv` | tsvector, gerado | `to_tsvector('portuguese', objeto)` com índice GIN | Usado por `busca_objeto` |
 
 **`pagamentos`**: RLS por UF. Proveniência completa. No TCE-PE, empenhos e liquidações viram linhas desta tabela. Liquidação é a despesa reconhecida pelo órgão, etapa anterior ao pagamento: por isso as respostas e as telas dizem "liquidações ou pagamentos" e "valor liquidado", e o empenho aparece à parte.
