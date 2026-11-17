@@ -303,6 +303,7 @@ export function apiFalsa(
     auditoria: {
       listar: vi.fn(opcoes.eventos ?? (async () => EVENTOS)),
       verificar: vi.fn(opcoes.cadeia ?? (async () => CADEIA_INTEGRA)),
+      cabeca: vi.fn(async () => ({ seq: 42, hash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", criado_em: "2026-11-17T12:00:00Z", n_eventos: 12 })),
     },
   };
   return api;

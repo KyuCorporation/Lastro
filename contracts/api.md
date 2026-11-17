@@ -28,6 +28,7 @@ Códigos de erro: `NAO_AUTENTICADO` (401), `PERFIL_SEM_PERMISSAO` (403), `ESCOPO
 | PATCH | `/alertas/{id}` | analista, admin | `{status: "visto" \| "resolvido"}` | `{id, status}` (só avança: aberto → visto → resolvido; voltar é `ENTRADA_INVALIDA`) |
 | GET | `/auditoria` | auditor, admin | `?evento&limite` | `[{seq, usuario_id, evento, detalhes, criado_em, hash}]` |
 | GET | `/auditoria/verificar` | auditor, admin | — | `{integra: bool, n_eventos, primeiro_seq_quebrado?}` |
+| GET | `/auditoria/cabeca` | auditor, admin | — | `{seq, hash, criado_em, n_eventos}` (último evento da trilha do tenant; nulos se a trilha está vazia) |
 | GET | `/metricas` | todos | — | `{eval: {...}, ataques: {...}, cronometro: {...}, ultima_atualizacao}` (lê `eval/reports/`) |
 
 Regras transversais:

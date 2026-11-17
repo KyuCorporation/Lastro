@@ -307,6 +307,14 @@ export interface EventoAuditoria {
 }
 
 /** GET /auditoria/verificar */
+/** GET /auditoria/cabeca: último evento da trilha do tenant (nulos se ela está vazia). */
+export interface CabecaCadeia {
+  seq: number | null;
+  hash: string | null;
+  criado_em: string | null;
+  n_eventos: number;
+}
+
 export interface VerificacaoCadeia {
   integra: boolean;
   n_eventos: number;

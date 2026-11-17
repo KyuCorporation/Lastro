@@ -64,7 +64,7 @@ def test_admin_de_um_tenant_nao_ve_o_outro(api, autenticar):
 
 
 @pytest.mark.parametrize("email", ["ana@alfa.demo", "gil@alfa.demo", "bia@beta.demo"])
-@pytest.mark.parametrize("rota", ["/auditoria", "/auditoria/verificar"])
+@pytest.mark.parametrize("rota", ["/auditoria", "/auditoria/verificar", "/auditoria/cabeca"])
 def test_quem_nao_e_auditor_recebe_403_auditado(api, autenticar, email, rota):
     with _superusuario() as su:
         antes = su.execute("select coalesce(max(seq), 0) from auditoria").fetchone()[0]
@@ -81,6 +81,32 @@ def test_quem_nao_e_auditor_recebe_403_auditado(api, autenticar, email, rota):
 @pytest.mark.parametrize("consulta", ["evento=DROP%20TABLE", "limite=0", "limite=501"])
 def test_parametros_invalidos_422(api, autenticar, consulta):
     assert api.get(f"/auditoria?{consulta}", headers=autenticar("caio@alfa.demo")).status_code == 422
+
+
+# ------------------------------------------------------------------ GET /auditoria/cabeca (P4.5)
+def test_cabeca_e_o_ultimo_evento_do_tenant(api, autenticar, evento_alfa):
+    caio = autenticar("caio@alfa.demo")  # o login do caio entra na trilha antes da leitura
+    r = api.get("/auditoria/cabeca", headers=caio)
+    assert r.status_code == 200
+    cabeca = r.json()
+    assert set(cabeca) == {"seq", "hash", "criado_em", "n_eventos"}
+    with _superusuario() as su:
+        seq, hash_, n = su.execute(
+            "select seq, hash, (select count(*) from auditoria where tenant_id = %s) "
+            "from auditoria where tenant_id = %s order by seq desc limit 1",
+            (TENANT_ALFA, TENANT_ALFA),
+        ).fetchone()
+    assert (cabeca["seq"], cabeca["hash"], cabeca["n_eventos"]) == (seq, hash_, n)
+
+
+def test_cabeca_e_so_do_proprio_tenant(api, autenticar):
+    autenticar("bia@beta.demo")
+    r = api.get("/auditoria/cabeca", headers=autenticar("admin@alfa.demo"))
+    with _superusuario() as su:
+        seqs_alfa = {
+            s for (s,) in su.execute("select seq from auditoria where tenant_id = %s", (TENANT_ALFA,))
+        }
+    assert r.json()["seq"] in seqs_alfa
 
 
 # ------------------------------------------------------------------ GET /auditoria/verificar

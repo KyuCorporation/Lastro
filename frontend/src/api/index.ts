@@ -5,6 +5,7 @@
 import type { Http } from "./http";
 import type {
   Alerta,
+  CabecaCadeia,
   CarteiraCriada,
   CarteiraEntrada,
   CarteiraListada,
@@ -64,6 +65,8 @@ export interface ApiAuditoria {
   /** `evento` filtra pelo tipo (consulta, negado, login…), como o `?evento` de GET /auditoria. */
   listar(limite?: number, evento?: string): Promise<EventoAuditoria[]>;
   verificar(): Promise<VerificacaoCadeia>;
+  /** GET /auditoria/cabeca: o hash do último evento, para publicar fora do Lastro. */
+  cabeca(): Promise<CabecaCadeia>;
 }
 
 export interface ApiFontes {
@@ -136,6 +139,7 @@ export function criarApiAuditoria(http: Http): ApiAuditoria {
         `/auditoria?limite=${encodeURIComponent(limite)}${evento ? `&evento=${encodeURIComponent(evento)}` : ""}`,
       ),
     verificar: () => http.get<VerificacaoCadeia>("/auditoria/verificar"),
+    cabeca: () => http.get<CabecaCadeia>("/auditoria/cabeca"),
   };
 }
 

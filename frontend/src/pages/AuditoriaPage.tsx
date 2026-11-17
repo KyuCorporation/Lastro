@@ -11,7 +11,7 @@ import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { Indicador } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
-import { CadeiaAuditoria } from "../features/auditoria/CadeiaAuditoria";
+import { CabecaDaCadeia, CadeiaAuditoria } from "../features/auditoria/CadeiaAuditoria";
 import { NOME_PERFIL, STATUS_CONSULTA, nomeIntent } from "../lib/apresentacao";
 import { hora } from "../lib/formato";
 
@@ -155,6 +155,7 @@ export function AuditoriaPage() {
       )}
 
       {veTenant && <CadeiaAuditoria />}
+      {veTenant && <CabecaDaCadeia />}
 
       <p className="cartao p-5 text-kyu-texto">
         O histórico não guarda senhas nem tokens. Cada consulta respondida tem um recibo com selo sha256.

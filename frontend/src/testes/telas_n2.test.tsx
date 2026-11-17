@@ -320,6 +320,19 @@ describe("04 auditoria: cadeia de eventos", () => {
     expect(eventos).toHaveTextContent("uf_fora_do_escopo");
   });
 
+  it("auditor vê a cabeça da cadeia inteira para publicar fora do Lastro e pode copiar o hash", async () => {
+    const { usuario, api } = await montarLogado("caio@alfa.demo", "/auditoria");
+    const copiar = vi.spyOn(navigator.clipboard, "writeText"); // o userEvent instala uma área de transferência falsa
+    const cabeca = await screen.findByRole("region", { name: "Cabeça da cadeia" });
+    expect(api.auditoria.cabeca).toHaveBeenCalled();
+    await waitFor(() => expect(cabeca).toHaveTextContent("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+    expect(cabeca).toHaveTextContent("Evento nº 42");
+    expect(cabeca).toHaveTextContent("12 eventos");
+    await usuario.click(within(cabeca).getByRole("button", { name: "Copiar o hash da cabeça" }));
+    expect(copiar).toHaveBeenCalledWith("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    expect(await within(cabeca).findByRole("status")).toHaveTextContent("Hash copiado");
+  });
+
   it("cadeia quebrada aponta o primeiro evento alterado", async () => {
     const api = apiFalsa({ cadeia: async () => ({ integra: false, n_eventos: 12, primeiro_seq_quebrado: 7 }) });
     await montarLogado("caio@alfa.demo", "/auditoria", api);
