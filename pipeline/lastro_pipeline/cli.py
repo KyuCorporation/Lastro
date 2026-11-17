@@ -6,7 +6,7 @@ from datetime import date, datetime
 import typer
 
 from lastro_pipeline import connectors, db, fixtures, runner
-from lastro_pipeline.config import Settings, get_settings
+from lastro_pipeline.config import Settings, get_settings, hoje_recife
 from lastro_pipeline.connectors.base import Conector
 from lastro_pipeline.http import ClienteHttp, FonteBloqueada, FonteIndisponivel
 from lastro_pipeline.sinais import calculo
@@ -78,7 +78,7 @@ def ingest(
 
 def _data(valor: str | None) -> date:
     if valor is None:
-        return date.today()
+        return hoje_recife()
     try:
         return datetime.strptime(valor, "%Y-%m-%d").date()
     except ValueError:

@@ -1,12 +1,19 @@
 """Configuração da pipeline. Tudo vem de variáveis de ambiente (.env); nenhum segredo no código."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 USER_AGENT = "lastro-hackathon"
+FUSO_RECIFE = timezone(timedelta(hours=-3))  # Pernambuco não tem horário de verão
+
+
+def hoje_recife(agora: datetime | None = None) -> date:
+    """O dia em Pernambuco, igual ao "hoje" da API. O container roda em UTC: entre 21h e meia-noite de Recife,
+    a data do servidor já seria o dia seguinte, e sinal e vigência mudariam de dia antes da hora."""
+    return (agora or datetime.now(FUSO_RECIFE)).astimezone(FUSO_RECIFE).date()
 
 
 def _lista(valor: str) -> list[str]:
