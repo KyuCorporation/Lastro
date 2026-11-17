@@ -30,7 +30,7 @@ def orgaos(participacao: str = "80.00") -> ResultadoConsulta:
     ]  # fmt: skip
     return ResultadoConsulta(
         intent="orgaos_fornecedor",
-        versao="orgaos_fornecedor@v1",
+        versao="orgaos_fornecedor@v2",
         parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
         conjuntos={
             "ranking": ranking,

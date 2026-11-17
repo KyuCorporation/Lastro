@@ -61,7 +61,7 @@ def test_registro_cobre_as_intents_n1_e_os_arquivos_existem():
 # ---------------------------------------------------------------- resumo_fornecedor
 def test_resumo_so_com_as_ufs_da_ana(ctx_ana):
     r = executar(plano("resumo_fornecedor"), ctx_ana, HOJE)
-    assert r.versao == "resumo_fornecedor@v2"
+    assert r.versao == "resumo_fornecedor@v3"
     assert r.parametros["ufs"] == ["PE"]
     assert origens(r.conjuntos["contratos"]) == {"TCAT-C1", "TCAT-C2", "TCAT-C3"}
     assert origens(r.conjuntos["pagamentos"]) == {"TCAT-P1", "TCAT-P2", "TCAT-P3"}
@@ -207,3 +207,89 @@ def test_intents_sem_consulta(intent, ctx_ana):
 def test_intent_n3_ainda_sem_sql(ctx_ana):
     with pytest.raises(IntentSemConsulta):
         executar(PlanoConsulta(intent="socios_sancionados", parametros=Parametros(cnpj=F1)), ctx_ana, HOJE)
+
+
+# ------------------------------------------------------------------ acima do limite de linhas (SPEC §7: 200)
+N_MUITOS = 201
+
+
+@pytest.fixture
+def fornecedor_com_muitos_contratos():
+    """F2 com 201 contratos vigentes em PE, cada um num órgão diferente, de R$ 1.000,00."""
+    from app.modules.catalogo.tests.conftest import (
+        INSERIR_CONTRATO,
+        INSERIR_ORGAO,
+        _hash,
+        _superusuario,
+        _url,
+        d,
+    )
+
+    limpar = (
+        "delete from contratos where id_origem like 'TCAT-T%'",
+        "delete from orgaos where id like 'demo_sintetico:TCAT-T%'",
+    )
+    with _superusuario() as conn:
+        for comando in limpar:
+            conn.execute(comando)
+        cur = conn.cursor()
+        orgaos = [
+            (f"demo_sintetico:TCAT-T{i:03d}", f"Órgão Teste {i:03d}", "PE", "municipal")
+            for i in range(N_MUITOS)
+        ]
+        cur.executemany(INSERIR_ORGAO, orgaos)
+        cur.executemany(
+            INSERIR_CONTRATO,
+            [
+                (f"TCAT-T{i:03d}", "PE", orgaos[i][0], F2, "Serviço tcat", "1000.00", d(-30), d(-30), d(90),
+                 _url(f"TCAT-T{i:03d}"), _hash(f"TCAT-T{i:03d}"))
+                for i in range(N_MUITOS)
+            ],
+        )  # fmt: skip
+    yield
+    with _superusuario() as conn:
+        for comando in limpar:
+            conn.execute(comando)
+
+
+def _plano_f2(intent: str) -> PlanoConsulta:
+    return PlanoConsulta(intent=intent, parametros=Parametros(cnpj=F2))
+
+
+@pytest.mark.usefixtures("fornecedor_com_muitos_contratos")
+def test_lista_acima_do_limite_e_truncada_com_total_certo_e_aviso(ctx_ana):
+    from app.llm.redator import AVISO_TRUNCADO, redigir
+
+    r = executar(_plano_f2("contratos_vigentes"), ctx_ana, HOJE)
+    assert r.truncado and len(r.conjuntos["linhas"]) == 200
+    assert r.totais == {"n_contratos": N_MUITOS, "valor_total": Decimal("201000.00")}
+
+    texto = redigir("p", r, ufs_autorizadas=("PE",), provedor=None).texto
+    assert "201 contratos vigentes" in texto and "R$ 201.000,00" in texto
+    assert texto.endswith(AVISO_TRUNCADO)
+    assert not any(c.isdigit() for c in AVISO_TRUNCADO)  # o harness do eval reprova número fora do recibo
+
+
+@pytest.mark.usefixtures("fornecedor_com_muitos_contratos")
+def test_totais_por_orgao_nao_param_no_limite_de_linhas(ctx_ana):
+    """Os conjuntos derivados (grupos por órgão) não são cortados: o total soma todos os grupos."""
+    resumo = executar(_plano_f2("resumo_fornecedor"), ctx_ana, HOJE)
+    assert resumo.versao == "resumo_fornecedor@v3"
+    assert resumo.totais["n_contratos"] == N_MUITOS
+    assert resumo.totais["valor_contratado"] == Decimal("201000.00")
+    assert (
+        resumo.truncado and len(resumo.conjuntos["contratos"]) == 200
+    )  # as linhas citáveis continuam limitadas
+
+    orgaos = executar(_plano_f2("orgaos_fornecedor"), ctx_ana, HOJE)
+    assert orgaos.versao == "orgaos_fornecedor@v2"
+    assert orgaos.totais["n_orgaos"] == N_MUITOS and orgaos.totais["n_contratos"] == N_MUITOS
+    assert orgaos.totais["valor_total"] == Decimal("201000.00")
+
+
+def test_sem_truncar_nao_ha_aviso(ctx_ana):
+    from app.llm.redator import AVISO_TRUNCADO, redigir
+
+    r = executar(plano("contratos_vigentes"), ctx_ana, HOJE)
+    assert not r.truncado
+    assert AVISO_TRUNCADO.strip() not in redigir("p", r, ufs_autorizadas=("PE",), provedor=None).texto
