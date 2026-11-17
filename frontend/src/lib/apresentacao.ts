@@ -91,6 +91,7 @@ const NOME_EVENTO: Record<string, string> = {
   ataque_detectado: "Tentativa de injeção bloqueada",
   dossie: "Dossiê aberto",
   carteira_criada: "Carteira criada",
+  alerta_atualizado: "Alerta atualizado",
   export: "Exportação",
 };
 

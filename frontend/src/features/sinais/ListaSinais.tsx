@@ -4,15 +4,16 @@ import type { Evidencia, Gravidade } from "../../api/types";
 import { LinkOrigem } from "../../components/LinkOrigem";
 import { Selo } from "../../components/Selo";
 import { GRAVIDADE, nomeSinal } from "../../lib/apresentacao";
-import { nomeTabela } from "../../lib/formato";
+import { dataCurta, nomeTabela } from "../../lib/formato";
 
 export interface SinalExibido {
   tipo: string;
   gravidade: Gravidade;
   explicacao: string;
   evidencias: Evidencia[];
-  /** Só no dossiê: versão da regra que gerou o sinal. */
+  /** Versão da regra que gerou o sinal e quando ele foi calculado (`make sinais`). */
   versao_regra?: string;
+  calculado_em?: string;
 }
 
 /** Quantas evidências aparecem de início. Um sinal guarda até 50 e várias apontam para o mesmo recorte da fonte. */
@@ -57,7 +58,13 @@ export function ListaSinais({ sinais, vazio = "Nenhum sinal para investigar." }:
               <Selo tom={g.tom}>
                 {g.rotulo} · {nomeSinal(s.tipo)}
               </Selo>
-              {s.versao_regra && <span className="text-sm text-kyu-suave">regra {s.versao_regra}</span>}
+              {(s.versao_regra || s.calculado_em) && (
+                <span className="text-sm text-kyu-suave">
+                  {[s.versao_regra && `regra ${s.versao_regra}`, s.calculado_em && `calculado em ${dataCurta(s.calculado_em)}`]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
             </div>
             <p className="mt-2 text-kyu-texto">{s.explicacao}</p>
             {s.evidencias.length > 0 && <Evidencias evidencias={s.evidencias} />}

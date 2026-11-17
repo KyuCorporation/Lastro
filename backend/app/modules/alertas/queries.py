@@ -20,6 +20,10 @@ select a.id, a.carteira_id, a.fornecedor_cnpj as cnpj, a.status, a.criado_em,
  limit %(limite)s
 """
 
+# PATCH /alertas/{id}: a RLS deixa só o tenant da sessão; alerta de outro tenant some como inexistente (404).
+STATUS_DO_ALERTA = "select status from alertas where id = %(id)s and tenant_id = ctx_tenant() for update"
+ATUALIZAR_STATUS = "update alertas set status = %(status)s where id = %(id)s and tenant_id = ctx_tenant()"
+
 # Alerta por evento (SPEC §3.3 I7): cada sinal de fornecedor da carteira que ainda não gerou alerta nesta carteira
 # vira um alerta aberto, com a cópia do que o sinal diz. A RLS de `sinais` limita aos sinais da UF de quem abre a
 # fila. Roda na mesma transação da fila e da criação da carteira.

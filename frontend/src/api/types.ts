@@ -196,6 +196,8 @@ export interface SinalFila {
   gravidade: Gravidade;
   explicacao: string;
   evidencias: Evidencia[];
+  calculado_em: string;
+  versao_regra: string;
 }
 
 export interface ItemFila {

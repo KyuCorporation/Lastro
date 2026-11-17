@@ -5,6 +5,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ErroApi } from "../api/http";
+import type { Alerta } from "../api/types";
 import { RECIBO_ANA, apiFalsa, montarApp, tokenEmMemoria } from "./montar";
 
 async function montarLogado(email: string, rota = "/", api = apiFalsa()) {
@@ -83,6 +84,45 @@ describe("06 carteiras e fila", () => {
     expect(tabela.textContent).not.toMatch(PALAVRAS_PROIBIDAS);
   });
 
+  it("analista marca o alerta como visto ou resolve, e ele sai da lista", async () => {
+    let abertos: Alerta[] = [
+      {
+        id: "al-1",
+        carteira_id: "cart-1",
+        cnpj: "99999999000191",
+        sinal: { id: "s-1", tipo: "sancao_direta", gravidade: "forte", uf: null, explicacao: "Consta 1 sanção vigente no CEIS." },
+        status: "aberto",
+        criado_em: "2026-11-17T12:00:00Z",
+      },
+    ];
+    const api = apiFalsa({
+      alertas: async () => abertos,
+      atualizarAlerta: async (id, status) => {
+        abertos = abertos.filter((a) => a.id !== id);
+        return { id, status };
+      },
+    });
+    const { usuario } = await montarLogado("ana@alfa.demo", "/carteiras", api);
+    expect(await screen.findByRole("button", { name: "Resolver: 99.999.999/0001-91, Sanção vigente" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Marcar como visto: 99.999.999/0001-91, Sanção vigente" }));
+    expect(api.alertas.atualizar).toHaveBeenCalledWith("al-1", "visto");
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Alertas abertos" })).not.toBeInTheDocument());
+  });
+
+  it("gestor vê os alertas abertos sem os botões de mudar o status", async () => {
+    const alerta: Alerta = {
+      id: "al-1",
+      carteira_id: "cart-1",
+      cnpj: "99999999000191",
+      sinal: { id: "s-1", tipo: "sancao_direta", gravidade: "forte", uf: null, explicacao: "Consta 1 sanção vigente no CEIS." },
+      status: "aberto",
+      criado_em: "2026-11-17T12:00:00Z",
+    };
+    await montarLogado("gil@alfa.demo", "/carteiras", apiFalsa({ alertas: async () => [alerta] }));
+    await screen.findByRole("table", { name: "Alertas abertos do cliente" });
+    expect(screen.queryByRole("button", { name: /Marcar como visto|Resolver/ })).not.toBeInTheDocument();
+  });
+
   it("sem alerta aberto, a seção não aparece", async () => {
     const { api } = await montarLogado("ana@alfa.demo", "/carteiras");
     await screen.findByRole("table", { name: /carteiras do cliente/i });
@@ -111,6 +151,7 @@ describe("06 carteiras e fila", () => {
     expect(primeiro).toHaveTextContent("Forte · Sanção vigente");
     expect(primeiro).toHaveTextContent("Atenção · Vencimentos concentrados");
     expect(primeiro).toHaveTextContent("62% do valor vigente termina em até 180 dias.");
+    expect(primeiro).toHaveTextContent("regra v2 · calculado em 17/11/2026");
     expect(within(primeiro).getByRole("link", { name: /Sanção 1/ })).toHaveAttribute(
       "href",
       "https://portaldatransparencia.gov.br/sancoes/ceis/1",

@@ -7,8 +7,18 @@ from psycopg.rows import dict_row
 
 from app.core.contexto import ContextoAcesso
 from app.core.db import sessao
+from app.core.errors import ErroApi
 from app.modules.alertas import queries
-from app.modules.alertas.schemas import LIMITE_ALERTAS, AlertaSaida, SinalAlerta, StatusAlerta
+from app.modules.alertas.schemas import (
+    LIMITE_ALERTAS,
+    ORDEM_STATUS,
+    AlertaAtualizacao,
+    AlertaAtualizado,
+    AlertaSaida,
+    SinalAlerta,
+    StatusAlerta,
+)
+from app.modules.auditoria import service as auditoria
 
 
 def gerar_da_carteira(conn: psycopg.Connection, carteira_id: UUID) -> int:
@@ -42,3 +52,19 @@ def listar(ctx: ContextoAcesso, status: StatusAlerta | None) -> list[AlertaSaida
         )
         for linha in linhas
     ]
+
+
+def atualizar(ctx: ContextoAcesso, alerta_id: UUID, entrada: AlertaAtualizacao) -> AlertaAtualizado:
+    """Marca como visto ou resolvido. O status só avança; a mudança entra na trilha junto com o update."""
+    with sessao(ctx) as conn:
+        linha = conn.execute(queries.STATUS_DO_ALERTA, {"id": alerta_id}).fetchone()
+        if linha is None:
+            raise ErroApi(404, "NAO_ENCONTRADO", "Alerta não encontrado.")
+        atual: str = linha[0]
+        if ORDEM_STATUS[entrada.status] <= ORDEM_STATUS[atual]:
+            raise ErroApi(422, "ENTRADA_INVALIDA", f"O alerta já está {atual}; o status só avança.")
+        conn.execute(queries.ATUALIZAR_STATUS, {"id": alerta_id, "status": entrada.status})
+        auditoria.registrar_em(
+            conn, "alerta_atualizado", {"alerta_id": str(alerta_id), "de": atual, "para": entrada.status}
+        )
+    return AlertaAtualizado(id=alerta_id, status=entrada.status)

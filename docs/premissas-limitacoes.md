@@ -28,7 +28,7 @@ Situação do código em 08/11/2026.
 - No modo `mock` (sem LLM), o planejador é um roteador por regras e o texto vem de modelos fixos por intent. As respostas ficam corretas e citadas, porém mais engessadas.
 
 **Plataforma**
-- O alerta nasce quando alguém cria a carteira ou abre a fila depois de um novo cálculo de sinais, não no instante do cálculo: a pipeline não escreve em dados de tenant. Marcar o alerta como visto ainda não tem rota.
+- O alerta nasce quando alguém cria a carteira ou abre a fila depois de um novo cálculo de sinais, não no instante do cálculo: a pipeline não escreve em dados de tenant. O status do alerta só avança (aberto, visto, resolvido) e cada mudança entra na auditoria.
 - O limite de 30 consultas por minuto fica na memória do processo da API.
 - O JWT vale 480 minutos e não tem revogação no servidor.
 - A auditoria registra o login que deu certo. Tentativa com senha errada não entra: a trilha é por tenant e, sem sessão, não há tenant.

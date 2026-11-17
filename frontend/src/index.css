@@ -18,6 +18,10 @@ body {
   .botao-primario {
     @apply foco rounded-md bg-kyu-laranja px-6 py-3 font-semibold text-white hover:bg-kyu-laranja-forte disabled:cursor-not-allowed disabled:opacity-60;
   }
+  /* Ação de linha de tabela: contorno, sem competir com o botão principal da tela. */
+  .botao-secundario {
+    @apply foco rounded-md border border-kyu-laranja px-3 py-1.5 text-sm font-semibold text-kyu-laranja hover:bg-kyu-cabecalho disabled:cursor-not-allowed disabled:opacity-60;
+  }
   .tabela-cabecalho {
     @apply bg-kyu-cabecalho text-left text-sm font-semibold text-kyu-suave;
   }
