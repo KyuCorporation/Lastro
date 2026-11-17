@@ -136,7 +136,7 @@ def test_um_orgao_com_70_por_cento_do_recebido_dispara():
     (sinal,) = sinais
     assert (sinal.tipo, sinal.gravidade, sinal.uf, sinal.valor) == ("concentracao", "atencao", "PE", 70)
     assert sinal.explicacao.endswith("vem de um único órgão: Secretaria de Saúde.")
-    assert "do valor recebido em PE nos últimos 24 meses (R$ 70.000,00 de R$ 100.000,00)" in sinal.explicacao
+    assert "do valor liquidado ou pago em PE nos últimos 24 meses (R$ 70.000,00 de R$ 100.000,00)" in sinal.explicacao
     assert len(sinal.evidencias) == 1 and sinal.evidencias[0]["tabela"] == "pagamentos"
 
 
