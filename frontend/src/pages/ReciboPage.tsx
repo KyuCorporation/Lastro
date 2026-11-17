@@ -197,7 +197,7 @@ export function ReciboPage() {
   if (recibo.isError) {
     return (
       <div className="space-y-4">
-        <TituloPagina numero="02" titulo="Recibo de evidências" />
+        <TituloPagina titulo="Recibo de evidências" />
         <MensagemErro erro={recibo.error} titulo="Não foi possível abrir o recibo" />
         <Link to="/" className="foco font-semibold text-kyu-laranja underline">
           Voltar para a consulta
@@ -212,8 +212,8 @@ export function ReciboPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="02" titulo="Recibo de evidências">
-        Confira os registros utilizados para sustentar uma resposta do KYU.
+      <TituloPagina titulo="Recibo de evidências">
+        Confira os registros utilizados para sustentar uma resposta do Lastro.
       </TituloPagina>
 
       <Destaque id={r.id} hash={r.hash} conteudo={c} />

@@ -105,7 +105,7 @@ const CATALOGO = [
   { conjunto: "Fornecedores", fontes: "Todas", campos: "CNPJ e razão social (pessoa física é descartada)" },
 ];
 
-const ETAPAS = ["Fontes oficiais", "Captura", "Normalização", "Catálogo KYU"];
+const ETAPAS = ["Fontes oficiais", "Captura", "Normalização", "Catálogo do Lastro"];
 
 function LinhaFonte({ f }: { f: Fonte }) {
   const e = f.ultima_execucao;
@@ -135,7 +135,7 @@ export function FontesPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="05" titulo="Fonte e catálogo de dados">
+      <TituloPagina titulo="Fonte e catálogo de dados">
         Dados públicos oficiais. Cada registro guarda a origem, a data da coleta e o hash do conteúdo.
       </TituloPagina>
 

@@ -78,7 +78,7 @@ export function FilaPage() {
   if (fila.isError) {
     return (
       <div className="space-y-4">
-        <TituloPagina numero="06" titulo="Fila da carteira" />
+        <TituloPagina titulo="Fila da carteira" />
         <MensagemErro erro={fila.error} titulo="Não foi possível abrir a carteira" />
         <Link to="/carteiras" className="foco font-semibold text-kyu-laranja underline">
           Voltar para as carteiras
@@ -92,7 +92,7 @@ export function FilaPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="06" titulo="Fila da carteira">
+      <TituloPagina titulo="Fila da carteira">
         {carteira.nome} · {NOME_FINALIDADE[carteira.finalidade] ?? carteira.finalidade} · {itens.length} fornecedor
         {itens.length === 1 ? "" : "es"}
       </TituloPagina>

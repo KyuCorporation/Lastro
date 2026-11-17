@@ -27,7 +27,7 @@ export function ConsultaPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="01" titulo="Consulta inteligente">
+      <TituloPagina titulo="Consulta inteligente">
         Pesquise contratos, pagamentos e sanções de fornecedores nas bases públicas do TCE-PE, do PNCP e do CEIS/CNEP.
       </TituloPagina>
 

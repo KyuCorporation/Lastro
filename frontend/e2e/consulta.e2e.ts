@@ -16,7 +16,7 @@ async function perguntar(page: Page, pergunta: string) {
 
 test("sem sessão, a tela protegida manda para o login", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Entrar no KYU" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entrar no Lastro" })).toBeVisible();
 });
 
 test("senha errada mostra a mensagem da API", async ({ page }) => {
@@ -100,9 +100,9 @@ test("gestor não vê o formulário de consulta", async ({ page }) => {
 test("sair encerra a sessão e a tela protegida volta a pedir login", async ({ page }) => {
   await entrarComo(page, "Ana");
   await page.getByRole("button", { name: "Sair" }).click();
-  await expect(page.getByRole("heading", { name: "Entrar no KYU" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entrar no Lastro" })).toBeVisible();
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Entrar no KYU" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entrar no Lastro" })).toBeVisible();
 });
 
 test("recibo de evidências mostra os registros reais, o total e o selo", async ({ page }) => {

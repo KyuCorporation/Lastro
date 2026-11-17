@@ -23,9 +23,9 @@ describe("moldura", () => {
       "Consulta",
       "Carteiras",
       "Fontes e catálogo",
-      "Métricas",
-      "Acesso",
       "Auditoria",
+      "Acesso",
+      "Métricas",
     ]);
     expect(within(menu).getByRole("link", { name: "Consulta" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("KYU")).toBeInTheDocument();

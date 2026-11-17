@@ -17,7 +17,7 @@ async function entrarComo(email: string) {
 describe("login", () => {
   it("sem sessão, qualquer rota leva ao login", async () => {
     montarApp({ rota: "/recibos/x" });
-    expect(await screen.findByRole("heading", { name: "Entrar no KYU" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar no Lastro" })).toBeInTheDocument();
   });
 
   it("senha errada mostra a mensagem da API e não entra", async () => {
@@ -58,7 +58,7 @@ describe("login", () => {
     const { token } = montarApp();
     const usuario = await entrarComo("ana@alfa.demo");
     await usuario.click(await screen.findByRole("button", { name: "Sair" }));
-    expect(await screen.findByRole("heading", { name: "Entrar no KYU" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entrar no Lastro" })).toBeInTheDocument();
     expect(token.ler()).toBeNull();
   });
 });
@@ -162,7 +162,7 @@ describe("consulta", () => {
     await entrarComo("ana@alfa.demo");
     await screen.findByRole("heading", { name: "Consulta inteligente" });
     act(() => sessao.perder());
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Entrar no KYU" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Entrar no Lastro" })).toBeInTheDocument());
     expect(screen.getByText("Sua sessão expirou. Entre novamente.")).toBeInTheDocument();
   });
 });

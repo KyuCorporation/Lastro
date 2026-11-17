@@ -71,7 +71,7 @@ export function ResultadoConsulta({ resultado, recibo, ufs }: Props) {
         <ListaCitacoes citacoes={resultado.citacoes} />
 
         {resultado.status === "respondida" || resultado.status === "abstencao" ? (
-          <p className="mt-6 text-sm text-kyu-suave">A resposta considera somente os registros disponíveis na base KYU.</p>
+          <p className="mt-6 text-sm text-kyu-suave">A resposta considera somente os registros disponíveis na base do Lastro.</p>
         ) : null}
         {(resultado.recibo_id || typeof cnpjConsultado === "string") && (
           <p className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
