@@ -73,6 +73,7 @@ def test_mapeamento_de_um_contrato(settings):
     assert contrato.vigencia_fim.isoformat() == "2027-01-14"
     assert contrato.orgao_id == "pe_portal:510101"  # estado: código e-Fisco, o mesmo das despesas
     assert contrato.data_assinatura is None  # a API não informa
+    assert contrato.situacao == "Regular"  # `Situacao` da fonte, sem tradução (migration 009)
     assert (
         contrato.url_origem
         == "http://sistemas.tcepe.tc.br/audinArquivos/licon/remessaTCEPE/remessaTCEPE.html?tipoFonteDocumento=IJ&idDocumento=90000001"
@@ -103,6 +104,16 @@ def test_contrato_sem_link_valido_do_tce_aponta_para_o_recorte_da_api(settings, 
 
 def test_amostra_guarda_o_link_do_contrato():
     assert "LinkArquivo" in mapa.CAMPOS_AMOSTRA["contrato"]
+
+
+def test_amostra_guarda_a_situacao_do_contrato():
+    assert "Situacao" in mapa.CAMPOS_AMOSTRA["contrato"]
+
+
+def test_contrato_sem_situacao_fica_nulo(settings):
+    registro = {k: v for k, v in _contrato_manual().items() if k != "Situacao"}
+    (saida,) = _normalizar(settings, [_resposta("contrato", [registro])])
+    assert saida.fato.situacao is None
 
 
 def test_liquidacao_herda_o_credor_do_empenho(settings):

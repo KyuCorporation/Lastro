@@ -184,6 +184,7 @@ _COLUNAS: dict[type[Fato], tuple[str, ...]] = {
         "data_assinatura",
         "vigencia_inicio",
         "vigencia_fim",
+        "situacao",
     ),
     Pagamento: ("uf", "orgao_id", "fornecedor_cnpj", "data_pagamento", "valor", "descricao"),
     Sancao: (
