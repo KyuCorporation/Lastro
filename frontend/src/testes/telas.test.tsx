@@ -84,8 +84,13 @@ describe("01 consulta inteligente", () => {
     const integridade = screen.getByRole("region", { name: "Integridade da consulta" });
     expect(integridade).toHaveTextContent("Escopo: PE");
     expect(integridade).toHaveTextContent("TCE-PE Dados Abertos");
-    expect(integridade).toHaveTextContent("Perfil validado antes da busca");
-    expect(integridade).toHaveTextContent("Texto conferido pelo verificador");
+    // Itens lidos do recibo desta consulta, não uma lista fixa.
+    expect(integridade).toHaveTextContent("Escopo aplicado pelo banco: PE");
+    expect(integridade).toHaveTextContent("Consulta do catálogo: Contratos vencendo (contratos_vencendo@v1)");
+    expect(integridade).toHaveTextContent("2 registros citados");
+    expect(integridade).toHaveTextContent("Plano: regras do sistema, sem IA");
+    expect(integridade).toHaveTextContent("Texto: conferido pelo verificador");
+    expect(integridade).toHaveTextContent("Registrada na auditoria");
   });
 
   it("link de origem fora de http(s) não vira link, e citações longas ficam recolhidas", async () => {
@@ -108,6 +113,34 @@ describe("01 consulta inteligente", () => {
     expect(within(itens[1]).queryByRole("link")).not.toBeInTheDocument();
     expect(screen.getByText("Ver as outras 2 fontes")).toBeInTheDocument();
     expect(document.querySelectorAll('a[href^="javascript:"], a[href^="about:"]')).toHaveLength(0);
+  });
+
+  it("enquanto consulta, avisa em texto; resposta padrão mostra o motivo no painel", async () => {
+    let liberar: (r: typeof RESPOSTA_ANA) => void = () => {};
+    const recibo = {
+      ...RECIBO_ANA,
+      conteudo: {
+        ...RECIBO_ANA.conteudo,
+        verificacao: { status: "fallback" as const, motivos: ["numero_fora_do_resultado"] },
+        ia: { provedor: "gemini", modelo: "gemini-3.6-flash", planejador_por_regras: false },
+      },
+    };
+    const api = apiFalsa({
+      consulta: () => new Promise((resolver) => (liberar = resolver)),
+      recibo: async () => recibo,
+    });
+    const { usuario } = await montarLogado("ana@alfa.demo", "/", api);
+    await usuario.type(screen.getByLabelText("Pergunta em linguagem natural"), "Resumo do CNPJ 99.999.999/0001-91");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
+    expect(await screen.findByText("Consultando as fontes autorizadas para você…")).toBeInTheDocument();
+
+    liberar(RESPOSTA_ANA);
+    const integridade = await screen.findByRole("region", { name: "Integridade da consulta" });
+    await waitFor(() => expect(integridade).toHaveTextContent("Plano: modelo gemini-3.6-flash"));
+    expect(integridade).toHaveTextContent(
+      "Texto: resposta padrão do sistema (o texto da IA trazia um número que não estava no resultado)",
+    );
+    expect(screen.queryByText("Consultando as fontes autorizadas para você…")).not.toBeInTheDocument();
   });
 
   it("prompt injection digitado na pergunta vira acesso negado, sem nenhum dado", async () => {

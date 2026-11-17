@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthProvider";
 import { pode } from "../auth/permissoes";
+import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { TituloPagina } from "../components/TituloPagina";
 import { ambiente } from "../config/ambiente";
@@ -50,6 +51,7 @@ export function ConsultaPage({ simulado = ambiente.consultasSimuladas }: { simul
       )}
 
       <div aria-live="polite">
+        {consulta.isPending && <Carregando texto="Consultando as fontes autorizadas para você…" />}
         {negacao && <ResultadoConsulta resultado={negacao} simulado={false} ufs={usuario.ufs} />}
         {consulta.isError && !negacao && <MensagemErro erro={consulta.error} titulo="A consulta não foi concluída" />}
         {consulta.data && (
