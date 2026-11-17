@@ -228,6 +228,10 @@
     select id::text from pagamentos
      where fornecedor_cnpj = '99000002000148'
        and id_origem not like 'emp:%'
+  sql_contexto: |
+    select id::text from pagamentos
+     where fornecedor_cnpj = '99000002000148'
+       and id_origem like 'emp:%'
 - id: G027
   usuario: ana@alfa.demo
   pergunta: "A 99.000.002/0001-48 ainda tem contrato em vigor?"
