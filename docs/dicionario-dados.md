@@ -91,7 +91,7 @@ Convenções:
 | `data_assinatura`, `vigencia_inicio`, `vigencia_fim` | date | | "Vigente" = `vigencia_fim >= hoje` |
 | `objeto_tsv` | tsvector, gerado | `to_tsvector('portuguese', objeto)` com índice GIN | Usado por `busca_objeto` |
 
-**`pagamentos`**: RLS por UF. Proveniência completa. No TCE-PE, empenhos e liquidações viram linhas desta tabela.
+**`pagamentos`**: RLS por UF. Proveniência completa. No TCE-PE, empenhos e liquidações viram linhas desta tabela. Liquidação é a despesa reconhecida pelo órgão, etapa anterior ao pagamento: por isso as respostas e as telas dizem "liquidações ou pagamentos" e "valor liquidado", e o empenho aparece à parte.
 
 | Campo | Tipo | Descrição | Regra |
 |---|---|---|---|

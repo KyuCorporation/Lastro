@@ -64,7 +64,7 @@ class Intent:
 _LISTA = [
     Intent(
         "resumo_fornecedor",
-        "Nº de contratos, valor contratado e valor pago, por UF e órgão",
+        "Nº de contratos, valor contratado e valor liquidado ou pago, por UF e órgão",
         ("cnpj",),
         ("uf",),
     ),
@@ -77,7 +77,7 @@ _LISTA = [
     ),
     Intent(
         "pagamentos_periodo",
-        "Pagamentos ao fornecedor entre data_inicio e data_fim, com total",
+        "Liquidações e pagamentos ao fornecedor entre data_inicio e data_fim, com total",
         ("cnpj", "data_inicio", "data_fim"),
         ("uf",),
     ),
