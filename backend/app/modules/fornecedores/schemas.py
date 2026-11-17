@@ -57,6 +57,9 @@ class SancaoDossie(Proveniencia):
     data_fim: date | None
     fundamentacao: str | None
     vigente: bool
+    removida_em: (
+        datetime | None
+    )  # saiu do cadastro da CGU (migration 008): não é vigente, mesmo com data futura
 
 
 class SinalDossie(BaseModel):

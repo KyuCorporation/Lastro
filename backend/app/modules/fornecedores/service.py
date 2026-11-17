@@ -125,7 +125,10 @@ def montar(ctx: ContextoAcesso, cnpj_bruto: str, hoje: date) -> Dossie:
             c for c in contratos if c.vigencia_fim is not None and c.vigencia_fim <= limite_vencendo
         ],
         sancoes=[
-            SancaoDossie(**s, vigente=sancao_vigente(s["data_inicio"], s["data_fim"], hoje))
+            SancaoDossie(
+                **s,
+                vigente=s["removida_em"] is None and sancao_vigente(s["data_inicio"], s["data_fim"], hoje),
+            )
             for s in lido.sancoes
         ],
         sinais=[SinalDossie(**s) for s in lido.sinais],

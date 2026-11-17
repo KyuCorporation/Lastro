@@ -1,6 +1,6 @@
 """Redator: modo mock, abstenção, provedor fora, prompt e formatação."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -67,6 +67,12 @@ def test_textos_deterministicos():
     assert redigir("p", resultados.sancoes(), ufs_autorizadas=PE, provedor=None).texto.endswith(
         "no CEIS ou no CNEP, ainda vigente. Sanção vigente é um sinal para investigar."
     )
+
+
+def test_sancao_retirada_do_cadastro_e_dita_assim():
+    retirada = resultados.sancoes(vigente=False, removida_em=datetime(2026, 11, 10, 12, tzinfo=UTC))
+    material = redigir("p", retirada, ufs_autorizadas=PE, provedor=None)
+    assert material.texto.endswith("no CEIS ou no CNEP, retirada do cadastro pela fonte.")
 
 
 @pytest.mark.parametrize(

@@ -365,6 +365,12 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
     return m.material(modelo, not linhas, registros)
 
 
+def _situacao_sancao(s: dict) -> str:
+    if s["vigente"]:
+        return "vigente"
+    return "retirada do cadastro" if s.get("removida_em") else "encerrada"
+
+
 @modelo_da_intent("sancoes_fornecedor")
 def _sancoes(r: ResultadoConsulta) -> Material:
     m, t, linhas = _Montador(), r.totais, r.conjuntos["linhas"]
@@ -385,12 +391,18 @@ def _sancoes(r: ResultadoConsulta) -> Material:
         f"O fornecedor {cnpj} tem {n} {registradas} no CEIS ou no CNEP, das quais {vig} {vigentes}."
         if t["n_sancoes"] > 1
         else f"O fornecedor {cnpj} tem {n} {registradas} no CEIS ou no CNEP"
-        + (", ainda vigente." if t["n_vigentes"] else ", já encerrada.")
+        + (
+            ", ainda vigente."
+            if t["n_vigentes"]
+            else ", retirada do cadastro pela fonte."
+            if linhas[0].get("removida_em")
+            else ", já encerrada."
+        )
     )
     if t["n_vigentes"]:
         modelo += " Sanção vigente é um sinal para investigar."
     registros = tuple(
-        f"- Sanção ({s['fonte_id'].upper()}, {'vigente' if s['vigente'] else 'encerrada'}): "
+        f"- Sanção ({s['fonte_id'].upper()}, {_situacao_sancao(s)}): "
         f"{dado_nao_confiavel(s.get('tipo'))}, aplicada por {dado_nao_confiavel(s.get('orgao_sancionador'))}"
         for s in linhas[:LIMITE_REGISTROS_TEXTO]
     )

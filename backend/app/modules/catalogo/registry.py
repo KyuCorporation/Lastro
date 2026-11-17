@@ -50,7 +50,7 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
         ConsultaCatalogo("contratos_vigentes", "v1", ("linhas",), ("linhas",)),
         ConsultaCatalogo("contratos_vencendo", "v1", ("linhas",), ("linhas",)),
         ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
-        ConsultaCatalogo("sancoes_fornecedor", "v1", ("linhas",), ("linhas",), usa_uf=False),
+        ConsultaCatalogo("sancoes_fornecedor", "v2", ("linhas",), ("linhas",), usa_uf=False),
         ConsultaCatalogo("orgaos_fornecedor", "v2", ("ranking", "contratos"), ("contratos",)),
         ConsultaCatalogo("busca_objeto", "v2", ("linhas",), ("linhas",), usa_cnpj=False),
     ]

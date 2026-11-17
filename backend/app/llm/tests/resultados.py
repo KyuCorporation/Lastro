@@ -103,16 +103,16 @@ def resumo(vazio: bool = False, empenhado: str = "0") -> ResultadoConsulta:
     )
 
 
-def sancoes(vigente: bool = True) -> ResultadoConsulta:
+def sancoes(vigente: bool = True, removida_em: datetime | None = None) -> ResultadoConsulta:
     linhas = [
         {"id": "s1", "fonte_id": "ceis", "id_origem": "S1", "url_origem": "https://x/s1",
          "coletado_em": COLETA, "hash_conteudo": "c" * 64, "arquivo_bruto_id": None, "tipo": "Impedimento",
          "orgao_sancionador": "Órgão X", "uf_orgao": "PE", "data_inicio": date(2026, 1, 1),
-         "data_fim": date(2027, 1, 1), "fundamentacao": "Lei", "vigente": vigente},
+         "data_fim": date(2027, 1, 1), "fundamentacao": "Lei", "vigente": vigente, "removida_em": removida_em},
     ]  # fmt: skip
     return ResultadoConsulta(
         intent="sancoes_fornecedor",
-        versao="sancoes_fornecedor@v1",
+        versao="sancoes_fornecedor@v2",
         parametros={"cnpj": CNPJ, "hoje": HOJE},
         conjuntos={"linhas": linhas},
         totais={"n_sancoes": 1, "n_vigentes": int(vigente)},
