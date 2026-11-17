@@ -30,6 +30,9 @@ log = logging.getLogger("lastro.llm")
 
 VERSAO_PROMPT = "redator_v2"
 TEMPERATURA = 0.2
+# Acrescentado pelo código quando a lista de linhas citáveis passou do limite do catálogo. Sem algarismos: o
+# aviso não é um valor do resultado.
+AVISO_TRUNCADO = " A lista de registros citados foi limitada; os totais consideram todos os registros."
 
 StatusRedacao = Literal["aprovado", "fallback", "abstencao"]
 
@@ -105,10 +108,14 @@ def _valores(material: Material, texto_com_marcadores: str) -> dict[str, dict[st
 
 
 def _deterministico(
-    material: Material, status: StatusRedacao, motivos: tuple[str, ...], provedor: ProvedorLLM | None
+    material: Material,
+    status: StatusRedacao,
+    motivos: tuple[str, ...],
+    provedor: ProvedorLLM | None,
+    aviso: str = "",
 ) -> RespostaRedigida:
     return RespostaRedigida(
-        texto=preencher(material.modelo, material.marcadores),
+        texto=preencher(material.modelo, material.marcadores) + aviso,
         status=status,
         motivos=motivos,
         valores=_valores(material, material.modelo),
@@ -132,20 +139,21 @@ def redigir(
     material = montar_material(resultado, fontes_coletadas_em=fontes_coletadas_em)
     if material.vazio:
         return _deterministico(material, "abstencao", ("resultado_vazio",), None)
+    aviso = AVISO_TRUNCADO if resultado.truncado else ""
     if provedor is None:
-        return _deterministico(material, "aprovado", (), None)
+        return _deterministico(material, "aprovado", (), None, aviso)
 
     try:
         bruto = provedor.gerar(
             montar_prompt(pergunta, material), json=False, timeout_s=timeout_s, temperatura=TEMPERATURA
         )
     except ProvedorIndisponivel:
-        return _deterministico(material, "fallback", ("provedor_indisponivel",), provedor)
+        return _deterministico(material, "fallback", ("provedor_indisponivel",), provedor, aviso)
     # Qualquer outra falha (SDK com defeito, resposta inesperada) também cai no fallback: a demo não pode
     # cair por causa da LLM (AGENTS.md §3.9).
     except Exception as erro:  # noqa: BLE001
         log.warning("redator: falha inesperada do provedor %s: %s", provedor.nome, type(erro).__name__)
-        return _deterministico(material, "fallback", ("erro_provedor",), provedor)
+        return _deterministico(material, "fallback", ("erro_provedor",), provedor, aviso)
 
     texto = limpar_saida(bruto if isinstance(bruto, str) else "")
     v = verificar(
@@ -157,9 +165,9 @@ def redigir(
         resultado_vazio=material.vazio,
     )
     if not v.aprovado:
-        return _deterministico(material, "fallback", v.motivos, provedor)
+        return _deterministico(material, "fallback", v.motivos, provedor, aviso)
     return RespostaRedigida(
-        texto=v.texto_final,
+        texto=v.texto_final + aviso,
         status="aprovado",
         motivos=(),
         valores=_valores(material, texto),

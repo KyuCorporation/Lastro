@@ -65,7 +65,7 @@ def _plano(intent: str, **parametros) -> PlanoConsulta:
 
 def test_resumo_separa_pago_de_empenhado(ctx_ana):
     r = executar(_plano("resumo_fornecedor"), ctx_ana, HOJE)
-    assert r.versao == "resumo_fornecedor@v2"
+    assert r.versao == "resumo_fornecedor@v3"
     assert r.totais["n_pagamentos"] == 2
     assert r.totais["valor_pago"] == Decimal("40000.00")
     assert r.totais["n_empenhos"] == 1

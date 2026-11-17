@@ -40,9 +40,10 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
     c.intent: c
     for c in [
         # v2 em resumo_fornecedor e pagamentos_periodo: empenho separado do pago (o recibo guarda a versão).
+        # v3 em resumo_fornecedor e v2 em orgaos_fornecedor: os agregados por órgão deixam de ter limite de linhas.
         ConsultaCatalogo(
             "resumo_fornecedor",
-            "v2",
+            "v3",
             ("por_uf_orgao", "contratos", "pagamentos"),
             ("contratos", "pagamentos"),
         ),
@@ -50,7 +51,7 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
         ConsultaCatalogo("contratos_vencendo", "v1", ("linhas",), ("linhas",)),
         ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
         ConsultaCatalogo("sancoes_fornecedor", "v1", ("linhas",), ("linhas",), usa_uf=False),
-        ConsultaCatalogo("orgaos_fornecedor", "v1", ("ranking", "contratos"), ("contratos",)),
+        ConsultaCatalogo("orgaos_fornecedor", "v2", ("ranking", "contratos"), ("contratos",)),
         ConsultaCatalogo("busca_objeto", "v1", ("linhas",), ("linhas",), usa_cnpj=False),
     ]
 }

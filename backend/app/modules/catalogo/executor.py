@@ -2,7 +2,8 @@
 
 - A UF do plano é interseccionada com as UFs da sessão. Pedido fora do escopo vira ESCOPO_NEGADO.
 - A RLS filtra de novo no banco: mesmo um parâmetro errado não traz linha fora do escopo.
-- Totais vêm do SQL (funções de janela antes do LIMIT), então ficam certos mesmo com a lista truncada.
+- Totais vêm do SQL (funções de janela antes do LIMIT) ou da soma dos conjuntos derivados, que não são cortados:
+  ficam certos mesmo com a lista de linhas citáveis truncada em `LIMITE_LINHAS`.
 """
 
 from dataclasses import dataclass, field
@@ -149,7 +150,8 @@ def executar(plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date) -> Resultado
         cur = conn.cursor(row_factory=dict_row)
         for nome in consulta.conjuntos:
             linhas = cur.execute(sql(consulta.intent, nome), params).fetchall()
-            if len(linhas) > LIMITE_LINHAS:
+            # Só as linhas citáveis têm teto. Os conjuntos derivados (grupos por órgão) alimentam os totais.
+            if nome in consulta.citaveis and len(linhas) > LIMITE_LINHAS:
                 linhas, truncado = linhas[:LIMITE_LINHAS], True
             janelas[nome] = _separar_totais(linhas)
             conjuntos[nome] = linhas

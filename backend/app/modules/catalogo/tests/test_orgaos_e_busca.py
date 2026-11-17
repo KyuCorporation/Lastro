@@ -36,7 +36,7 @@ def assert_proveniencia(resultado) -> None:
 # ------------------------------------------------------------------ orgaos_fornecedor
 def test_ranking_de_orgaos_com_participacao(ctx_ana):
     r = executar(orgaos(), ctx_ana, HOJE)
-    assert r.versao == "orgaos_fornecedor@v1"
+    assert r.versao == "orgaos_fornecedor@v2"
     ranking = r.conjuntos["ranking"]
     assert [g["orgao_id"] for g in ranking] == ["demo_sintetico:TCAT-PE2", "demo_sintetico:TCAT-PE1"]
     assert [g["valor_contratado"] for g in ranking] == [Decimal("300000.00"), Decimal("150000.00")]

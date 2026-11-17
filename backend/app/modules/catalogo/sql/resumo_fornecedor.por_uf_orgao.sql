@@ -1,6 +1,7 @@
--- resumo_fornecedor@v2 — totais por UF e órgão (derivado das linhas de contratos e pagamentos abaixo)
+-- resumo_fornecedor@v3 — totais por UF e órgão (derivado das linhas de contratos e pagamentos abaixo)
 -- v2: empenho (id_origem 'emp:', TCE-PE) não é pagamento. "pago" soma o que saiu (liquidação, pagamento);
 --     o empenhado vem à parte.
+-- v3: sem limite de linhas. É um agregado por órgão, e os totais da resposta somam todos os grupos.
 with c as (
   select uf, orgao_id,
          count(*)                                                   as n_contratos,
@@ -35,4 +36,3 @@ select coalesce(c.uf, p.uf)                 as uf,
   full join p on p.uf = c.uf and coalesce(p.orgao_id, '') = coalesce(c.orgao_id, '')
   left join orgaos o on o.id = coalesce(c.orgao_id, p.orgao_id)
  order by valor_contratado desc, uf, orgao_id
- limit %(limite)s

@@ -88,7 +88,7 @@ def resumo(vazio: bool = False, empenhado: str = "0") -> ResultadoConsulta:
     soma = lambda k: sum((g[k] for g in grupos), Decimal(0))
     return ResultadoConsulta(
         intent="resumo_fornecedor",
-        versao="resumo_fornecedor@v2",
+        versao="resumo_fornecedor@v3",
         parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
         conjuntos={"por_uf_orgao": grupos, "contratos": [], "pagamentos": []},
         totais={
@@ -139,7 +139,7 @@ def orgaos(maior: str = "Secretaria de Saúde") -> ResultadoConsulta:
     ]  # fmt: skip
     return ResultadoConsulta(
         intent="orgaos_fornecedor",
-        versao="orgaos_fornecedor@v1",
+        versao="orgaos_fornecedor@v2",
         parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
         conjuntos={"ranking": ranking, "contratos": [contrato("C1", "300000.00", date(2027, 1, 1), maior)]},
         totais={
