@@ -3,6 +3,7 @@
 1. abre `execucoes_ingestao` (fica gravada mesmo se a execução falhar);
 2. para cada resposta bruta: bronze (disco + `arquivos_brutos`) → interpretar → normalizar → upsert;
 3. qualidade e queda de volume → status `ok` ou `parcial`;
+   coleta online `ok` de um cadastro completo (CEIS, CNEP) marca as sanções que saíram dele (`removida_em`);
 4. erro → status `falhou` com a mensagem, sem gravar nada parcial dos fatos (transação única).
 """
 
@@ -49,6 +50,9 @@ def executar(
 
     contagem = db.Contagem()
     qualidade = AvaliadorQualidade()
+    # Só o arquivo inteiro, coletado agora, diz quem saiu do cadastro. A fixture offline é um recorte.
+    cadastro_completo = modo == "online" and getattr(conector, "cadastro_completo", False)
+    vistos: set[str] = set()
     try:
         with conn.transaction():
             for resposta in respostas:
@@ -66,10 +70,14 @@ def executar(
                     if normalizado.fornecedor:
                         db.gravar_fornecedor(conn, normalizado.fornecedor)
                     contagem.somar(db.gravar_fato(conn, normalizado.fato, arquivo_id, resposta.coletado_em))
+                    if cadastro_completo:
+                        vistos.add(normalizado.fato.id_origem)
 
             antes = db.lidos_na_execucao_anterior(conn, conector.fonte_id, execucao_id, filtros)
             parametros["qualidade"] = qualidade.relatorio(contagem.lidos, antes)
             status = "parcial" if parametros["qualidade"]["queda_de_volume"] else "ok"
+            if cadastro_completo and status == "ok" and vistos:
+                parametros["removidas"] = db.marcar_sancoes_do_cadastro(conn, conector.fonte_id, vistos)
             db.fechar_execucao(conn, execucao_id, status, contagem, parametros)
     except Exception as erro:
         with conn.transaction():

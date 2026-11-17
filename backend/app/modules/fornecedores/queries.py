@@ -53,7 +53,7 @@ select c.id, c.fonte_id, c.id_origem, c.url_origem, c.coletado_em, c.uf::text as
 
 SANCOES = """
 select id, fonte_id, id_origem, url_origem, coletado_em, tipo, orgao_sancionador, uf_orgao::text as uf_orgao,
-       data_inicio, data_fim, fundamentacao
+       data_inicio, data_fim, fundamentacao, removida_em
   from sancoes
  where cnpj = %(cnpj)s
  order by data_inicio desc nulls last, id

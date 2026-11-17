@@ -50,7 +50,8 @@ select id, fornecedor_cnpj, uf, orgao_id, valor, data_pagamento, url_origem
 SQL_SANCOES = """
 select id, fonte_id, cnpj, tipo, data_inicio, data_fim, url_origem
   from sancoes
- where (data_inicio is null or data_inicio <= %(hoje)s)
+ where removida_em is null
+   and (data_inicio is null or data_inicio <= %(hoje)s)
    and (data_fim is null or data_fim >= %(hoje)s)
 """
 

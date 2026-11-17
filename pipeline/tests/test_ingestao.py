@@ -146,3 +146,74 @@ def test_falha_fica_registrada_e_nao_grava_fatos(conn, settings):
     ).fetchone()
     assert status == "falhou"
     assert "colunas ausentes" in erro
+
+
+# ===================== sanção retirada do cadastro (P4.1, migration 008) =====================
+# O banco de teste pode já ter sanções de outras fixtures (exemplo_manual): cada teste compara com o estado inicial.
+def _ceis_sem_a_primeira_linha():
+    """A amostra do CEIS sem a primeira sanção: o arquivo do dia seguinte, em que ela saiu do cadastro."""
+    (resposta,) = fixtures.ler(FIXTURES / "ceis" / "amostra")
+    cabecalho, _primeira, *resto = resposta.conteudo.decode("utf-8").splitlines(keepends=True)
+    return resposta, replace(
+        resposta, conteudo="".join([cabecalho, *resto]).encode("utf-8"), nome="sem_uma.csv"
+    )
+
+
+def _removidas(conn) -> set[str]:
+    return {
+        i
+        for (i,) in conn.execute(
+            "select id_origem from sancoes where fonte_id = 'ceis' and removida_em is not null"
+        )
+    }
+
+
+def _ids(conector, resposta) -> set[str]:
+    return {
+        n.fato.id_origem
+        for r in conector.interpretar(resposta)
+        if hasattr(n := conector.normalizar(r, resposta), "fato")
+    }
+
+
+def test_coleta_completa_marca_a_sancao_que_saiu_do_cadastro(conn, settings):
+    (conector,) = conectores("ceis", settings)
+    completa, sem_uma = _ceis_sem_a_primeira_linha()
+    runner.executar(conn, conector, [completa], "online", settings.raw_dir)
+    antes = _removidas(conn)
+    assert not (antes & _ids(conector, completa))  # tudo o que veio no arquivo está presente
+
+    resumo = runner.executar(conn, conector, [sem_uma], "online", settings.raw_dir)
+    assert resumo.status == "ok"
+    (removida,) = _removidas(conn) - antes
+    assert removida in _ids(conector, completa) - _ids(conector, sem_uma)
+    detalhes = conn.execute(
+        "select parametros from execucoes_ingestao where id = %s", (resumo.execucao_id,)
+    ).fetchone()[0]
+    assert detalhes["removidas"] == 1
+
+    # Voltou ao cadastro: deixa de estar removida.
+    runner.executar(conn, conector, [completa], "online", settings.raw_dir)
+    assert _removidas(conn) == antes
+
+
+def test_fixture_offline_nao_remove_nada(conn, settings):
+    """A fixture é um recorte, não o cadastro inteiro: ausência nela não quer dizer nada."""
+    (conector,) = conectores("ceis", settings)
+    completa, sem_uma = _ceis_sem_a_primeira_linha()
+    antes = _removidas(conn)
+    runner.executar(conn, conector, [completa], "offline", raw_dir=None)
+    runner.executar(conn, conector, [sem_uma], "offline", raw_dir=None)
+    assert _removidas(conn) == antes
+
+
+def test_coleta_parcial_nao_remove_nada(conn, settings):
+    """Queda de volume (arquivo truncado, por exemplo) deixa a execução parcial: ninguém é marcado como removido."""
+    (conector,) = conectores("ceis", settings)
+    completa, _ = _ceis_sem_a_primeira_linha()
+    runner.executar(conn, conector, [completa], "online", settings.raw_dir)
+    antes = _removidas(conn)
+    so_manual = list(fixtures.ler(FIXTURES / "ceis" / "exemplo_manual"))
+    resumo = runner.executar(conn, conector, so_manual, "online", settings.raw_dir)
+    assert resumo.status == "parcial"
+    assert _removidas(conn) == antes

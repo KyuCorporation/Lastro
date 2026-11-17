@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ErroApi } from "../api/http";
 import type { Alerta } from "../api/types";
-import { RECIBO_ANA, apiFalsa, montarApp, tokenEmMemoria } from "./montar";
+import { DOSSIE, RECIBO_ANA, apiFalsa, montarApp, tokenEmMemoria } from "./montar";
 
 async function montarLogado(email: string, rota = "/", api = apiFalsa()) {
   await api.auth.login({ email, senha: "demo123" });
@@ -196,6 +196,17 @@ describe("06 carteiras e fila", () => {
 });
 
 describe("07 dossiê do fornecedor", () => {
+  it("sanção retirada do cadastro da CGU aparece com a data, não como vigente", async () => {
+    const [s] = DOSSIE.sancoes;
+    const api = apiFalsa({
+      dossie: async () => ({ ...DOSSIE, sancoes: [{ ...s!, vigente: false, removida_em: "2026-11-10T12:00:00Z" }] }),
+    });
+    await montarLogado("ana@alfa.demo", "/fornecedores/99999999000191", api);
+    const sancoes = await screen.findByRole("region", { name: "Sanções" });
+    expect(sancoes).toHaveTextContent("Retirada do cadastro em 10/11/2026");
+    expect(sancoes).not.toHaveTextContent("Vigente");
+  });
+
   it("reúne resumo, contratos, sanções, sinais, sócios e fontes, cada item com a origem", async () => {
     const { api } = await montarLogado("ana@alfa.demo", "/fornecedores/99999999000191");
     await screen.findByRole("heading", { name: "Dossiê do fornecedor" });

@@ -61,6 +61,9 @@ def escrever_csv(cabecalho: list[str], linhas: list[list[str]]) -> bytes:
 
 
 class ConectorSancoes:
+    # O arquivo diário é o cadastro inteiro: sanção que não vem nele saiu do cadastro (runner, migration 008).
+    cadastro_completo = True
+
     def __init__(self, settings: Settings, cadastro: str, hoje: date | None = None) -> None:
         if cadastro not in CADASTROS:
             raise ValueError(f"cadastro desconhecido: {cadastro}")

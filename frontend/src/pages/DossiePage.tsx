@@ -174,7 +174,13 @@ function Conteudo({ d }: { d: Dossie }) {
                   {s.data_inicio ? dataCurta(s.data_inicio) : "—"} a {s.data_fim ? dataCurta(s.data_fim) : "sem fim"}
                 </td>
                 <td className={CELULA}>
-                  <Selo tom={s.vigente ? "vermelho" : "neutro"}>{s.vigente ? "Vigente" : "Encerrada"}</Selo>
+                  <Selo tom={s.vigente ? "vermelho" : "neutro"}>
+                    {s.vigente
+                      ? "Vigente"
+                      : s.removida_em
+                        ? `Retirada do cadastro em ${dataCurta(s.removida_em)}`
+                        : "Encerrada"}
+                  </Selo>
                 </td>
               </tr>
             ))}

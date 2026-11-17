@@ -13,7 +13,7 @@ from app.llm.plano import Parametros, PlanoConsulta
 from app.modules.catalogo.executor import IntentSemConsulta, executar
 from app.modules.catalogo.intents import INTENTS
 from app.modules.catalogo.registry import CONSULTAS, PROVENIENCIA, sql
-from app.modules.catalogo.tests.conftest import F1, F2, HOJE
+from app.modules.catalogo.tests.conftest import F1, F2, HOJE, _superusuario
 
 pytestmark = pytest.mark.usefixtures("dados_catalogo")
 
@@ -175,6 +175,25 @@ def test_sancoes_vigentes_e_passadas(ctx_ana):
     assert r.totais == {"n_sancoes": 2, "n_vigentes": 1}
     assert "ufs" not in r.parametros
     assert_proveniencia(r)
+
+
+@pytest.fixture
+def s1_retirada():
+    """TCAT-S1 (vigente pela data) marcada como retirada do cadastro pela pipeline (migration 008)."""
+    with _superusuario() as su:
+        su.execute("update sancoes set removida_em = '2026-11-10T12:00:00Z' where id_origem = 'TCAT-S1'")
+    yield
+    with _superusuario() as su:
+        su.execute("update sancoes set removida_em = null where id_origem = 'TCAT-S1'")
+
+
+def test_sancao_retirada_do_cadastro_nao_e_vigente(ctx_ana, s1_retirada):
+    r = executar(plano("sancoes_fornecedor"), ctx_ana, HOJE)
+    por_id = {s["id_origem"]: s for s in r.conjuntos["linhas"]}
+    assert por_id["TCAT-S1"]["vigente"] is False and por_id["TCAT-S1"]["removida_em"] is not None
+    assert por_id["TCAT-S2"]["removida_em"] is None
+    assert r.totais == {"n_sancoes": 2, "n_vigentes": 0}
+    assert r.versao == "sancoes_fornecedor@v2"
 
 
 def test_sancao_e_nacional_e_aparece_para_qualquer_uf(ctx_bia):

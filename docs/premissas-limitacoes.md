@@ -17,6 +17,7 @@ Situação do código em 08/11/2026.
 - O link de cada contrato do TCE-PE (`LinkArquivo`) é `http`, não `https`, e não foi conferido se abre de fora do Brasil. A fixture `amostra/` foi gerada antes de o campo entrar e só passa a tê-lo depois de `ingest pe_portal --amostra 200` em rede brasileira; até lá, os contratos da amostra apontam para o recorte da API.
 - No `pe_portal`, o bronze guarda a resposta já sem dado de pessoa física (LGPD). O `sha256` é o da resposta saneada, não o dos bytes que a fonte mandou.
 - Não há conector de quadro societário. A tabela `socios` fica vazia, então o dossiê mostra "Nenhum sócio" e o sinal de contágio não existe.
+- Sanção que sai do CEIS ou do CNEP só é marcada como retirada (`removida_em`) numa coleta online completa com status `ok`. A demo carrega fixtures offline, que são recortes, então nela nenhuma sanção aparece como retirada. Entre os arquivos do CEIS de 05/11 e 17/11/2026, 375 sanções de PJ saíram do cadastro, 56 delas ainda vigentes pela data.
 - A ingestão roda por comando (`make ingest-*`, `make sinais`), sem agendamento. Os sinais refletem a última vez que alguém rodou `sinais`.
 - "Hoje" é o dia em Pernambuco (UTC−3) na API e na pipeline. As views de `db/migrations/003_views.sql` usam `current_date` do banco, que roda em UTC; o catálogo não usa essas views.
 

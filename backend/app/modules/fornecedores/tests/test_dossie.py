@@ -4,6 +4,7 @@ import pytest
 
 from app.core.db import sessao
 from app.modules.carteiras.tests.conftest import F1, F2, F3
+from app.modules.catalogo.tests.conftest import _superusuario
 
 
 def _dossie(api, headers, cnpj):
@@ -131,3 +132,15 @@ def test_abertura_do_dossie_fica_na_auditoria(cliente, autenticar, ctx_caio):
             "select usuario_id::text, detalhes from auditoria where evento = 'dossie' order by seq desc limit 1"
         ).fetchone()
     assert evento == ("00000000-0000-0000-0000-0000000000a1", {"cnpj": F3, "encontrado": False})
+
+
+def test_sancao_retirada_do_cadastro_aparece_encerrada_com_a_data(cliente, autenticar):
+    with _superusuario() as su:
+        su.execute("update sancoes set removida_em = '2026-11-10T12:00:00Z' where id_origem = 'TCAT-S1'")
+    try:
+        r = _dossie(cliente, autenticar("ana@alfa.demo"), F1)
+        (s1,) = [s for s in r.json()["sancoes"] if s["id_origem"] == "TCAT-S1"]
+        assert s1["vigente"] is False and s1["removida_em"].startswith("2026-11-10")
+    finally:
+        with _superusuario() as su:
+            su.execute("update sancoes set removida_em = null where id_origem = 'TCAT-S1'")
