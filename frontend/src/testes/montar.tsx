@@ -237,6 +237,7 @@ export function apiFalsa(
     fila?: (id: string) => Promise<Fila>;
     dossie?: (cnpj: string) => Promise<Dossie>;
     cadeia?: () => Promise<VerificacaoCadeia>;
+    eventos?: () => Promise<EventoAuditoria[]>;
     metricas?: () => Promise<Metricas>;
   } = {},
 ) {
@@ -287,7 +288,7 @@ export function apiFalsa(
     },
     fornecedores: { dossie: vi.fn(opcoes.dossie ?? (async () => DOSSIE)) },
     auditoria: {
-      listar: vi.fn(async () => EVENTOS),
+      listar: vi.fn(opcoes.eventos ?? (async () => EVENTOS)),
       verificar: vi.fn(opcoes.cadeia ?? (async () => CADEIA_INTEGRA)),
     },
   };

@@ -1,7 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import type { ConteudoRecibo } from "../api/types";
+import { useApi } from "../api/ApiProvider";
+import type { ErroApi } from "../api/http";
+import type { ConteudoRecibo, EventoAuditoria } from "../api/types";
+import { useAuth } from "../auth/AuthProvider";
+import { pode } from "../auth/permissoes";
 import { Carregando } from "../components/Carregando";
 import { LinkOrigem } from "../components/LinkOrigem";
 import { MensagemErro } from "../components/MensagemErro";
@@ -48,6 +53,37 @@ function SeloIntegridade({ id }: { id: string }) {
   );
 }
 
+/** Quantos eventos recentes da trilha são lidos para achar o do recibo (o contrato não tem busca por recibo). */
+const EVENTOS_RECENTES = 200;
+
+/**
+ * Segundo selo, só para quem lê a auditoria: o hash do recibo também fica no evento da trilha encadeada.
+ * Trocar conteúdo e hash juntos na linha do recibo passa no primeiro selo, mas não neste.
+ */
+function SeloAncora({ id, hash }: { id: string; hash: string }) {
+  const api = useApi();
+  const eventos = useQuery<EventoAuditoria[], ErroApi>({
+    queryKey: ["auditoria-eventos", EVENTOS_RECENTES],
+    queryFn: () => api.auditoria.listar(EVENTOS_RECENTES),
+  });
+  const evento = eventos.data?.find((e) => e.detalhes?.recibo_id === id && typeof e.detalhes.recibo_hash === "string");
+  let tom: "verde" | "vermelho" | "neutro" = "neutro";
+  let texto = "Conferindo a trilha de auditoria…";
+  if (eventos.isError) texto = "Não foi possível ler a trilha de auditoria agora";
+  else if (evento && evento.detalhes?.recibo_hash === hash.trim()) {
+    tom = "verde";
+    texto = `Ancorado na trilha de auditoria · evento #${evento.seq}`;
+  } else if (evento) {
+    tom = "vermelho";
+    texto = `O selo do recibo não confere com a trilha de auditoria · evento #${evento.seq}`;
+  } else if (eventos.data) texto = "Âncora na trilha não localizada nos eventos recentes";
+  return (
+    <p role="status" aria-label="Âncora na trilha de auditoria" aria-live="polite">
+      <Selo tom={tom}>{texto}</Selo>
+    </p>
+  );
+}
+
 function Secao({ id, titulo, children }: { id: string; titulo: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="cartao p-6">
@@ -62,7 +98,8 @@ function Secao({ id, titulo, children }: { id: string; titulo: string; children:
 const CLASSE_DL = "mt-3 grid gap-x-6 gap-y-2 text-kyu-texto sm:grid-cols-[max-content_1fr]";
 
 /** Destaque do topo: o total em reais ou, em consulta sem valor (sanções), a contagem principal. */
-function Destaque({ id, conteudo }: { id: string; conteudo: ConteudoRecibo }) {
+function Destaque({ id, hash, conteudo }: { id: string; hash: string; conteudo: ConteudoRecibo }) {
+  const { usuario } = useAuth();
   const principal = valorPrincipal(conteudo);
   const contagem = principal ? null : contagemPrincipal(conteudo);
   const titulo = principal ? "Valor total identificado" : (contagem?.rotulo ?? "Valor total identificado");
@@ -85,6 +122,7 @@ function Destaque({ id, conteudo }: { id: string; conteudo: ConteudoRecibo }) {
           {n} registro{n === 1 ? "" : "s"} relacionado{n === 1 ? "" : "s"}
         </Selo>
         <SeloIntegridade id={id} />
+        {pode(usuario?.perfil, "ver_auditoria") && <SeloAncora id={id} hash={hash} />}
       </div>
     </section>
   );
@@ -169,7 +207,7 @@ export function ReciboPage() {
         Confira os registros utilizados para sustentar uma resposta do KYU.
       </TituloPagina>
 
-      <Destaque id={r.id} conteudo={c} />
+      <Destaque id={r.id} hash={r.hash} conteudo={c} />
 
       <Secao id="titulo-registros" titulo="Registros de origem">
         {n === 0 ? (

@@ -7,6 +7,7 @@ O superusuário só aparece aqui para simular a adulteração; a API nunca o usa
 from collections.abc import Iterator
 
 import pytest
+from psycopg.types.json import Jsonb
 
 from app.modules.catalogo.tests.conftest import _superusuario
 from app.modules.recibos.canonico import hash_recibo
@@ -103,6 +104,28 @@ def test_alterar_o_recibo_no_banco_vira_alterado(api, autenticar, recibo_da_ana,
     assert antes["integro"] is True
     assert depois["integro"] is False
     assert depois["hash_gravado"] != depois["hash_recalculado"]
+
+
+def test_trocar_conteudo_e_hash_juntos_passa_no_selo_mas_nao_bate_com_a_trilha(
+    api, autenticar, recibo_da_ana
+):
+    """Por que o hash também vai para a auditoria: quem escreve no banco consegue refazer o hash da linha do
+    recibo, e o selo de /verificar continua "íntegro". O hash guardado no evento da trilha denuncia a troca."""
+    with _superusuario() as su:
+        ancorado = su.execute(
+            "select detalhes->>'recibo_hash' from auditoria where detalhes->>'recibo_id' = %s",
+            (recibo_da_ana,),
+        ).fetchone()[0]
+        (conteudo,) = su.execute("select conteudo from recibos where id = %s", (recibo_da_ana,)).fetchone()
+        conteudo["resposta_final"] = "Vence R$ 999,00."
+        su.execute(
+            "update recibos set conteudo = %s, hash = %s where id = %s",
+            (Jsonb(conteudo), hash_recibo(conteudo), recibo_da_ana),
+        )
+
+    depois = _verificar(api, autenticar("ana@alfa.demo"), recibo_da_ana).json()
+    assert depois["integro"] is True  # o selo do recibo, sozinho, não vê a troca
+    assert depois["hash_gravado"] != ancorado  # a trilha vê
 
 
 def test_auditor_e_admin_verificam_recibo_do_tenant(api, autenticar, recibo_da_ana):

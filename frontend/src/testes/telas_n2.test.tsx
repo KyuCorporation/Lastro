@@ -358,3 +358,38 @@ describe("02 recibo: o que o SPEC §12 lista", () => {
     expect(await navigator.clipboard.readText()).toBe(RECIBO_ANA.hash);
   });
 });
+
+describe("02 recibo: âncora na trilha de auditoria", () => {
+  const evento = (recibo_hash: string) => ({
+    seq: 41, usuario_id: "u", evento: "consulta", criado_em: "2026-11-06T11:12:00Z", hash: "9".repeat(64),
+    detalhes: { recibo_id: "recibo-1", recibo_hash },
+  });
+
+  it("auditor vê que o selo do recibo é o mesmo gravado na trilha", async () => {
+    const api = apiFalsa({ eventos: async () => [evento(RECIBO_ANA.hash)] });
+    await montarLogado("caio@alfa.demo", "/recibos/recibo-1", api);
+    const selo = await screen.findByRole("status", { name: "Âncora na trilha de auditoria" });
+    await waitFor(() => expect(selo).toHaveTextContent("Ancorado na trilha de auditoria · evento #41"));
+    expect(api.auditoria.listar).toHaveBeenCalledWith(200);
+  });
+
+  it("selo diferente do gravado na trilha aparece como divergência", async () => {
+    const api = apiFalsa({ eventos: async () => [evento("f".repeat(64))] });
+    await montarLogado("caio@alfa.demo", "/recibos/recibo-1", api);
+    const selo = await screen.findByRole("status", { name: "Âncora na trilha de auditoria" });
+    await waitFor(() => expect(selo).toHaveTextContent("O selo do recibo não confere com a trilha de auditoria"));
+  });
+
+  it("recibo sem evento entre os recentes diz isso, sem acusar alteração", async () => {
+    await montarLogado("caio@alfa.demo", "/recibos/recibo-1");
+    const selo = await screen.findByRole("status", { name: "Âncora na trilha de auditoria" });
+    await waitFor(() => expect(selo).toHaveTextContent("Âncora na trilha não localizada nos eventos recentes"));
+  });
+
+  it("analista não consulta a trilha (a API responderia 403 e registraria a negação)", async () => {
+    const { api } = await montarLogado("ana@alfa.demo", "/recibos/recibo-1");
+    await screen.findByRole("status", { name: "Integridade do recibo" });
+    expect(screen.queryByRole("status", { name: "Âncora na trilha de auditoria" })).not.toBeInTheDocument();
+    expect(api.auditoria.listar).not.toHaveBeenCalled();
+  });
+});

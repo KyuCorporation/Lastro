@@ -248,9 +248,9 @@ def _gravar(
             },
         ).fetchone()[0]
 
-        recibo_id = None
+        recibo = None
         if d.verificacao is not None:
-            recibo_id = recibos.gravar(
+            recibo = recibos.gravar(
                 conn,
                 DadosRecibo(
                     consulta_id=consulta_id,
@@ -271,12 +271,18 @@ def _gravar(
             )
 
         intent = d.planejamento.plano.intent if d.planejamento else None
-        base = {"consulta_id": str(consulta_id), "intent": intent, "recibo_id": recibo_id and str(recibo_id)}
+        # O hash do recibo entra na trilha encadeada: trocar conteúdo e hash na linha do recibo não o apaga daqui.
+        base = {
+            "consulta_id": str(consulta_id),
+            "intent": intent,
+            "recibo_id": recibo and str(recibo.id),
+            "recibo_hash": recibo and recibo.hash,
+        }
         auditoria.registrar_em(conn, d.evento, {**base, **d.detalhes})
         if MOTIVOS_DE_ATAQUE.intersection(d.motivos):
             ataque = {**base, "motivos": sorted(MOTIVOS_DE_ATAQUE.intersection(d.motivos))}
             auditoria.registrar_em(conn, "ataque_detectado", ataque)
-    return consulta_id, recibo_id
+    return consulta_id, recibo and recibo.id
 
 
 def _registrar_erro(entrada: ConsultaEntrada, ctx: ContextoAcesso, erro: Exception) -> None:
