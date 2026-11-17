@@ -112,6 +112,12 @@ A_SANCAO = ("sanc", "puni", "penalid")
 A_VALOR_UNICO = ("contrat", "soma", "total", "valor")
 
 
+# No TCE-PE o que entra como "saiu para o fornecedor" é a liquidação (despesa reconhecida pelo órgão), etapa
+# anterior ao pagamento. O texto diz as duas coisas para não chamar liquidação de pagamento.
+_LIQUIDACAO = "liquidação ou pagamento"
+_LIQUIDACOES = "liquidações ou pagamentos"
+
+
 # ------------------------------------------------------------------ partes comuns
 def _p(n: int, singular: str, plural: str) -> str:
     """Concordância do texto pronto: o código sabe o valor, então escolhe a forma certa (nada de "contrato(s)")."""
@@ -132,7 +138,7 @@ def _ufs_marcador(m: _Montador, resultado: ResultadoConsulta) -> str:
 
 
 def _frase_empenho(m: _Montador, t: dict[str, Any]) -> str:
-    """Empenho é reserva no orçamento, não pagamento: aparece à parte e só quando existe.
+    """Empenho é reserva no orçamento, etapa anterior à liquidação: aparece à parte e só quando existe.
 
     Os marcadores entram depois dos demais, então a numeração de quem não tem empenho não muda.
     """
@@ -141,15 +147,14 @@ def _frase_empenho(m: _Montador, t: dict[str, Any]) -> str:
     v_e = m.add(
         t["valor_empenhado"],
         "moeda",
-        "valor empenhado (reservado, ainda não pago)",
+        "valor empenhado (reservado no orçamento)",
         "sum(empenhos.valor)",
         ancoras=A_EMPENHO,
     )
     n_e = m.add(t["n_empenhos"], "inteiro", "número de empenhos", "count(empenhos)", ancoras=A_EMPENHO)
     empenhos = _p(t["n_empenhos"], "empenho", "empenhos")
     return (
-        f" Há ainda {v_e} empenhados em {n_e} {empenhos}: reserva no orçamento, que só conta como pago "
-        "depois de liquidada."
+        f" Há ainda {v_e} empenhados em {n_e} {empenhos}: reserva no orçamento, etapa anterior à liquidação."
     )
 
 
@@ -184,14 +189,14 @@ def _resumo(r: ResultadoConsulta) -> Material:
     n_p = m.add(
         t["n_pagamentos"],
         "inteiro",
-        "número de pagamentos (sem contar empenhos)",
+        "número de liquidações e pagamentos (sem contar empenhos)",
         "count(pagamentos)",
         ancoras=A_PAGO,
     )
     v_p = m.add(
         t["valor_pago"],
         "moeda",
-        "valor pago somado (sem contar empenhos)",
+        "valor liquidado ou pago (sem contar empenhos)",
         "sum(pagamentos.valor)",
         ancoras=A_PAGO,
     )
@@ -199,15 +204,15 @@ def _resumo(r: ResultadoConsulta) -> Material:
     vazio = t["n_contratos"] == 0 and t["n_pagamentos"] == 0 and t["n_empenhos"] == 0
     if vazio:
         modelo = (
-            f"Não encontrei contratos nem pagamentos do fornecedor {cnpj} "
+            f"Não encontrei contratos, liquidações nem pagamentos do fornecedor {cnpj} "
             f"nas fontes autorizadas para você ({ufs})."
         )
     else:
         modelo = (
             f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem {n_c} "
             f"{_p(t['n_contratos'], 'contrato', 'contratos')}, somando {v_c}, dos quais {v_v} em contratos "
-            f"ainda vigentes. {_p(t['n_pagamentos'], 'Foi registrado', 'Foram registrados')} {n_p} "
-            f"{_p(t['n_pagamentos'], 'pagamento', 'pagamentos')}, num total de {v_p}."
+            f"ainda vigentes. {_p(t['n_pagamentos'], 'Foi registrada', 'Foram registradas')} {n_p} "
+            f"{_p(t['n_pagamentos'], _LIQUIDACAO, _LIQUIDACOES)}, num total de {v_p}."
         ) + _frase_empenho(m, t)
     registros = tuple(
         f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
@@ -317,31 +322,31 @@ def _pagamentos(r: ResultadoConsulta) -> Material:
     n = m.add(
         t["n_pagamentos"],
         "inteiro",
-        "número de pagamentos no período (sem contar empenhos)",
+        "número de liquidações e pagamentos no período (sem contar empenhos)",
         "count(pagamentos)",
         ancoras=A_PAGO,
     )
     valor = m.add(
         t["valor_total"],
         "moeda",
-        "valor pago no período (sem contar empenhos)",
+        "valor liquidado ou pago no período (sem contar empenhos)",
         "sum(pagamentos.valor)",
         ancoras=A_PAGO,
     )
     ufs = _ufs_marcador(m, r)
     if not linhas:
         modelo = (
-            f"Não encontrei pagamentos ao fornecedor {cnpj} entre {inicio} e {fim} "
+            f"Não encontrei liquidações nem pagamentos ao fornecedor {cnpj} entre {inicio} e {fim} "
             f"nas fontes autorizadas para você ({ufs})."
         )
     else:
         modelo = (
-            f"Entre {inicio} e {fim}, o fornecedor {cnpj} recebeu {n} "
-            f"{_p(t['n_pagamentos'], 'pagamento', 'pagamentos')} "
+            f"Entre {inicio} e {fim}, o fornecedor {cnpj} teve {n} "
+            f"{_p(t['n_pagamentos'], _LIQUIDACAO + ' registrado', _LIQUIDACOES + ' registrados')} "
             f"nas fontes autorizadas para você ({ufs}), num total de {valor}."
         ) + _frase_empenho(m, t)
     registros = tuple(
-        f"- Pagamento do órgão {dado_nao_confiavel(p.get('orgao_nome'))} (UF {p['uf']}): "
+        f"- Liquidação ou pagamento do órgão {dado_nao_confiavel(p.get('orgao_nome'))} (UF {p['uf']}): "
         f"{dado_nao_confiavel(p.get('descricao'))}"
         for p in linhas[:LIMITE_REGISTROS_TEXTO]
     )
