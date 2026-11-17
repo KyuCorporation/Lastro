@@ -36,7 +36,6 @@ npx tsx e2e/capturas.ts <pasta>       # capturas das 5 telas no tamanho dos mock
 |---|---|---|
 | `VITE_API_URL` | `http://localhost:8000` | Base da API |
 | `VITE_DEMO_MODE` | `false` | Mostra o seletor rápido dos usuários do seed no login (o Compose lê `DEMO_MODE` do `.env`) |
-| `VITE_CONSULTAS_SIMULADAS` | `false` | Responde `POST /consultas` com dados fictícios, só para desenvolver a tela sem backend. A tela avisa "resposta simulada". **Desligado na demo** |
 
 ## Estrutura
 

@@ -14,7 +14,6 @@ import { ValoresDaResposta } from "./ValoresDaResposta";
 
 interface Props {
   resultado: ConsultaSaida;
-  simulado: boolean;
   /** Recibo da resposta (GET /recibos/{id}), quando houver e já tiver chegado. */
   recibo?: Recibo;
   ufs: string[];
@@ -45,7 +44,7 @@ function ResumoDaConsulta({ recibo }: { recibo: Recibo }) {
 }
 
 /** Resultado da consulta (tela 01): resposta com evidências à esquerda, integridade à direita. */
-export function ResultadoConsulta({ resultado, simulado, recibo, ufs }: Props) {
+export function ResultadoConsulta({ resultado, recibo, ufs }: Props) {
   const titulo = useRef<HTMLHeadingElement>(null);
   const apresentacao = STATUS_CONSULTA[resultado.status] ?? STATUS_CONSULTA.erro;
   const cnpjConsultado = recibo?.conteudo.execucao.parametros_efetivos.cnpj;
@@ -60,9 +59,9 @@ export function ResultadoConsulta({ resultado, simulado, recibo, ufs }: Props) {
         <h2 id={idTitulo} ref={titulo} tabIndex={-1} className="foco mb-4 inline-block rounded-md">
           <Selo tom={apresentacao.tom}>{apresentacao.selo}</Selo>
         </h2>
-        {(resultado.sintetico || simulado) && (
+        {resultado.sintetico && (
           <div className="mb-4">
-            <SeloSintetico simulado={simulado} />
+            <SeloSintetico />
           </div>
         )}
         <TextoResposta texto={resultado.resposta} />

@@ -16,7 +16,7 @@ const http = criarHttp({
   token: () => sessao.token.ler(),
   aoPerderSessao: () => sessao.perder(),
 });
-const api = criarApi(http, { consultasSimuladas: ambiente.consultasSimuladas });
+const api = criarApi(http);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
