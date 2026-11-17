@@ -52,12 +52,13 @@ export interface OpcoesHttp {
 export interface Http {
   get<T>(caminho: string): Promise<T>;
   post<T>(caminho: string, corpo: unknown): Promise<T>;
+  patch<T>(caminho: string, corpo: unknown): Promise<T>;
 }
 
 export function criarHttp(opcoes: OpcoesHttp): Http {
   const executarFetch = opcoes.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  async function requisitar<T>(metodo: "GET" | "POST", caminho: string, corpo?: unknown): Promise<T> {
+  async function requisitar<T>(metodo: "GET" | "POST" | "PATCH", caminho: string, corpo?: unknown): Promise<T> {
     const cabecalhos: Record<string, string> = { Accept: "application/json" };
     const token = opcoes.token();
     if (token) cabecalhos.Authorization = `Bearer ${token}`;
@@ -93,6 +94,7 @@ export function criarHttp(opcoes: OpcoesHttp): Http {
   return {
     get: (caminho) => requisitar("GET", caminho),
     post: (caminho, corpo) => requisitar("POST", caminho, corpo),
+    patch: (caminho, corpo) => requisitar("PATCH", caminho, corpo),
   };
 }
 

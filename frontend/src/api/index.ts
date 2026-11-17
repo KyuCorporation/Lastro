@@ -52,6 +52,8 @@ export interface ApiCarteiras {
 export interface ApiAlertas {
   /** GET /alertas: os do tenant, mais recentes primeiro. */
   listar(status?: StatusAlerta): Promise<Alerta[]>;
+  /** PATCH /alertas/{id}: o status só avança (aberto → visto → resolvido). */
+  atualizar(id: string, status: "visto" | "resolvido"): Promise<{ id: string; status: StatusAlerta }>;
 }
 
 export interface ApiFornecedores {
@@ -116,7 +118,11 @@ export function criarApiCarteiras(http: Http): ApiCarteiras {
 }
 
 export function criarApiAlertas(http: Http): ApiAlertas {
-  return { listar: (status) => http.get<Alerta[]>(status ? `/alertas?status=${encodeURIComponent(status)}` : "/alertas") };
+  return {
+    listar: (status) => http.get<Alerta[]>(status ? `/alertas?status=${encodeURIComponent(status)}` : "/alertas"),
+    atualizar: (id, status) =>
+      http.patch<{ id: string; status: StatusAlerta }>(`/alertas/${encodeURIComponent(id)}`, { status }),
+  };
 }
 
 export function criarApiFornecedores(http: Http): ApiFornecedores {

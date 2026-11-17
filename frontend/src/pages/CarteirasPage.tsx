@@ -8,7 +8,7 @@ import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
-import { useAlertas } from "../features/alertas/hooks";
+import { useAlertas, useAtualizarAlerta } from "../features/alertas/hooks";
 import { separarCnpjs, useCarteiras, useCriarCarteira } from "../features/carteiras/hooks";
 import { GRAVIDADE, NOME_FINALIDADE, nomeSinal } from "../lib/apresentacao";
 import { cnpj as formatarCnpj, dataCurta } from "../lib/formato";
@@ -133,7 +133,35 @@ function SinalDoAlerta({ sinal }: { sinal: Alerta["sinal"] }) {
 }
 
 /** Alertas abertos (GET /alertas?status=aberto): sinal novo de fornecedor de carteira. Some se não houver nenhum. */
-function AlertasAbertos({ carteiras }: { carteiras: CarteiraListada[] }) {
+function AcoesDoAlerta({ alerta }: { alerta: Alerta }) {
+  const atualizar = useAtualizarAlerta();
+  const rotulo = `${formatarCnpj(alerta.cnpj)}, ${alerta.sinal ? nomeSinal(alerta.sinal.tipo) : "sinal fora do seu escopo"}`;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        aria-label={`Marcar como visto: ${rotulo}`}
+        className="botao-secundario"
+        disabled={atualizar.isPending}
+        onClick={() => atualizar.mutate({ id: alerta.id, status: "visto" })}
+      >
+        Marcar como visto
+      </button>
+      <button
+        type="button"
+        aria-label={`Resolver: ${rotulo}`}
+        className="botao-secundario"
+        disabled={atualizar.isPending}
+        onClick={() => atualizar.mutate({ id: alerta.id, status: "resolvido" })}
+      >
+        Resolver
+      </button>
+      {atualizar.isError && <MensagemErro erro={atualizar.error} titulo="Não foi possível atualizar o alerta" />}
+    </div>
+  );
+}
+
+function AlertasAbertos({ carteiras, podeAtualizar }: { carteiras: CarteiraListada[]; podeAtualizar: boolean }) {
   const alertas = useAlertas("aberto");
   if (!alertas.isSuccess || alertas.data.length === 0) return null;
   const nomes = new Map(carteiras.map((c) => [c.id, c.nome]));
@@ -155,7 +183,12 @@ function AlertasAbertos({ carteiras }: { carteiras: CarteiraListada[] }) {
               <th scope="col" className="rounded-l-md px-4 py-3">Fornecedor</th>
               <th scope="col" className="px-4 py-3">Sinal</th>
               <th scope="col" className="px-4 py-3">Carteira</th>
-              <th scope="col" className="rounded-r-md px-4 py-3">Desde</th>
+              <th scope="col" className={`px-4 py-3 ${podeAtualizar ? "" : "rounded-r-md"}`}>Desde</th>
+              {podeAtualizar && (
+                <th scope="col" className="rounded-r-md px-4 py-3">
+                  <span className="sr-only">Ações</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -179,6 +212,11 @@ function AlertasAbertos({ carteiras }: { carteiras: CarteiraListada[] }) {
                   )}
                 </td>
                 <td className="px-4 py-4">{dataCurta(a.criado_em)}</td>
+                {podeAtualizar && (
+                  <td className="px-4 py-4">
+                    <AcoesDoAlerta alerta={a} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -200,7 +238,7 @@ export function CarteirasPage() {
         Fornecedores agrupados por finalidade, com a fila de quem olhar primeiro.
       </TituloPagina>
 
-      <AlertasAbertos carteiras={carteiras.data ?? []} />
+      <AlertasAbertos carteiras={carteiras.data ?? []} podeAtualizar={pode(usuario.perfil, "atualizar_alerta")} />
 
       {pode(usuario.perfil, "editar_carteira") && <NovaCarteira />}
 

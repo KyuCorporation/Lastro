@@ -19,6 +19,7 @@ import type {
   Fonte,
   Metricas,
   Recibo,
+  StatusAlerta,
   Usuario,
   VerificacaoCadeia,
   VerificacaoRecibo,
@@ -170,12 +171,16 @@ export const FILA: Fila = {
           gravidade: "forte",
           explicacao: "Sanção vigente no CEIS até 10/05/2027.",
           evidencias: [{ tabela: "sancoes", id: "s-1", url_origem: "https://portaldatransparencia.gov.br/sancoes/ceis/1" }],
+          calculado_em: "2026-11-17T09:00:00Z",
+          versao_regra: "v2",
         },
         {
           tipo: "penhasco",
           gravidade: "atencao",
           explicacao: "62% do valor vigente termina em até 180 dias.",
           evidencias: [{ tabela: "contratos", id: "ct-1", url_origem: null }],
+          calculado_em: "2026-11-17T09:00:00Z",
+          versao_regra: "v2",
         },
       ],
     },
@@ -237,6 +242,7 @@ export function apiFalsa(
     criarCarteira?: (entrada: CarteiraEntrada) => Promise<CarteiraCriada>;
     fila?: (id: string) => Promise<Fila>;
     alertas?: () => Promise<Alerta[]>;
+    atualizarAlerta?: (id: string, status: "visto" | "resolvido") => Promise<{ id: string; status: StatusAlerta }>;
     dossie?: (cnpj: string) => Promise<Dossie>;
     cadeia?: () => Promise<VerificacaoCadeia>;
     eventos?: () => Promise<EventoAuditoria[]>;
@@ -288,7 +294,10 @@ export function apiFalsa(
           }),
       ),
     },
-    alertas: { listar: vi.fn(opcoes.alertas ?? (async () => [])) },
+    alertas: {
+      listar: vi.fn(opcoes.alertas ?? (async () => [])),
+      atualizar: vi.fn(opcoes.atualizarAlerta ?? (async (id: string, status: "visto" | "resolvido") => ({ id, status }))),
+    },
     fornecedores: { dossie: vi.fn(opcoes.dossie ?? (async () => DOSSIE)) },
     auditoria: {
       listar: vi.fn(opcoes.eventos ?? (async () => EVENTOS)),
