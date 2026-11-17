@@ -14,6 +14,7 @@ Situação do código em 08/11/2026.
 
 **Dados**
 - O conector do TCE-PE foi conferido na API real e tem amostra real (`data/fixtures/pe_portal/amostra`), mas a carga completa (`make ingest-pe`) ainda não foi feita. Despesa municipal só entra para os municípios de `TCEPE_MUNICIPIOS`. Uma unidade gestora estadual com mais de 100 mil empenhos ou liquidações no ano não pode ser coletada inteira (limite da API); ainda não foi medido se alguma chega a isso.
+- O link de cada contrato do TCE-PE (`LinkArquivo`) é `http`, não `https`, e não foi conferido se abre de fora do Brasil. A fixture `amostra/` foi gerada antes de o campo entrar e só passa a tê-lo depois de `ingest pe_portal --amostra 200` em rede brasileira; até lá, os contratos da amostra apontam para o recorte da API.
 - No `pe_portal`, o bronze guarda a resposta já sem dado de pessoa física (LGPD). O `sha256` é o da resposta saneada, não o dos bytes que a fonte mandou.
 - Não há conector de quadro societário. A tabela `socios` fica vazia, então o dossiê mostra "Nenhum sócio" e o sinal de contágio não existe.
 - A ingestão roda por comando (`make ingest-*`, `make sinais`), sem agendamento. Os sinais refletem a última vez que alguém rodou `sinais`.

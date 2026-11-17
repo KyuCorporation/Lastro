@@ -44,7 +44,7 @@ Em todas: 1 requisição por segundo, retry com backoff, cache em disco do dia (
 
 | Método | O que traz | Filtros usados | Campos usados |
 |---|---|---|---|
-| `Contratos` | contratos do estado e dos municípios | `AnoContrato`, `Esfera` (`Municipio` só na amostra) | `CodigoContrato`, `CodigoEfiscoUG` (estado), `CodigoUG`, `UnidadeGestora`, `CPF_CNPJ`, `TipoDocumento`, `RazaoSocial`, `Objeto`, `Valor`, `Vigencia` ("dd/mm/aaaa a dd/mm/aaaa"), `Esfera` |
+| `Contratos` | contratos do estado e dos municípios | `AnoContrato`, `Esfera` (`Municipio` só na amostra) | `CodigoContrato`, `CodigoEfiscoUG` (estado), `CodigoUG`, `UnidadeGestora`, `CPF_CNPJ`, `TipoDocumento`, `RazaoSocial`, `Objeto`, `Valor`, `Vigencia` ("dd/mm/aaaa a dd/mm/aaaa"), `Esfera`, `LinkArquivo` (página do documento no sistema do tribunal, `http://sistemas.tcepe.tc.br/...remessaTCEPE.html?...&idDocumento=N`) |
 | `DespesasEstaduais` | um registro por empenho do estado | `ANOREFERENCIA`, `ID_UNIDADE_GESTORA` (e-Fisco) | `NUMEROEMPENHO`, `CPF_CNPJ`, `NOME_FORNECEDOR`, `VALOREMPENHADO`, `DATAEMPENHO`, `HISTORICO`, `NOMEUNIDADEGESTORA` |
 | `DespesasMunicipais` | um registro por empenho municipal | `CODIGO_MUNICIPIO`, `ANOREFERENCIA`, `MESREFERENCIA` | os mesmos, mais `ID_EMPENHO` e `FORNECEDOR` |
 | `EmpenhoLiquidacao` | liquidações e anulações (valor negativo). **Não traz o credor** | `ANOREFERENCIA`, `ESFERA`, `ID_UNIDADE_GESTORA` | `IDEMPENHO`, `NUMERO`, `TIPO`, `VALOR`, `DATA` |
@@ -71,13 +71,13 @@ Existem e não são usados: `EmpenhoPagamento` (pagamentos, só municípios), `T
 - em registro de PJ, CPF formatado e sequência de 11 dígitos em nome, `Objeto` e `HISTORICO` são mascarados (razão social de MEI costuma trazer o CPF do titular);
 - espaços de preenchimento saem; a resposta é regravada em UTF-8, com `saneamento_lgpd.registros_omitidos` no envelope.
 
-Consequência: o arquivo do bronze e o `sha256` em `arquivos_brutos` são os da **resposta saneada**, não os bytes exatos que a fonte mandou. `url_origem` continua sendo a chamada exata. A fixture `amostra/` leva só PJ e só os campos usados, sem `HISTORICO`.
+Consequência: o arquivo do bronze e o `sha256` em `arquivos_brutos` são os da **resposta saneada**, não os bytes exatos que a fonte mandou. `url_origem` continua sendo a chamada exata, exceto no contrato com `LinkArquivo`. A fixture `amostra/` leva só PJ e só os campos usados, sem `HISTORICO`.
 
 **Mapeamento:**
 
 | Origem TCE-PE | Destino | Regra |
 |---|---|---|
-| `Contratos` | `contratos` | `id_origem` = `ctr:<CodigoContrato>`; `uf` = `PE`; `valor_global` = `Valor`; vigência extraída de `Vigencia`; `data_assinatura` nula (a API não informa; os sinais usam o início da vigência) |
+| `Contratos` | `contratos` | `id_origem` = `ctr:<CodigoContrato>`; `uf` = `PE`; `valor_global` = `Valor`; vigência extraída de `Vigencia`; `data_assinatura` nula (a API não informa; os sinais usam o início da vigência); `url_origem` = `LinkArquivo` quando é do host `sistemas.tcepe.tc.br`, senão a chamada exata da API |
 | `Despesas*` (empenho) | `pagamentos` | `id_origem` = `emp:<UG>:<exercício>:<empenho>` (empenho = `ID_EMPENHO` nos municípios, `NUMEROEMPENHO` no estado); valor = `VALOREMPENHADO`; `descricao` começa com "empenho" |
 | `EmpenhoLiquidacao` | `pagamentos` | `id_origem` = `liq:<UG>:<exercício>:<empenho>:<NUMERO>`; credor e órgão vêm do empenho de mesma chave; anulação entra com valor negativo e `descricao` "anulação de liquidação…"; liquidação sem empenho de PJ coletado é descartada (`fora_do_escopo`) |
 | Unidade gestora | `orgaos` | `id` = `pe_portal:<código>`: e-Fisco com 6 dígitos no estado (as despesas vêm sem o zero à esquerda e são completadas), código do TCE nos municípios |
