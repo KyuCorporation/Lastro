@@ -191,3 +191,32 @@ def test_recalculo_fica_na_trilha_global_de_auditoria(como_superusuario):
     ).fetchone()
     assert evento == "sinais_recalculados" and tenant is None
     assert detalhes["versao_regra"] == "v2" and detalhes["hoje"] == HOJE.isoformat()
+
+
+ALERTA = """
+insert into alertas (tenant_id, fornecedor_cnpj, sinal_id, sinal_tipo, sinal_gravidade, sinal_uf, sinal_explicacao)
+select %s, fornecedor_cnpj, id, tipo, gravidade, uf, explicacao from sinais where id = %s
+returning id
+"""
+
+
+def test_sinal_vencido_com_alerta_e_apagado_e_o_alerta_guarda_a_copia(como_superusuario):
+    """Migration 007: o alerta não segura mais o sinal vencido (on delete set null) e a pipeline não lê alertas."""
+    conn = como_superusuario
+    conn.execute("set local role lastro_ingest")
+    _semear(conn)
+    calculo.recalcular(conn, HOJE)
+    conn.execute("reset role")
+    sancao = _sinais(conn)[(F_PE, None, "sancao_direta")][0]
+    (alerta,) = conn.execute(ALERTA, (ANA[0], sancao)).fetchone()
+
+    conn.execute("set local role lastro_ingest")
+    resumo = calculo.recalcular(conn, d(200))  # a sanção venceu
+    conn.execute("reset role")
+
+    assert (F_PE, None, "sancao_direta") not in _sinais(conn)
+    assert resumo.mantidos_por_alerta == 0
+    sinal_id, tipo = conn.execute(
+        "select sinal_id, sinal_tipo from alertas where id = %s", (alerta,)
+    ).fetchone()
+    assert sinal_id is None and tipo == "sancao_direta"
