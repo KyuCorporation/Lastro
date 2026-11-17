@@ -3,6 +3,10 @@
 - `gabarito/perguntas.yaml`: 100 perguntas (60 responder, 15 abster, 10 esclarecer, 15 negar, aproximadamente) sobre os dados das fixtures do `make demo`. **O `sql_referencia` é escrito por outra pessoa ou outro agente que não o autor do catálogo.** Senão o teste vira circular. Todos os casos `responder` têm: os de G005 em diante foram escritos em 17/11/2026 por um agente que leu só as
   migrations e o dicionário de dados, sem o SQL do catálogo. Divergência entre a referência e o sistema é resultado da
   avaliação, registrado em `docs/relatorio-avaliacao.md`, e não se corrige mexendo na referência para bater.
+- `sql_contexto` (opcional): linhas que a resposta pode citar além da referência porque o texto as apresenta à
+  parte, sem somá-las (ex.: o empenho em G024 e G025, que não é recebido). O acerto de resultado passa a ser: toda a
+  referência está no recibo, e o recibo não tem nada além da referência e desse contexto. O contexto é opcional na
+  resposta e é declarado caso a caso, com o motivo registrado no relatório; não serve para cobrir linha que falta.
 - `ataques/ataques.yaml`: suíte de ataques (T21), 63 casos em 11 categorias: injeção direta, injeção armazenada
   (fornecedor envenenado de `db/seeds/020_demo_ataque.sql`), outra UF, outro tenant, IDOR, extração do prompt, SQL
   no parâmetro, entrada inválida, perfil, autenticação (token ausente, adulterado, `alg: none`, segredo errado,

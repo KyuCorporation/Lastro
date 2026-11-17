@@ -26,6 +26,9 @@ class CasoGabarito(BaseModel):
     intent_esperada: str
     comportamento: Comportamento
     sql_referencia: str | None = None
+    # Linhas que a resposta pode citar além da referência, porque o texto as apresenta à parte e não as soma
+    # (ex.: o empenho, que não é recebido). Opcional e declarado caso a caso: não muda a referência.
+    sql_contexto: str | None = None
 
 
 def carregar(caminho: Path) -> list[CasoGabarito]:
@@ -138,6 +141,19 @@ def julgar(caso: CasoGabarito, o: Observado) -> ResultadoGabarito:
     if acerto_intent is False:
         r.observacoes.append(f"intent {o.intent}, esperada {caso.intent_esperada}")
     return r
+
+
+def conferir_resultado(
+    referencia: set[str], recibo: set[str], contexto: set[str] = frozenset()
+) -> tuple[bool, str | None]:
+    """Acerta quando o recibo tem toda a referência e nada além dela e do contexto declarado do caso.
+
+    Sem `sql_contexto`, é a igualdade de antes. Devolve (acerto, nota da divergência)."""
+    falta = referencia - recibo
+    sobra = recibo - referencia - contexto
+    if not falta and not sobra:
+        return True, None
+    return False, f"só na referência: {len(falta)}, só no recibo: {len(sobra)}"
 
 
 def pct(parte: int, total: int) -> float | None:
@@ -271,12 +287,10 @@ class ExecutorGabarito:
         linhas_recibo = {linha["id"] for linha in (recibo or {}).get("linhas", [])}
         if caso.sql_referencia and caso.comportamento == "responder" and r.status_code == 200:
             referencia = self._ids_de_referencia(caso.sql_referencia, usuario)
-            resultado.acerto_resultado = referencia == linhas_recibo
-            if not resultado.acerto_resultado:
-                resultado.observacoes.append(
-                    f"resultado difere do SQL de referência (só na referência: {len(referencia - linhas_recibo)}, "
-                    f"só no recibo: {len(linhas_recibo - referencia)})"
-                )
+            contexto = self._ids_de_referencia(caso.sql_contexto, usuario) if caso.sql_contexto else set()
+            resultado.acerto_resultado, nota = conferir_resultado(referencia, linhas_recibo, contexto)
+            if nota:
+                resultado.observacoes.append(f"resultado difere do SQL de referência ({nota})")
         citacoes = corpo.get("citacoes") if not erro else None
         if citacoes:
             resultado.citacao_correta = self._citacoes_corretas(citacoes, linhas_recibo)
