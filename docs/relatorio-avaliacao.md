@@ -13,12 +13,42 @@ Rodada de 08/11/2026 com `LLM_PROVIDER=mock`, sem LLM; o planejador é o roteado
 | Gabarito: perguntas sem falha | 100 de 100 | — |
 | Gabarito: acerto de intent | 100% (80 avaliadas) | ≥ 90% |
 | Gabarito: citação correta | 100% (42 respostas) | — |
-| Gabarito: resultado igual ao SQL de referência | 100% (só 1 pergunta tem SQL independente) | — |
+| Gabarito: resultado igual ao SQL de referência | 100% (só 1 pergunta tinha SQL independente nesta rodada; ver 1.1) | — |
 | Ataques bloqueados | 58 de 58 (100%) | ≥ 95% |
 | Vazamentos entre UFs ou tenants | 0 | zero |
 | Matriz de acesso (`backend/app/tests/test_acesso.py`) | todos os casos do SPEC §6.4 passando | — |
 
 A tela 08 Métricas mostra a rodada mais recente, lida de `eval/reports/`.
+
+### 1.1 SQL de referência independente (17/11/2026)
+
+Os 59 casos `responder` do gabarito passaram a ter `sql_referencia`. Os de G005 em diante foram escritos por um agente que leu só `db/migrations/` e `docs/dicionario-dados.md`, sem o SQL do catálogo e sem rodar o sistema. O harness compara o conjunto de linhas da referência com as linhas do recibo.
+
+Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**.
+
+| Medida | Resultado |
+|---|---|
+| Acerto de resultado | 88,1% (52 de 59) |
+| Intent | 100% |
+| Comportamento | 100% |
+| Citação | 100% |
+
+Divergências:
+
+| Caso | Pergunta | Divergência | Leitura |
+|---|---|---|---|
+| G030 | "Contratos sobre manutenção predial" (PE) | O sistema não acha o contrato que a referência acha | **Defeito do sistema.** O roteador por regras tira o acento do termo (`manutencao predial`), e o `objeto_tsv` guarda o objeto com acento: "manutencao" e "manutenção" não casam. A resposta sai como abstenção ("não encontrei"), que o harness aceita como resposta certa de "responder" sem registro. |
+| G051 | "Busque contratos com objeto de aquisição de medicamentos em AL" | O sistema não acha nenhum dos 19 contratos | **Defeito do sistema**, pela mesma causa (`aquisicao`). |
+| G024, G025 | "Quanto o fornecedor 99.000.002/0001-48 recebeu entre …" | O recibo tem uma linha a mais: o empenho de 05/04/2025 | Leitura diferente. O sistema cita o empenho à parte ("reserva no orçamento, etapa anterior à liquidação") e não o soma ao recebido. A referência deixa o empenho fora do conjunto. |
+| G026 | "Resumo do fornecedor 99.000.002/0001-48" | O recibo tem o empenho a mais | Mesma leitura de G024. |
+| G043 | "Quando terminam os contratos do CNPJ 33.891.594/0001-27?" | O sistema responde que nada vence em 180 dias; a referência traz o contrato que ainda não terminou | Leitura diferente, com resposta pouco útil. Sem prazo na pergunta, o sistema aplica a janela padrão de 180 dias de `contratos_vencendo`, e a pergunta pede a data de término. |
+| G100 | "A maior parte do dinheiro … vem de um órgão só?" | O sistema usa só os contratos (1 linha); a referência soma contratos e liquidações (3 linhas) | Leitura diferente de "dinheiro": valor contratado ou recebido. |
+
+Escolhas da referência que coincidiram com o sistema:
+- empenho não conta como recebido;
+- "vigente" é `vigencia_fim` hoje ou depois;
+- "vencendo em N meses" é hoje até hoje + 30·N dias;
+- sanção vigente é início até hoje e fim vazio ou a partir de hoje.
 
 ## 2. Cronômetro de diligência (T23)
 
