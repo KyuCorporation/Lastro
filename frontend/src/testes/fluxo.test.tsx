@@ -80,11 +80,11 @@ describe("consulta", () => {
     // valor destacado com leitura por extenso para leitor de tela
     expect(within(resultado).getByText("um milhão duzentos e cinquenta mil reais")).toHaveClass("sr-only");
     expect(within(resultado).getByText("14 de janeiro de 2027")).toBeInTheDocument();
-    // citação [1] liga ao item da lista de fontes
-    const link = within(resultado).getByRole("link", { name: "fonte 1" });
-    const item = document.getElementById(link.getAttribute("href")!.slice(1));
+    // cada citação leva à linha de origem na fonte oficial
+    const fontes = within(resultado).getByRole("list", { name: "Fontes citadas" });
+    const item = within(fontes).getAllByRole("listitem")[0];
     expect(item).toHaveTextContent("TCE-PE Dados Abertos");
-    expect(within(item!).getByRole("link", { name: /Abrir na fonte oficial/ })).toHaveAttribute(
+    expect(within(item).getByRole("link", { name: /Abrir na fonte oficial/ })).toHaveAttribute(
       "href",
       RESPOSTA_ANA.citacoes[0].url_origem,
     );

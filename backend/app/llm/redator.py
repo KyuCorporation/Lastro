@@ -92,7 +92,13 @@ def _anos_do_plano(resultado: ResultadoConsulta) -> set[int]:
 def _valores(material: Material, texto_com_marcadores: str) -> dict[str, dict[str, str]]:
     usados = dict.fromkeys(MARCADOR.findall(texto_com_marcadores))
     return {
-        mid: {"valor": valor_cru(m.valor, m.tipo), "tipo": m.tipo, "origem": m.origem}
+        mid: {
+            "valor": valor_cru(m.valor, m.tipo),
+            "tipo": m.tipo,
+            "origem": m.origem,
+            # Rótulo escrito pelo código: a tela mostra cada valor ao lado do que ele significa.
+            "significado": m.significado,
+        }
         for mid, m in material.marcadores.items()
         if mid in usados
     }

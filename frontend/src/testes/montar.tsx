@@ -36,7 +36,7 @@ export const ANA: Usuario = {
 export const GIL: Usuario = { ...ANA, id: "00000000-0000-0000-0000-0000000000a3", nome: "Gil (gestor)", perfil: "gestor" };
 
 const RESPOSTA_ANA_TEXTO =
-  "O fornecedor tem 2 contratos vigentes em PE, que somam R$ 1.250.000,00 [1], até 14/01/2027 [2].";
+  "O fornecedor tem 2 contratos vigentes em PE, que somam R$ 1.250.000,00, até 14/01/2027.";
 
 export const RESPOSTA_ANA: ConsultaSaida = {
   consulta_id: "c-1",
@@ -99,8 +99,11 @@ export const RECIBO_ANA: Recibo = {
       },
     ],
     valores: {
-      v1: { valor: "99.999.999/0001-91", tipo: "texto", origem: "parametros.cnpj" },
-      v4: { valor: "1250000.00", tipo: "moeda", origem: "sum(valor_global)" },
+      v1: { valor: "99.999.999/0001-91", tipo: "texto", origem: "parametros.cnpj", significado: "CNPJ do fornecedor" },
+      v3: { valor: "2", tipo: "inteiro", origem: "count(contratos)", significado: "número de contratos que vencem no prazo" },
+      v4: { valor: "1250000.00", tipo: "moeda", origem: "sum(valor_global)", significado: "valor somado dos contratos que vencem" },
+      v5: { valor: "62.50", tipo: "percentual", origem: "valor_vencendo / valor_vigente_total",
+        significado: "parte do valor vigente que vence no prazo" },
     },
     fontes: [
       { fonte_id: "pe_portal", nome: "TCE-PE Dados Abertos", coletado_em: "2026-11-06T09:00:00Z", execucao_id: null, sintetico: false },

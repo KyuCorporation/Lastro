@@ -5,7 +5,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ErroApi } from "../api/http";
-import { HISTORICO, RECIBO_ANA, apiFalsa, montarApp, tokenEmMemoria } from "./montar";
+import { HISTORICO, RECIBO_ANA, RESPOSTA_ANA, apiFalsa, montarApp, tokenEmMemoria } from "./montar";
 
 // O AuthProvider valida o token guardado com GET /me: o backend falso precisa de um login antes.
 async function montarLogado(email: string, rota = "/", api = apiFalsa()) {
@@ -54,18 +54,60 @@ describe("01 consulta inteligente", () => {
     await usuario.click(screen.getByRole("button", { name: "Consultar" }));
 
     const resposta = await screen.findByRole("region", { name: "Resposta com evidências" });
-    expect(await within(resposta).findByText("Valor total registrado: R$ 1.250.000,00")).toBeInTheDocument();
+    const valores = await within(resposta).findByRole("region", { name: "Valores usados na resposta" });
     expect(api.recibos.obter).toHaveBeenCalledWith("recibo-1");
+    expect(valores).toHaveTextContent("A IA não escreve números");
+    const termos = within(valores).getAllByRole("term").map((t) => t.textContent);
+    const definicoes = within(valores).getAllByRole("definition").map((d) => d.textContent);
+    expect(termos).toEqual([
+      "Número de contratos que vencem no prazo",
+      "Valor somado dos contratos que vencem",
+      "Parte do valor vigente que vence no prazo",
+    ]);
+    expect(definicoes).toEqual(["2", "R$ 1.250.000,00", "62,5%"]);
+    expect(valores).not.toHaveTextContent("CNPJ do fornecedor"); // parâmetro da pergunta não é resultado
     expect(resposta).toHaveTextContent("2 registros de contrato encontrados");
     expect(resposta).toHaveTextContent("Período considerado: próximos 180 dias a partir de 06/11/2026");
     expect(resposta).toHaveTextContent("Nenhuma informação de sanção foi consultada nesta busca");
     expect(within(resposta).getByRole("link", { name: "Ver evidências" })).toHaveAttribute("href", "/recibos/recibo-1");
+    expect(within(resposta).getByRole("link", { name: "Abrir dossiê do fornecedor" })).toHaveAttribute(
+      "href",
+      "/fornecedores/99999999000191",
+    );
+
+    const fontes = within(resposta).getByRole("list", { name: "Fontes citadas" });
+    const [primeira, segunda] = within(fontes).getAllByRole("listitem");
+    expect(primeira).toHaveTextContent("ctr:2025:001"); // identificador de origem, não o id interno
+    expect(primeira).not.toHaveTextContent("linha-1");
+    expect(segunda).toHaveTextContent("Registro sem link público");
 
     const integridade = screen.getByRole("region", { name: "Integridade da consulta" });
     expect(integridade).toHaveTextContent("Escopo: PE");
     expect(integridade).toHaveTextContent("TCE-PE Dados Abertos");
     expect(integridade).toHaveTextContent("Perfil validado antes da busca");
     expect(integridade).toHaveTextContent("Texto conferido pelo verificador");
+  });
+
+  it("link de origem fora de http(s) não vira link, e citações longas ficam recolhidas", async () => {
+    const citacao = RESPOSTA_ANA.citacoes[0];
+    const citacoes = [
+      { ...citacao, n: 1, id: "x-1", url_origem: "javascript:alert(1)" },
+      { ...citacao, n: 2, id: "x-2", url_origem: "about:blank#dado-sintetico" },
+      ...[3, 4, 5, 6, 7].map((n) => ({ ...citacao, n, id: `x-${n}` })),
+    ];
+    const api = apiFalsa({ consulta: async () => ({ ...RESPOSTA_ANA, citacoes, recibo_id: null }) });
+    const { usuario } = await montarLogado("ana@alfa.demo", "/", api);
+    await usuario.type(screen.getByLabelText("Pergunta em linguagem natural"), "Resumo do CNPJ 99.999.999/0001-91");
+    await usuario.click(screen.getByRole("button", { name: "Consultar" }));
+
+    const fontes = await screen.findByRole("list", { name: "Fontes citadas" });
+    const itens = within(fontes).getAllByRole("listitem");
+    expect(itens).toHaveLength(5);
+    expect(within(itens[0]).queryByRole("link")).not.toBeInTheDocument();
+    expect(itens[0]).toHaveTextContent("Registro sem link público");
+    expect(within(itens[1]).queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("Ver as outras 2 fontes")).toBeInTheDocument();
+    expect(document.querySelectorAll('a[href^="javascript:"], a[href^="about:"]')).toHaveLength(0);
   });
 
   it("prompt injection digitado na pergunta vira acesso negado, sem nenhum dado", async () => {

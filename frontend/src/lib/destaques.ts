@@ -1,4 +1,5 @@
-// Quebra o texto da resposta em trechos para destacar valores e ligar as marcas de citação.
+// Quebra o texto da resposta em trechos para destacar valores. As citações ficam na lista de fontes: o backend
+// nunca escreve "[n]" no texto (o verificador reprova algarismo fora de marcador).
 // O texto já chega com os números inseridos pelo backend (verificador, SPEC §8.3): aqui só se formata.
 
 import { moedaPorExtenso } from "./extenso";
@@ -8,21 +9,19 @@ export type Trecho =
   | { tipo: "moeda"; texto: string; falado: string }
   | { tipo: "data"; texto: string; falado: string }
   | { tipo: "numero"; texto: string }
-  | { tipo: "cnpj"; texto: string }
-  | { tipo: "citacao"; texto: string; n: number };
+  | { tipo: "cnpj"; texto: string };
 
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
-// Ordem importa: CNPJ, moeda e data antes de número solto; citação "[n]".
+// Ordem importa: CNPJ, moeda e data antes de número solto.
 const PADRAO = new RegExp(
   [
     String.raw`(?<cnpj>\b\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}\b)`,
     String.raw`(?<moeda>R\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})?)`,
     String.raw`(?<data>\b\d{2}/\d{2}/\d{4}\b)`,
-    String.raw`(?<citacao>\[(?<n>\d{1,3})\])`,
     String.raw`(?<numero>\b\d+(?:[.,]\d+)*%?)`,
   ].join("|"),
   "g",
@@ -43,7 +42,6 @@ export function dividirEmTrechos(texto: string): Trecho[] {
     if (g.cnpj) trechos.push({ tipo: "cnpj", texto: g.cnpj });
     else if (g.moeda) trechos.push({ tipo: "moeda", texto: g.moeda, falado: moedaPorExtenso(g.moeda) });
     else if (g.data) trechos.push({ tipo: "data", texto: g.data, falado: dataFalada(g.data) });
-    else if (g.citacao) trechos.push({ tipo: "citacao", texto: g.citacao, n: Number(g.n) });
     else trechos.push({ tipo: "numero", texto: g.numero });
     ultimo = inicio + achado[0].length;
   }

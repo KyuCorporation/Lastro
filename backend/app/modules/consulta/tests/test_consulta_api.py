@@ -99,7 +99,12 @@ def test_recibo_segue_o_contrato_e_o_hash_confere_depois_de_gravado(api, autenti
             "sintetico": True,
         }
     ]
-    assert conteudo["valores"]["v4"] == {"valor": "100000.00", "tipo": "moeda", "origem": "sum(valor_global)"}
+    assert conteudo["valores"]["v4"] == {
+        "valor": "100000.00",
+        "tipo": "moeda",
+        "origem": "sum(valor_global)",
+        "significado": "valor somado dos contratos que vencem",
+    }
 
 
 # ------------------------------------------------------------------ negação (403, gravada antes)

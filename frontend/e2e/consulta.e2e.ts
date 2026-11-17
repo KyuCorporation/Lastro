@@ -108,7 +108,13 @@ test("recibo de evidências mostra os registros reais, o total e o selo", async 
   await entrarComo(page, "Ana");
   await perguntar(page, "Quais contratos do CNPJ 99.000.001/0001-01 vencem nos próximos 6 meses?");
   const resposta = page.getByRole("region", { name: "Resposta com evidências" });
-  await expect(resposta).toContainText("Valor total registrado: R$ 1.250.000,00");
+  const valores = resposta.getByRole("region", { name: "Valores usados na resposta" });
+  await expect(valores).toContainText("Valor somado dos contratos que vencem");
+  await expect(valores).toContainText("R$ 1.250.000,00");
+  await expect(resposta.getByRole("link", { name: "Abrir dossiê do fornecedor" })).toHaveAttribute(
+    "href",
+    "/fornecedores/99000001000101",
+  );
   await expect(resposta).toContainText("Período considerado: próximos 180 dias");
   await expect(page.getByRole("region", { name: "Integridade da consulta" })).toContainText("Escopo: PE");
   await expect(page.getByRole("region", { name: "Integridade da consulta" })).toContainText("TCE-PE Dados Abertos");

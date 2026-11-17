@@ -89,7 +89,12 @@ def test_valores_do_texto_batem_com_o_banco(ctx_ana):
     assert "vence 1 contrato" in vencendo.texto
     assert "R$ 100.000,00" in vencendo.texto
     assert "25,00% do valor vigente" in vencendo.texto
-    assert vencendo.valores["v4"] == {"valor": "100000.00", "tipo": "moeda", "origem": "sum(valor_global)"}
+    assert vencendo.valores["v4"] == {
+        "valor": "100000.00",
+        "tipo": "moeda",
+        "origem": "sum(valor_global)",
+        "significado": "valor somado dos contratos que vencem",
+    }
 
     resumo = redigir(
         "p",
