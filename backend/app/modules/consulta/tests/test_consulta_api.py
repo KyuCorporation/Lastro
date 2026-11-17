@@ -56,6 +56,7 @@ def test_pergunta_vira_resposta_com_citacoes_recibo_e_auditoria(api, autenticar,
     (citacao,) = corpo["citacoes"]
     assert citacao["tabela"] == "contratos" and citacao["fonte_id"] == "demo_sintetico"
     assert citacao["url_origem"] == "about:blank#teste-TCAT-C1"
+    assert citacao["id_origem"] == "TCAT-C1" and citacao["resumo"].startswith("Contrato com ")
     assert corpo["recibo_id"]
 
     # consulta gravada com plano, intent e versões
