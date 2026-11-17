@@ -19,7 +19,7 @@ Códigos de erro: `NAO_AUTENTICADO` (401), `PERFIL_SEM_PERMISSAO` (403), `ESCOPO
 | POST | `/carteiras` | analista, admin | `{nome, finalidade, cnpjs: [string]}` | `{id, nome, finalidade, n_itens, cnpjs_invalidos: []}` |
 | GET | `/carteiras` | todos | — | `[{id, nome, finalidade, n_itens, criada_em}]` |
 | GET | `/carteiras/{id}/fila` | todos | — | `{carteira, itens: [{cnpj, razao_social, prioridade, valor_exposto, sinais: [{tipo, gravidade, explicacao, evidencias, calculado_em, versao_regra}]}]}` |
-| GET | `/fornecedores/{cnpj}/dossie` | todos | — | `{fornecedor, resumo_por_uf, contratos_vigentes, vencendo_180d, sancoes, sinais, socios?, fontes}` (cada item com `fonte_id`, `url_origem`, `coletado_em`) |
+| GET | `/fornecedores/{cnpj}/dossie` | todos | — | `{fornecedor, resumo_por_uf, contratos_vigentes, vencendo_180d, sancoes: [{..., vigente, removida_em}], sinais, socios?, fontes}` (cada item com `fonte_id`, `url_origem`, `coletado_em`) |
 | POST | `/consultas` | analista, admin | `{pergunta (≤500 chars), carteira_id?}` | `{consulta_id, status, resposta, citacoes: [{n, tabela, id, fonte_id, url_origem, coletado_em}], recibo_id, sintetico: bool}` |
 | GET | `/consultas` | todos | `?limite` | consultas visíveis pela RLS |
 | GET | `/recibos/{id}` | dono, auditor, admin | — | `{id, conteudo (recibo.schema.json), hash, criado_em}` |
