@@ -52,7 +52,8 @@ export interface ApiFornecedores {
 }
 
 export interface ApiAuditoria {
-  listar(limite?: number): Promise<EventoAuditoria[]>;
+  /** `evento` filtra pelo tipo (consulta, negado, login…), como o `?evento` de GET /auditoria. */
+  listar(limite?: number, evento?: string): Promise<EventoAuditoria[]>;
   verificar(): Promise<VerificacaoCadeia>;
 }
 
@@ -112,7 +113,10 @@ export function criarApiFornecedores(http: Http): ApiFornecedores {
 
 export function criarApiAuditoria(http: Http): ApiAuditoria {
   return {
-    listar: (limite = 100) => http.get<EventoAuditoria[]>(`/auditoria?limite=${encodeURIComponent(limite)}`),
+    listar: (limite = 100, evento?: string) =>
+      http.get<EventoAuditoria[]>(
+        `/auditoria?limite=${encodeURIComponent(limite)}${evento ? `&evento=${encodeURIComponent(evento)}` : ""}`,
+      ),
     verificar: () => http.get<VerificacaoCadeia>("/auditoria/verificar"),
   };
 }

@@ -370,7 +370,18 @@ describe("02 recibo: âncora na trilha de auditoria", () => {
     await montarLogado("caio@alfa.demo", "/recibos/recibo-1", api);
     const selo = await screen.findByRole("status", { name: "Âncora na trilha de auditoria" });
     await waitFor(() => expect(selo).toHaveTextContent("Ancorado na trilha de auditoria · evento #41"));
-    expect(api.auditoria.listar).toHaveBeenCalledWith(200);
+    // O hash do recibo fica no evento da consulta respondida ou da abstenção: lê os dois, no teto do contrato.
+    expect(api.auditoria.listar).toHaveBeenCalledWith(500, "consulta");
+    expect(api.auditoria.listar).toHaveBeenCalledWith(500, "abstencao");
+  });
+
+  it("recibo de uma abstenção também acha a âncora", async () => {
+    const abstencao = { ...evento(RECIBO_ANA.hash), seq: 57, evento: "abstencao" };
+    const api = apiFalsa();
+    api.auditoria.listar = vi.fn(async (_limite?: number, tipo?: string) => (tipo === "abstencao" ? [abstencao] : []));
+    await montarLogado("caio@alfa.demo", "/recibos/recibo-1", api);
+    const selo = await screen.findByRole("status", { name: "Âncora na trilha de auditoria" });
+    await waitFor(() => expect(selo).toHaveTextContent("Ancorado na trilha de auditoria · evento #57"));
   });
 
   it("selo diferente do gravado na trilha aparece como divergência", async () => {
@@ -383,7 +394,9 @@ describe("02 recibo: âncora na trilha de auditoria", () => {
   it("recibo sem evento entre os recentes diz isso, sem acusar alteração", async () => {
     await montarLogado("caio@alfa.demo", "/recibos/recibo-1");
     const selo = await screen.findByRole("status", { name: "Âncora na trilha de auditoria" });
-    await waitFor(() => expect(selo).toHaveTextContent("Âncora na trilha não localizada nos eventos recentes"));
+    await waitFor(() =>
+      expect(selo).toHaveTextContent("Âncora na trilha não localizada entre as 500 respostas e 500 abstenções mais recentes"),
+    );
   });
 
   it("analista não consulta a trilha (a API responderia 403 e registraria a negação)", async () => {

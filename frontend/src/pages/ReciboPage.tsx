@@ -53,8 +53,12 @@ function SeloIntegridade({ id }: { id: string }) {
   );
 }
 
-/** Quantos eventos recentes da trilha são lidos para achar o do recibo (o contrato não tem busca por recibo). */
-const EVENTOS_RECENTES = 200;
+/**
+ * O hash do recibo fica no evento da trilha que a consulta gravou: `consulta` (respondida) ou `abstencao`. O contrato
+ * não tem busca por recibo: a página lê os mais recentes de cada um, até o teto de GET /auditoria (500).
+ */
+const CONSULTAS_RECENTES = 500;
+const EVENTOS_COM_RECIBO = ["consulta", "abstencao"] as const;
 
 /**
  * Segundo selo, só para quem lê a auditoria: o hash do recibo também fica no evento da trilha encadeada.
@@ -63,8 +67,9 @@ const EVENTOS_RECENTES = 200;
 function SeloAncora({ id, hash }: { id: string; hash: string }) {
   const api = useApi();
   const eventos = useQuery<EventoAuditoria[], ErroApi>({
-    queryKey: ["auditoria-eventos", EVENTOS_RECENTES],
-    queryFn: () => api.auditoria.listar(EVENTOS_RECENTES),
+    queryKey: ["auditoria-eventos", ...EVENTOS_COM_RECIBO, CONSULTAS_RECENTES],
+    queryFn: async () =>
+      (await Promise.all(EVENTOS_COM_RECIBO.map((tipo) => api.auditoria.listar(CONSULTAS_RECENTES, tipo)))).flat(),
   });
   const evento = eventos.data?.find((e) => e.detalhes?.recibo_id === id && typeof e.detalhes.recibo_hash === "string");
   let tom: "verde" | "vermelho" | "neutro" = "neutro";
@@ -76,7 +81,11 @@ function SeloAncora({ id, hash }: { id: string; hash: string }) {
   } else if (evento) {
     tom = "vermelho";
     texto = `O selo do recibo não confere com a trilha de auditoria · evento #${evento.seq}`;
-  } else if (eventos.data) texto = "Âncora na trilha não localizada nos eventos recentes";
+  } else if (eventos.data) {
+    texto =
+      `Âncora na trilha não localizada entre as ${CONSULTAS_RECENTES} respostas e ` +
+      `${CONSULTAS_RECENTES} abstenções mais recentes`;
+  }
   return (
     <p role="status" aria-label="Âncora na trilha de auditoria" aria-live="polite">
       <Selo tom={tom}>{texto}</Selo>
