@@ -17,6 +17,7 @@ Situação do código em 08/11/2026.
 - No `pe_portal`, o bronze guarda a resposta já sem dado de pessoa física (LGPD). O `sha256` é o da resposta saneada, não o dos bytes que a fonte mandou.
 - Não há conector de quadro societário. A tabela `socios` fica vazia, então o dossiê mostra "Nenhum sócio" e o sinal de contágio não existe.
 - A ingestão roda por comando (`make ingest-*`, `make sinais`), sem agendamento. Os sinais refletem a última vez que alguém rodou `sinais`.
+- "Hoje" é o dia em Pernambuco (UTC−3) na API e na pipeline. As views de `db/migrations/003_views.sql` usam `current_date` do banco, que roda em UTC; o catálogo não usa essas views.
 
 **Consultas**
 - O catálogo cobre 7 intents. `fila_carteira` e `socios_sancionados` estão no contrato do plano, mas viram abstenção ("ainda não está disponível").
@@ -33,8 +34,8 @@ Situação do código em 08/11/2026.
 - A tela do recibo procura a âncora na trilha entre as 500 respostas e as 500 abstenções mais recentes do tenant (teto de `GET /auditoria`). Recibo mais antigo aparece como "âncora não localizada", sem acusar alteração. Busca direta por recibo (`?recibo_id=`) depende de mudança de contrato.
 
 **Avaliação**
-- Das 100 perguntas do gabarito, só a G001 tem `sql_referencia` escrita por alguém fora do catálogo (SPEC §14.1). As outras conferem intent, comportamento e citação, mas não o valor contra uma consulta independente.
-- Os números do gabarito e dos ataques na tela de métricas foram gerados com `LLM_PROVIDER=mock`. Com o Gemini, é preciso rodar `make eval` de novo.
+- As 59 perguntas `responder` do gabarito têm `sql_referencia` escrita sem acesso ao SQL do catálogo (SPEC §14.1). As divergências que restam são de leitura (empenho citado à parte, prazo padrão de 180 dias, "dinheiro" como valor contratado) e estão em `docs/relatorio-avaliacao.md`.
+- O gabarito só rodou sem LLM (`mock`). Com o Gemini, só a suíte de ataques rodou, em 16/11, antes do teto de tempo da consulta. A tela de métricas mostra os dois provedores lado a lado quando os dois relatórios existem (`make eval EVAL_LLM=gemini`).
 - O cronômetro de diligência (T23) ainda não foi medido.
 
 ## Riscos
@@ -50,8 +51,7 @@ Situação do código em 08/11/2026.
 ## Próximos passos
 
 1. Fazer a primeira carga completa do TCE-PE em rede brasileira (`make ingest-pe`) e medir o volume por unidade gestora.
-2. Fazer alguém de fora do catálogo escrever `sql_referencia` para o gabarito, para a métrica de resultado medir de verdade.
-3. Implementar o SQL de `fila_carteira` e `socios_sancionados`, e o conector de quadro societário com o sinal de contágio.
-4. Criar alertas quando uma nova sanção ou sinal atingir fornecedor de carteira.
-5. Medir o cronômetro com 3 CNPJs e validar a hipótese com especialistas (T23).
-6. Rodar `make eval` e `make eval-ataques` com o Gemini e publicar os números ao lado dos do modo `mock`.
+2. Implementar o SQL de `fila_carteira` e `socios_sancionados`, e o conector de quadro societário com o sinal de contágio.
+3. Criar alertas quando uma nova sanção ou sinal atingir fornecedor de carteira.
+4. Medir o cronômetro com 3 CNPJs e validar a hipótese com especialistas (T23).
+5. Rodar `make eval EVAL_LLM=gemini` e `make eval-ataques EVAL_LLM=gemini` e publicar os números ao lado dos do modo `mock`.
