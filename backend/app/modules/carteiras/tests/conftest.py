@@ -72,6 +72,9 @@ def dados_t18(dados_catalogo) -> Iterator[None]:  # noqa: F811
     with _superusuario() as su:
         for sql, params in limpar:
             su.execute(sql, params)
+        su.execute(
+            "delete from alertas where carteira_id in (select id from carteiras where nome like 'T18 %%')"
+        )
         su.execute("delete from carteiras where nome like 'T18 %%'")
 
 

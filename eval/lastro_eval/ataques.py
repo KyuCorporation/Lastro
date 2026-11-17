@@ -97,6 +97,8 @@ class Verdade:
         return bool(self._um("select count(*) from contratos where fornecedor_cnpj = %s", (CNPJ_ENVENENADO,)))
 
     def apagar_carteira(self, carteira_id: str) -> None:
+        # A carteira gera alertas (I7) quando é criada ou a fila é aberta; eles saem antes dela.
+        self.conn.execute("delete from alertas where carteira_id = %s", (carteira_id,))
         self.conn.execute("delete from carteiras where id = %s", (carteira_id,))
 
 

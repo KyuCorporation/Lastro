@@ -118,7 +118,7 @@ def dados_do_alfa(api, autenticar, ctx_ana):
         "auditoria_seq": seq,
     }
     with _superusuario() as su:
-        su.execute("delete from alertas where id = %s", (alerta_id,))
+        su.execute("delete from alertas where carteira_id = %s", (carteira_id,))
         su.execute("delete from carteiras where id = %s", (carteira_id,))
 
 

@@ -10,6 +10,7 @@ from app.core.cnpj import cnpj_valido, normalizar_cnpj
 from app.core.contexto import ContextoAcesso
 from app.core.db import sessao
 from app.core.errors import ErroApi
+from app.modules.alertas import service as alertas
 from app.modules.auditoria import service as auditoria
 from app.modules.carteiras import queries
 from app.modules.carteiras.prioridade import prioridade
@@ -50,6 +51,7 @@ def criar(ctx: ContextoAcesso, entrada: CarteiraEntrada) -> CarteiraCriada:
         conn.cursor().executemany(
             queries.INSERIR_ITEM, [{"carteira_id": carteira_id, "cnpj": c} for c in validos]
         )
+        alertas.gerar_da_carteira(conn, carteira_id)
         auditoria.registrar_em(
             conn,
             "carteira_criada",
@@ -86,6 +88,7 @@ def fila(ctx: ContextoAcesso, carteira_id: UUID, hoje: date) -> Fila:
         carteira = cur.execute(queries.BUSCAR_CARTEIRA, {"id": carteira_id}).fetchone()
         if carteira is None:
             raise ErroApi(404, "NAO_ENCONTRADO", "Carteira não encontrada.")
+        alertas.gerar_da_carteira(conn, carteira_id)
         linhas = cur.execute(queries.FILA, {"id": carteira_id, "hoje": hoje}).fetchall()
 
     itens = []
