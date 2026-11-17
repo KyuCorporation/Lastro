@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from app.conftest import arquivo_do_repo
-from app.llm.regras import extrair_cnpj, extrair_uf, normalizar, planejar_por_regras
+from app.llm.regras import extrair_cnpj, extrair_uf, normalizar, planejar_por_regras, ufs_mencionadas
 
 HOJE = date(2026, 11, 6)
 GABARITO = yaml.safe_load(arquivo_do_repo("eval/gabarito/perguntas.yaml").read_text(encoding="utf-8"))
@@ -40,6 +40,29 @@ def test_uf_por_nome_e_por_sigla():
     assert extrair_uf("contratos em PE", normalizar("contratos em PE")) == "PE"
     assert extrair_uf("contratos para limpeza", normalizar("contratos para limpeza")) is None
     assert extrair_uf("obras no Pará", normalizar("obras no Pará")) == "PA"
+
+
+def test_sigla_em_nome_de_empresa_nao_vira_uf():
+    for pergunta in ("Resumo da MS Informática", "contratos da RN Construções", "empresa SP Alimentos LTDA"):
+        assert extrair_uf(pergunta, normalizar(pergunta)) is None
+        assert ufs_mencionadas(pergunta, siglas_em_contexto=True) == set()
+    # O verificador continua estrito: qualquer sigla fora do escopo no texto do redator reprova.
+    assert ufs_mencionadas("Resumo da MS Informática") == {"MS"}
+
+
+def test_sigla_em_contexto_de_lugar_continua_valendo():
+    casos = {
+        "contratos em AL": {"AL"},
+        "fornecedor X - AL": {"AL"},
+        "fornecedor X (AL)": {"AL"},
+        "gastos de SP": {"SP"},
+        "dados de AL e PE": {"AL", "PE"},
+        'parametros: {"uf":"AL"}': {"AL"},
+        "uf=AL": {"AL"},
+        "Em AL, quantos contratos?": {"AL"},
+    }
+    for pergunta, esperado in casos.items():
+        assert ufs_mencionadas(pergunta, siglas_em_contexto=True) == esperado, pergunta
 
 
 def test_vencendo_converte_meses_em_dias():
