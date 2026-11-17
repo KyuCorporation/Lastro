@@ -70,7 +70,7 @@ def test_orgaos_de_fornecedor_sem_contratos(ctx_ana):
 # ------------------------------------------------------------------ busca_objeto
 def test_busca_full_text_em_portugues(ctx_ana):
     r = executar(busca("limpeza tcat"), ctx_ana, HOJE)
-    assert r.versao == "busca_objeto@v1"
+    assert r.versao == "busca_objeto@v2"
     assert origens(r.conjuntos["linhas"]) == {"TCAT-C1", "TCAT-C3"}  # C4 é de AL
     assert r.totais == {"n_contratos": 2, "valor_total": Decimal("150000.00")}
     assert r.parametros["termo"] == "limpeza tcat" and "cnpj" not in r.parametros
@@ -84,6 +84,16 @@ def test_busca_usa_radical_do_portugues(ctx_ana):
         "TCAT-C1",
         "TCAT-C2",
     }
+
+
+def test_busca_ignora_acento_dos_dois_lados(ctx_admin):
+    # O roteador por regras tira o acento do termo, quem pergunta pode digitar sem acento, e a fonte grava
+    # objeto com acento ("manutenção") e sem acento ("MANUTENCAO"): os quatro casos têm de se achar.
+    for termo in ("manutencao tcat", "manutenção tcat", "MANUTENÇÃO TCAT"):
+        assert origens(executar(busca(termo), ctx_admin, HOJE).conjuntos["linhas"]) == {
+            "TCAT-C3",
+            "TCAT-C4",
+        }, termo
 
 
 def test_busca_respeita_o_escopo(ctx_bia, ctx_admin):

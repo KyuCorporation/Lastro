@@ -24,21 +24,22 @@ A tela 08 Métricas mostra a rodada mais recente, lida de `eval/reports/`.
 
 Os 59 casos `responder` do gabarito passaram a ter `sql_referencia`. Os de G005 em diante foram escritos por um agente que leu só `db/migrations/` e `docs/dicionario-dados.md`, sem o SQL do catálogo e sem rodar o sistema. O harness compara o conjunto de linhas da referência com as linhas do recibo.
 
-Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**.
+Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**. Depois da correção da busca (`busca_objeto@v2`), a segunda rodada deu **94 de 100**.
 
-| Medida | Resultado |
-|---|---|
-| Acerto de resultado | 88,1% (52 de 59) |
-| Intent | 100% |
-| Comportamento | 100% |
-| Citação | 100% |
+| Medida | Primeira rodada | Depois da correção |
+|---|---|---|
+| Acerto de resultado | 88,1% (52 de 59) | 89,8% (53 de 59) |
+| Intent | 100% | 100% |
+| Comportamento | 100% | 100% |
+| Citação | 100% | 100% |
 
 Divergências:
 
 | Caso | Pergunta | Divergência | Leitura |
 |---|---|---|---|
-| G030 | "Contratos sobre manutenção predial" (PE) | O sistema não acha o contrato que a referência acha | **Defeito do sistema.** O roteador por regras tira o acento do termo (`manutencao predial`), e o `objeto_tsv` guarda o objeto com acento: "manutencao" e "manutenção" não casam. A resposta sai como abstenção ("não encontrei"), que o harness aceita como resposta certa de "responder" sem registro. |
-| G051 | "Busque contratos com objeto de aquisição de medicamentos em AL" | O sistema não acha nenhum dos 19 contratos | **Defeito do sistema**, pela mesma causa (`aquisicao`). |
+| G030 | "Contratos sobre manutenção predial" (PE) | O sistema não achava o contrato que a referência acha | **Defeito do sistema, corrigido em `busca_objeto@v2`.** O roteador por regras tira o acento do termo (`manutencao predial`), e o `objeto_tsv` guarda o objeto com acento: "manutencao" e "manutenção" não casavam. A resposta saía como abstenção ("não encontrei"), que o harness aceita como resposta certa de "responder" sem registro. A v2 compara os dois lados sem acento. |
+| G051 | "Busque contratos com objeto de aquisição de medicamentos em AL" | O sistema não achava nenhum dos 19 contratos | **Defeito do sistema, corrigido em `busca_objeto@v2`**, pela mesma causa (`aquisicao`). |
+| G038 | "Busque contratos com objeto de medicamentos" (depois da v2) | O recibo traz um contrato a mais: a anuidade da Associação Brasileira de Educação Médica | Custo conhecido da v2. Sem acento, "médica" e "medicamentos" têm o mesmo radical ("medic"). A referência evitou esse caso. |
 | G024, G025 | "Quanto o fornecedor 99.000.002/0001-48 recebeu entre …" | O recibo tem uma linha a mais: o empenho de 05/04/2025 | Leitura diferente. O sistema cita o empenho à parte ("reserva no orçamento, etapa anterior à liquidação") e não o soma ao recebido. A referência deixa o empenho fora do conjunto. |
 | G026 | "Resumo do fornecedor 99.000.002/0001-48" | O recibo tem o empenho a mais | Mesma leitura de G024. |
 | G043 | "Quando terminam os contratos do CNPJ 33.891.594/0001-27?" | O sistema responde que nada vence em 180 dias; a referência traz o contrato que ainda não terminou | Leitura diferente, com resposta pouco útil. Sem prazo na pergunta, o sistema aplica a janela padrão de 180 dias de `contratos_vencendo`, e a pergunta pede a data de término. |
