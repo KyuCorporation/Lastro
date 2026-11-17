@@ -12,7 +12,15 @@ import pytest
 
 from app.core import relogio
 from app.main import app
-from app.modules.catalogo.tests.conftest import F1, F2, HOJE, _superusuario, d, dados_catalogo  # noqa: F401
+from app.modules.catalogo.tests.conftest import (  # noqa: F401
+    F1,
+    F2,
+    HOJE,
+    _superusuario,
+    c2_rescindido,
+    d,
+    dados_catalogo,
+)
 from app.modules.consulta.tests.conftest import api, autenticar, com_ambiente  # noqa: F401
 
 F3 = "11333555000171"  # só em AL

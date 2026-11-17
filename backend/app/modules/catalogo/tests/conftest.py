@@ -140,3 +140,15 @@ def dados_catalogo():
     with _superusuario() as conn:
         for comando in LIMPAR:
             conn.execute(comando)
+
+
+@pytest.fixture
+def c2_rescindido(dados_catalogo):
+    """TCAT-C2 (R$ 300 mil, vigente por 400 dias) rescindido na fonte (migration 009): deixa de ser vigente."""
+    with _superusuario() as su:
+        su.execute(
+            "update contratos set situacao = 'Rescindido por Acordo Entre as Partes' where id_origem = 'TCAT-C2'"
+        )
+    yield
+    with _superusuario() as su:
+        su.execute("update contratos set situacao = null where id_origem = 'TCAT-C2'")

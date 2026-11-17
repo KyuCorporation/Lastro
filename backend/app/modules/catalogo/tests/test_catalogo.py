@@ -61,7 +61,7 @@ def test_registro_cobre_as_intents_n1_e_os_arquivos_existem():
 # ---------------------------------------------------------------- resumo_fornecedor
 def test_resumo_so_com_as_ufs_da_ana(ctx_ana):
     r = executar(plano("resumo_fornecedor"), ctx_ana, HOJE)
-    assert r.versao == "resumo_fornecedor@v3"
+    assert r.versao == "resumo_fornecedor@v4"
     assert r.parametros["ufs"] == ["PE"]
     assert origens(r.conjuntos["contratos"]) == {"TCAT-C1", "TCAT-C2", "TCAT-C3"}
     assert origens(r.conjuntos["pagamentos"]) == {"TCAT-P1", "TCAT-P2", "TCAT-P3"}
@@ -126,6 +126,16 @@ def test_contratos_vigentes(ctx_ana):
     assert origens(r.conjuntos["linhas"]) == {"TCAT-C1", "TCAT-C2"}
     assert r.totais == {"n_contratos": 2, "valor_total": Decimal("400000.00")}
     assert_proveniencia(r)
+
+
+def test_contrato_rescindido_na_fonte_nao_e_vigente(ctx_ana, c2_rescindido):
+    r = executar(plano("contratos_vigentes"), ctx_ana, HOJE)
+    assert origens(r.conjuntos["linhas"]) == {"TCAT-C1"} and r.versao == "contratos_vigentes@v2"
+    vencendo = executar(plano("contratos_vencendo", dias=180), ctx_ana, HOJE)
+    assert vencendo.totais["valor_vigente_total"] == Decimal("100000.00")
+    assert vencendo.totais["percentual_do_vigente"] == Decimal("100.00")
+    resumo = executar(plano("resumo_fornecedor"), ctx_ana, HOJE)
+    assert resumo.totais["valor_vigente"] == Decimal("100000.00")
 
 
 # ---------------------------------------------------------------- contratos_vencendo
@@ -293,7 +303,7 @@ def test_lista_acima_do_limite_e_truncada_com_total_certo_e_aviso(ctx_ana):
 def test_totais_por_orgao_nao_param_no_limite_de_linhas(ctx_ana):
     """Os conjuntos derivados (grupos por órgão) não são cortados: o total soma todos os grupos."""
     resumo = executar(_plano_f2("resumo_fornecedor"), ctx_ana, HOJE)
-    assert resumo.versao == "resumo_fornecedor@v3"
+    assert resumo.versao == "resumo_fornecedor@v4"
     assert resumo.totais["n_contratos"] == N_MUITOS
     assert resumo.totais["valor_contratado"] == Decimal("201000.00")
     assert (

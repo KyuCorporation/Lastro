@@ -13,7 +13,9 @@ select cnpj, razao_social, uf_sede
 RESUMO_POR_UF = """
 with c as (
   select uf, count(*)::int as n_contratos, sum(valor_global) as valor_contratado,
-         sum(valor_global) filter (where vigencia_fim >= %(hoje)s) as valor_vigente
+         sum(valor_global) filter (
+           where vigencia_fim >= %(hoje)s and coalesce(situacao, 'Regular') = 'Regular'
+         ) as valor_vigente
     from contratos
    where fornecedor_cnpj = %(cnpj)s and uf::text = any (ctx_ufs())
    group by uf
@@ -47,6 +49,7 @@ select c.id, c.fonte_id, c.id_origem, c.url_origem, c.coletado_em, c.uf::text as
  where c.fornecedor_cnpj = %(cnpj)s
    and c.uf::text = any (ctx_ufs())
    and c.vigencia_fim >= %(hoje)s
+   and coalesce(c.situacao, 'Regular') = 'Regular'
  order by c.vigencia_fim, c.id
  limit %(limite)s
 """

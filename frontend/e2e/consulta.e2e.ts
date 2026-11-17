@@ -130,7 +130,7 @@ test("recibo de evidências mostra os registros reais, o total e o selo", async 
     /^https:\/\/sistemas\.tcepe\.tc\.br\/DadosAbertos\//,
   );
   await expect(page.getByRole("region", { name: "Valores usados na resposta" })).toContainText("R$ 1.250.000,00");
-  await expect(page.getByRole("region", { name: "Plano e parâmetros" })).toContainText("contratos_vencendo@v1");
+  await expect(page.getByRole("region", { name: "Plano e parâmetros" })).toContainText("contratos_vencendo@v2");
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible(); // selo sha256 do recibo
 });
 

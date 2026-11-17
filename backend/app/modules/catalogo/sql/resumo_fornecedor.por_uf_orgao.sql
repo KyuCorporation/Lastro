@@ -1,12 +1,15 @@
--- resumo_fornecedor@v3 — totais por UF e órgão (derivado das linhas de contratos e pagamentos abaixo)
+-- resumo_fornecedor@v4 — totais por UF e órgão (derivado das linhas de contratos e pagamentos abaixo)
 -- v2: empenho (id_origem 'emp:', TCE-PE) não é pagamento. "pago" soma o que saiu (liquidação, pagamento);
 --     o empenhado vem à parte.
 -- v3: sem limite de linhas. É um agregado por órgão, e os totais da resposta somam todos os grupos.
+-- v4: valor vigente exige situação da fonte nula ou "Regular" (migration 009).
 with c as (
   select uf, orgao_id,
          count(*)                                                   as n_contratos,
          sum(valor_global)                                          as valor_contratado,
-         sum(valor_global) filter (where vigencia_fim >= %(hoje)s)  as valor_vigente
+         sum(valor_global) filter (
+           where vigencia_fim >= %(hoje)s and coalesce(situacao, 'Regular') = 'Regular'
+         )                                                          as valor_vigente
     from contratos
    where fornecedor_cnpj = %(cnpj)s
      and uf::text = any (%(ufs)s::text[])
