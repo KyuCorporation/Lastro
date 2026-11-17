@@ -57,6 +57,7 @@ ASSUNTOS: list[tuple[str, re.Pattern[str]]] = [
 
 PEDE_RESUMO = re.compile(r"\bresum|panorama")
 RECEBIMENTO = re.compile(r"receb|\bpag")
+PERGUNTA_QUANDO = re.compile(r"\bquando\b")
 SOBRE_CONTRATOS = re.compile(r"contrat|objeto")
 DOMINIO = re.compile(r"gast|govern|contrat|fornecedor|empresa|cnpj|pag|receb|licitac|despesa|orgao|valor")
 # Em ordem: "objeto" tem prioridade, então em "contratos com objeto de X" o termo é X.
@@ -198,6 +199,10 @@ def planejar_por_regras(pergunta: str, hoje: date) -> PlanoConsulta:
         assunto = "resumo_fornecedor"
     elif assunto == "resumo_fornecedor" and RECEBIMENTO.search(t) and extrair_periodo(t, hoje):
         assunto = "pagamentos_periodo"  # "quanto recebeu entre X e Y" pede o período, não o histórico todo
+    elif assunto == "contratos_vencendo" and PERGUNTA_QUANDO.search(t) and not extrair_dias(t):
+        # "Quando terminam?" sem prazo pede a data de término: a janela padrão de 180 dias esconderia o contrato
+        # que termina depois. Os vigentes trazem a vigência de cada um e o próximo a terminar.
+        assunto = "contratos_vigentes"
 
     # Busca textual só quando a pergunta fala de contrato ou objeto ("um poema sobre o agreste" não é busca).
     busca = None

@@ -368,7 +368,7 @@
 - id: G043
   usuario: bia@beta.demo
   pergunta: "Quando terminam os contratos do CNPJ 33.891.594/0001-27?"
-  intent_esperada: contratos_vencendo
+  intent_esperada: contratos_vigentes
   comportamento: responder
   sql_referencia: |
     select id from contratos
