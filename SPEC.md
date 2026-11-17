@@ -262,11 +262,11 @@ Injeção armazenada para a demo: `db/seeds/020_demo_ataque.sql` cria um fornece
 
 Calculados pela pipeline (`pipeline/sinais/`) **por fornecedor e por UF**, versionados (`versao_regra`), sempre com `explicacao` em uma frase e `evidencias` (lista de `{tabela, id, url_origem}`).
 
-| Sinal | Regra (v1) | Gravidade |
+| Sinal | Regra (v2) | Gravidade |
 |---|---|---|
 | `sancao_direta` | CNPJ em CEIS ou CNEP com sanção vigente | forte |
 | `penhasco` | ≥ 50% do valor contratado vigente termina em até 180 dias | atenção |
-| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses | atenção |
+| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses, quando o recebido na janela soma ao menos R$ 10 mil (abaixo disso o percentual não diz nada). Anulação de liquidação abate do recebido. Vale só para os órgãos com dado carregado (§10) | atenção |
 | `contagio` | Sócio em comum com empresa com sanção vigente (opcional) | atenção |
 | `liquidez` | Condicional: só se o dado de PE tiver liquidação e pagamento separados; regra a definir | atenção |
 
