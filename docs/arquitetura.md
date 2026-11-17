@@ -110,7 +110,7 @@ FastAPI, Pydantic v2 e psycopg 3, com SQL explícito e sem ORM. Cada módulo tem
 5. **Verificador** (`llm/verificador.py`): reprova número, CNPJ, URL ou UF fora do resultado, marcador desconhecido, texto de prompt e linguagem de acusação. A reprovação troca o texto pelo modelo determinístico.
 6. **Gravação:** consulta, recibo e eventos de auditoria entram numa transação só. O recibo (`contracts/recibo.schema.json`) traz pergunta, plano, parâmetros efetivos, linhas citadas com hash, fontes, valores, verificação e versões dos prompts. O `hash` é o sha256 do JSON canônico.
 
-Intents com SQL: `resumo_fornecedor@v2`, `contratos_vigentes@v1`, `contratos_vencendo@v1`, `pagamentos_periodo@v2`, `sancoes_fornecedor@v1`, `orgaos_fornecedor@v1`, `busca_objeto@v1` (full-text em português no objeto do contrato).
+Intents com SQL: `resumo_fornecedor@v3`, `contratos_vigentes@v1`, `contratos_vencendo@v1`, `pagamentos_periodo@v2`, `sancoes_fornecedor@v1`, `orgaos_fornecedor@v2`, `busca_objeto@v1` (full-text em português no objeto do contrato).
 
 `fila_carteira` e `socios_sancionados` estão no contrato do plano, mas ainda não têm SQL: viram abstenção, com recibo.
 
@@ -143,7 +143,7 @@ React 18, TypeScript `strict`, TanStack Query e Tailwind com a paleta `kyu-*`. A
 - as citações;
 - o resultado, quando há `sql_referencia`.
 
-`run_eval.py ataques` roda os 58 casos de `eval/ataques/ataques.yaml` e falha se houver qualquer vazamento. Os relatórios ficam em `eval/reports/` e alimentam a tela de métricas.
+`run_eval.py ataques` roda os 63 casos de `eval/ataques/ataques.yaml` e falha se houver qualquer vazamento. Os relatórios ficam em `eval/reports/` e alimentam a tela de métricas.
 
 ## Para produção
 

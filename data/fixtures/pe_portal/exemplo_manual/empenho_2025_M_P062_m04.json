@@ -1,0 +1,30 @@
+{
+ "resposta": {
+  "status": "OK",
+  "tamanhoResultado": "2",
+  "limiteResultado": "100000",
+  "conteudo": [
+   {
+    "ID_UNIDADE_GESTORA": "1146",
+    "NOMEUNIDADEGESTORA": "PREFEITURA EXEMPLO DE GARANHUNS (SINTÉTICO)",
+    "CODIGO_MUNICIPIO": "P062",
+    "ESFERA": "M",
+    "ANOREFERENCIA": "2025",
+    "MESREFERENCIA": "4",
+    "ID_EMPENHO": "9000310",
+    "NUMEROEMPENHO": "0000310",
+    "CPF_CNPJ": "99000002000148",
+    "FORNECEDOR": "TRANSPORTES EXEMPLO BETA LTDA (SINTÉTICO)",
+    "TIPOCREDOR": "1",
+    "VALOREMPENHADO": "40000.00",
+    "VALORLIQUIDADO": "40000.00",
+    "VALORPAGO": "40000.00",
+    "DATAEMPENHO": "2025-04-05 00:00:00.0",
+    "HISTORICO": "Transporte escolar, abril"
+   },
+   {
+    "_lastro_omitido": "pessoa_fisica"
+   }
+  ]
+ }
+}

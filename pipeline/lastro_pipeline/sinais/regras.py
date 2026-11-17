@@ -1,4 +1,6 @@
-"""Regras dos sinais de risco, v1 (SPEC §9). Funções puras: recebem fatos já lidos do banco e devolvem sinais.
+"""Regras dos sinais de risco, v2 (SPEC §9). Funções puras: recebem fatos já lidos do banco e devolvem sinais.
+
+A v2 mudou a concentração: piso de valor na janela e anulação de liquidação abatendo do recebido.
 
 Sinal não é acusação: só `sancao_direta` é "forte"; o resto é "atenção". Toda explicação é uma frase e toda
 evidência aponta para a linha de origem (`{tabela, id, url_origem}`).
@@ -16,7 +18,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-VERSAO_REGRA = "v1"
+VERSAO_REGRA = "v2"
 
 TipoSinal = Literal["sancao_direta", "penhasco", "concentracao"]
 Gravidade = Literal["forte", "atencao", "info"]
@@ -26,6 +28,8 @@ PENHASCO_DIAS = 180
 PENHASCO_LIMIAR = Decimal("0.50")
 CONCENTRACAO_MESES = 24
 CONCENTRACAO_LIMIAR = Decimal("0.70")
+# Abaixo deste total na janela o percentual não diz nada (um pagamento pequeno já daria 100%).
+CONCENTRACAO_VALOR_MINIMO = Decimal(10000)
 # Evidências guardadas por sinal (as de maior valor). A explicação traz o total, então nada se perde no texto.
 MAX_EVIDENCIAS = 50
 
@@ -241,10 +245,11 @@ def _recebimentos_por_grupo(
 
     Usa os pagamentos (liquidações) quando a UF tem algum para o fornecedor. Fontes sem pagamento (o PNCP só
     traz contratos) usam o valor dos contratos assinados na janela, e a explicação diz isso.
+    Anulação de liquidação (valor negativo, TCE-PE) entra para abater do recebido.
     """
     pagos: dict[tuple[str, str], list[_Recebimento]] = defaultdict(list)
     for p in pagamentos:
-        if p.data is not None and inicio <= p.data <= hoje and p.valor is not None and p.valor > 0:
+        if p.data is not None and inicio <= p.data <= hoje and p.valor is not None and p.valor != 0:
             pagos[(p.cnpj, p.uf)].append(_Recebimento("pagamentos", p.id, p.orgao_id, p.valor, p.url_origem))
 
     contratados: dict[tuple[str, str], list[_Recebimento]] = defaultdict(list)
@@ -276,18 +281,25 @@ def concentracao(
     for (cnpj, uf), (base, itens) in sorted(
         _recebimentos_por_grupo(contratos, pagamentos, inicio, hoje).items()
     ):
-        total = sum((r.valor for r in itens), Decimal(0))
-        por_orgao: dict[str, Decimal] = defaultdict(Decimal)
+        # Saldo por órgão (None = órgão desconhecido). Saldo negativo acontece quando a anulação cai na janela e a
+        # liquidação anulada ficou fora dela: conta como zero, senão a fatia do maior órgão passaria de 100%.
+        saldos: dict[str | None, Decimal] = defaultdict(Decimal)
         for r in itens:
-            if r.orgao_id is not None:  # órgão desconhecido conta no total, mas nunca como "o maior órgão"
-                por_orgao[r.orgao_id] += r.valor
-        if total <= 0 or not por_orgao:
+            saldos[r.orgao_id] += r.valor
+        saldos = {orgao_id: max(valor, Decimal(0)) for orgao_id, valor in saldos.items()}
+        total = sum(saldos.values(), Decimal(0))
+        # Órgão desconhecido conta no total, mas nunca como "o maior órgão".
+        por_orgao = {orgao_id: valor for orgao_id, valor in saldos.items() if orgao_id is not None}
+        if total < CONCENTRACAO_VALOR_MINIMO or not por_orgao:
             continue
         orgao, valor_orgao = max(por_orgao.items(), key=lambda kv: (kv[1], kv[0]))
         fracao = valor_orgao / total
         if fracao < CONCENTRACAO_LIMIAR:
             continue
-        do_orgao = sorted((r for r in itens if r.orgao_id == orgao), key=lambda r: (-r.valor, str(r.id)))
+        # Evidências: o que o órgão pagou, do maior para o menor (a anulação abate o total, mas não é evidência).
+        do_orgao = sorted(
+            (r for r in itens if r.orgao_id == orgao and r.valor > 0), key=lambda r: (-r.valor, str(r.id))
+        )
         nome = _nome_curto(nomes_orgaos.get(orgao, orgao))
         medida = (
             "do valor recebido"

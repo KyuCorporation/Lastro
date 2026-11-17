@@ -121,3 +121,23 @@ def test_cota_esgotada_429_nao_repete():
     with pytest.raises(base.ProvedorIndisponivel):
         ProvedorGemini("chave", "m", cliente=cliente).gerar("p", timeout_s=5)
     assert len(cliente.configs) == 1
+
+
+def test_repeticao_so_usa_o_tempo_que_sobrou(monkeypatch):
+    """5xx repete uma vez, mas dentro do mesmo timeout: sem sobra, cai no fallback em vez de esperar de novo."""
+    relogio = iter([0.0, 9.5])  # início; hora da repetição (sobram 0,5 s de 10 s)
+    monkeypatch.setattr(gemini.time, "monotonic", lambda: next(relogio))
+    monkeypatch.setattr(gemini.time, "sleep", lambda _s: None)
+
+    class Modelos:
+        chamadas = 0
+
+        def generate_content(self, **_k):
+            self.chamadas += 1
+            raise errors.ServerError(503, {"error": {"message": "overloaded"}})
+
+    cliente = type("Cliente", (), {"models": Modelos()})()
+    provedor = gemini.ProvedorGemini("chave", "modelo-x", cliente=cliente)
+    with pytest.raises(base.ProvedorIndisponivel):
+        provedor.gerar("p", timeout_s=10.0)
+    assert cliente.models.chamadas == 1

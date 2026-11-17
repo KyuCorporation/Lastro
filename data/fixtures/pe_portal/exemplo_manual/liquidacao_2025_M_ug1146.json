@@ -1,0 +1,33 @@
+{
+ "resposta": {
+  "status": "OK",
+  "tamanhoResultado": "2",
+  "limiteResultado": "100000",
+  "conteudo": [
+   {
+    "ID_UNIDADE_GESTORA": "1146",
+    "MUNICIPIO": "P062",
+    "ESFERA": "M",
+    "ANOREFERENCIA": "2025",
+    "IDEMPENHO": "9000310",
+    "NUMEROEMPENHO": "0000310",
+    "NUMERO": "700001",
+    "TIPO": "Liquidação",
+    "VALOR": "20000.00",
+    "DATA": "2025-04-30 00:00:00.0"
+   },
+   {
+    "ID_UNIDADE_GESTORA": "1146",
+    "MUNICIPIO": "P062",
+    "ESFERA": "M",
+    "ANOREFERENCIA": "2025",
+    "IDEMPENHO": "9000310",
+    "NUMEROEMPENHO": "0000310",
+    "NUMERO": "700002",
+    "TIPO": "Liquidação",
+    "VALOR": "20000.00",
+    "DATA": "2025-05-31 00:00:00.0"
+   }
+  ]
+ }
+}

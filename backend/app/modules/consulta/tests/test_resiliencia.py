@@ -3,6 +3,7 @@
 LLM fora do ar está em test_consulta_api.py (seção "LLM fora do ar"); fonte fora em pipeline/tests.
 """
 
+import json
 from uuid import uuid4
 
 from app.modules.catalogo.tests.conftest import _superusuario
@@ -59,3 +60,64 @@ def test_conexao_que_cai_no_meio_da_gravacao_nao_deixa_resposta_sem_recibo(
     monkeypatch.undo()
     depois = _perguntar(api, autenticar)
     assert depois.status_code == 200 and depois.json()["recibo_id"]
+
+
+# ------------------------------------------------------------------ teto de tempo total da consulta
+PLANO_VIGENTES = {"versao": "v1", "intent": "contratos_vigentes", "parametros": {"cnpj": "11222333000181"}}
+
+
+class ProvedorLento:
+    """LLM que responde certo, mas cada chamada custa `custo_s` no relógio da consulta (sem esperar de verdade)."""
+
+    nome, modelo = "lento", "lento-1"
+
+    def __init__(self, relogio: list[float], custo_s: float, plano: str | None = None) -> None:
+        self.relogio, self.custo_s = relogio, custo_s
+        self.plano = plano if plano is not None else json.dumps(PLANO_VIGENTES)
+        self.timeouts: list[float] = []
+
+    def gerar(self, prompt, *, json=False, timeout_s, temperatura=0.0) -> str:
+        self.timeouts.append(timeout_s)
+        self.relogio[0] += self.custo_s
+        return self.plano if json else "O fornecedor {{v1}} tem {{v2}} contratos vigentes, somando {{v3}}."
+
+
+def _recibo(api, cabecalho, corpo) -> dict:
+    return api.get(f"/recibos/{corpo['recibo_id']}", headers=cabecalho).json()["conteudo"]
+
+
+def test_planejador_lento_gasta_o_orcamento_e_o_texto_vem_do_modelo_padrao(api, autenticar, com_ambiente):
+    """O plano chegou, mas não sobra tempo para o redator: a resposta sai com o texto padrão, sem outra espera."""
+    relogio = [0.0]
+    provedor = ProvedorLento(relogio, custo_s=11.0)
+    com_ambiente(provedor=provedor, orcamento_s=12.0, relogio=lambda: relogio[0])
+    cabecalho = autenticar("ana@alfa.demo")
+
+    r = _perguntar(api, autenticar)
+    assert r.status_code == 200 and r.json()["status"] == "respondida"
+    assert len(provedor.timeouts) == 1  # só o planejador chamou a LLM
+    recibo = _recibo(api, cabecalho, r.json())
+    assert recibo["verificacao"] == {"status": "fallback", "motivos": ["tempo_esgotado"]}
+    assert recibo["ia"]["planejador_por_regras"] is False
+
+
+def test_sem_tempo_para_a_segunda_tentativa_o_plano_vem_das_regras(api, autenticar, com_ambiente):
+    relogio = [0.0]
+    provedor = ProvedorLento(relogio, custo_s=11.0, plano="isto não é um plano")
+    com_ambiente(provedor=provedor, orcamento_s=12.0, relogio=lambda: relogio[0])
+    cabecalho = autenticar("ana@alfa.demo")
+
+    r = _perguntar(api, autenticar)
+    assert r.status_code == 200 and r.json()["status"] == "respondida"
+    assert len(provedor.timeouts) == 1  # a segunda tentativa do planejador não cabia no orçamento
+    assert _recibo(api, cabecalho, r.json())["ia"]["planejador_por_regras"] is True
+
+
+def test_cada_chamada_a_llm_recebe_no_maximo_o_tempo_que_resta(api, autenticar, com_ambiente):
+    relogio = [0.0]
+    provedor = ProvedorLento(relogio, custo_s=3.0)
+    com_ambiente(provedor=provedor, timeout_s=20.0, orcamento_s=8.0, relogio=lambda: relogio[0])
+
+    r = _perguntar(api, autenticar)
+    assert r.status_code == 200
+    assert provedor.timeouts == [8.0, 5.0]  # planejador com o orçamento inteiro; redator com o que sobrou

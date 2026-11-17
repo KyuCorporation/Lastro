@@ -26,7 +26,8 @@ def mensagem_escopo(ufs: list[str]) -> str:
 
 def _ufs_citadas(pergunta: str) -> set[str]:
     # Texto todo em maiúsculas faria "SE", "TO", "PA" parecerem siglas: aí só valem os nomes dos estados.
-    return ufs_mencionadas(pergunta.lower() if pergunta.isupper() else pergunta)
+    # Sigla só conta quando usada como lugar: "MS Informática" é nome de empresa, não Mato Grosso do Sul.
+    return ufs_mencionadas(pergunta.lower() if pergunta.isupper() else pergunta, siglas_em_contexto=True)
 
 
 def checar_pergunta(pergunta: str, ctx: ContextoAcesso) -> Negacao | None:

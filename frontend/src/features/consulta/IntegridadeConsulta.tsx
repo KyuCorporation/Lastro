@@ -1,14 +1,31 @@
-import type { ConsultaSaida, Recibo } from "../../api/types";
+import type { ConsultaSaida, ConteudoRecibo, Recibo } from "../../api/types";
 import { Selo } from "../../components/Selo";
+import { nomeIntent, nomeMotivo } from "../../lib/apresentacao";
 import { nomeFonte } from "../../lib/formato";
-import { nomesFontes } from "../recibo/leitura";
+import { contextoCarteira, nomesFontes } from "../recibo/leitura";
 
-const VERIFICACAO: Record<string, string> = {
-  aprovado: "Texto conferido pelo verificador",
-  fallback: "Resposta padrão do sistema, com os valores do banco",
-  abstencao: "Sem registros nas fontes: o sistema não conclui",
-  negado: "Pedido negado",
+const TEXTO: Record<string, string> = {
+  aprovado: "conferido pelo verificador",
+  fallback: "resposta padrão do sistema",
+  abstencao: "sem registros nas fontes, o sistema não conclui",
+  negado: "pedido negado",
 };
+
+/** O que aconteceu nesta consulta, lido do recibo dela: nada aqui é uma lista fixa. */
+function regrasDoRecibo(c: ConteudoRecibo): string[] {
+  const n = c.execucao.n_linhas;
+  const motivos = (c.verificacao.motivos ?? []).map(nomeMotivo).join("; ");
+  const texto = TEXTO[c.verificacao.status] ?? c.verificacao.status;
+  const mostrarMotivos = c.verificacao.status === "fallback" && motivos;
+  return [
+    `Escopo aplicado pelo banco: ${(c.execucao.ufs_efetivas.length ? c.execucao.ufs_efetivas : c.ufs_autorizadas).join(", ")}`,
+    `Consulta do catálogo: ${nomeIntent(c.execucao.consulta_catalogo)} (${c.execucao.consulta_catalogo})`,
+    `${n} registro${n === 1 ? "" : "s"} citado${n === 1 ? "" : "s"}`,
+    `Plano: ${c.ia.planejador_por_regras ? "regras do sistema, sem IA" : `modelo ${c.ia.modelo ?? c.ia.provedor ?? "de IA"}`}`,
+    `Texto: ${texto}${mostrarMotivos ? ` (${motivos})` : ""}`,
+    "Registrada na auditoria",
+  ];
+}
 
 function Regra({ ok, children }: { ok: boolean; children: string }) {
   return (
@@ -31,6 +48,7 @@ export function IntegridadeConsulta({ resultado, recibo, ufs }: { resultado: Con
     ? nomesFontes(recibo.conteudo)
     : [...new Set(resultado.citacoes.map((c) => nomeFonte(c.fonte_id)))];
   const negada = resultado.status === "negada";
+  const contexto = recibo ? contextoCarteira(recibo.conteudo) : null;
 
   return (
     <section aria-labelledby={`integridade-${resultado.consulta_id}`} className="cartao p-6">
@@ -46,19 +64,31 @@ export function IntegridadeConsulta({ resultado, recibo, ufs }: { resultado: Con
         {fontes.length > 0 ? fontes.join(" · ") : negada ? "Nenhuma: a busca foi interrompida" : "Nenhum registro citado"}
       </p>
 
+      {contexto && (
+        <>
+          <h3 className="mt-5 text-sm font-semibold text-kyu-suave">Contexto</h3>
+          <p className="mt-1 text-kyu-texto">{contexto}</p>
+        </>
+      )}
+
       <h3 className="mt-5 text-sm font-semibold text-kyu-suave">Regras aplicadas</h3>
       <ul className="mt-2 space-y-2 text-kyu-texto">
-        <Regra ok>Perfil validado antes da busca</Regra>
-        <Regra ok={!negada}>{negada ? "Busca bloqueada fora do escopo" : "Escopo aplicado pelo banco de dados"}</Regra>
-        <Regra ok={resultado.citacoes.length > 0}>Resposta vinculada a registros</Regra>
-        <Regra ok>Consulta registrada para auditoria</Regra>
+        {recibo ? (
+          regrasDoRecibo(recibo.conteudo).map((regra) => (
+            <Regra key={regra} ok>
+              {regra}
+            </Regra>
+          ))
+        ) : (
+          // Sem recibo (negação, pedido de detalhe): só o que vale para toda consulta.
+          <>
+            <Regra ok>Perfil validado antes da busca</Regra>
+            <Regra ok={!negada}>{negada ? "Busca bloqueada fora do escopo" : "Escopo aplicado pelo banco de dados"}</Regra>
+            <Regra ok={resultado.citacoes.length > 0}>Resposta vinculada a registros</Regra>
+            <Regra ok>Consulta registrada para auditoria</Regra>
+          </>
+        )}
       </ul>
-      {recibo && (
-        <p className="mt-4 text-sm text-kyu-texto">
-          <span className="font-semibold">Verificação:</span>{" "}
-          {VERIFICACAO[recibo.conteudo.verificacao.status] ?? recibo.conteudo.verificacao.status}
-        </p>
-      )}
 
       <p className="mt-5 text-sm text-kyu-suave">Sem evidência suficiente, a IA não conclui.</p>
     </section>

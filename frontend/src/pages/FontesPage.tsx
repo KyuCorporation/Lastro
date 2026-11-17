@@ -13,10 +13,11 @@ import { dataHora, nomeFonte } from "../lib/formato";
 // O que cada fonte traz para o Lastro (docs/catalogo-fontes.md). A coleta vem de GET /fontes.
 const CONTEUDO: Record<string, { conteudo: string; ordem: number }> = {
   pe_portal: {
-    conteudo: "Contratos, empenhos e liquidações de PE (amostra de homologação; nesta base, os contratos de PE vêm do PNCP)",
+    conteudo:
+      "Contratos do estado e dos municípios de PE; empenhos e liquidações do estado e dos municípios configurados",
     ordem: 1,
   },
-  pncp: { conteudo: "Contratos públicos de todas as esferas (PE e AL)", ordem: 2 },
+  pncp: { conteudo: "Contratos públicos dos outros estados carregados (Alagoas na demo); PE vem do TCE-PE", ordem: 2 },
   ceis: { conteudo: "Empresas inidôneas e suspensas, de todo o país", ordem: 3 },
   cnep: { conteudo: "Empresas punidas pela Lei Anticorrupção, de todo o país", ordem: 4 },
 };
@@ -219,8 +220,9 @@ export function FontesPage() {
           ))}
         </ol>
         <p className="mt-5 text-kyu-suave">
-          Captura a 1 requisição por segundo, guarda a resposta bruta com sha256, normaliza campo a campo, descarta
-          pessoa física e grava sem duplicar: rodar de novo não muda as contagens.
+          Captura a 1 requisição por segundo, guarda cada resposta com sha256, normaliza campo a campo, descarta pessoa
+          física e grava sem duplicar: rodar de novo não muda as contagens. No TCE-PE, o dado de pessoa física é
+          retirado antes de a resposta ser guardada.
         </p>
       </section>
     </div>

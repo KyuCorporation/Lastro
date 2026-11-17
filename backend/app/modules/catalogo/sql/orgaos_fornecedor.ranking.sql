@@ -1,4 +1,5 @@
--- orgaos_fornecedor@v1 — ranking de órgãos por valor contratado e participação (derivado dos contratos abaixo)
+-- orgaos_fornecedor@v2 — ranking de órgãos por valor contratado e participação (derivado dos contratos abaixo)
+-- v2: sem limite de linhas. É um agregado por órgão, e os totais da resposta somam todos os grupos.
 with por_orgao as (
   select c.uf, c.orgao_id,
          count(*)              as n_contratos,
@@ -16,4 +17,3 @@ select p.uf, p.orgao_id, o.nome as orgao_nome, o.esfera,
   from por_orgao p
   left join orgaos o on o.id = p.orgao_id
  order by valor_contratado desc, p.orgao_id
- limit %(limite)s

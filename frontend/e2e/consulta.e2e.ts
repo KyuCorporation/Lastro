@@ -1,5 +1,5 @@
 // Passos da demo pela interface real, nas 5 telas do design: consulta, recibo, acesso, auditoria e fontes.
-// Dados: seeds de demo e `ingest todas --offline` (make demo). Nada é simulado: VITE_CONSULTAS_SIMULADAS=false.
+// Dados: seeds de demo e `ingest todas --offline` (make demo). Nada é simulado.
 
 import { expect, test, type Page } from "@playwright/test";
 
@@ -108,7 +108,13 @@ test("recibo de evidências mostra os registros reais, o total e o selo", async 
   await entrarComo(page, "Ana");
   await perguntar(page, "Quais contratos do CNPJ 99.000.001/0001-01 vencem nos próximos 6 meses?");
   const resposta = page.getByRole("region", { name: "Resposta com evidências" });
-  await expect(resposta).toContainText("Valor total registrado: R$ 1.250.000,00");
+  const valores = resposta.getByRole("region", { name: "Valores usados na resposta" });
+  await expect(valores).toContainText("Valor somado dos contratos que vencem");
+  await expect(valores).toContainText("R$ 1.250.000,00");
+  await expect(resposta.getByRole("link", { name: "Abrir dossiê do fornecedor" })).toHaveAttribute(
+    "href",
+    "/fornecedores/99000001000101",
+  );
   await expect(resposta).toContainText("Período considerado: próximos 180 dias");
   await expect(page.getByRole("region", { name: "Integridade da consulta" })).toContainText("Escopo: PE");
   await expect(page.getByRole("region", { name: "Integridade da consulta" })).toContainText("TCE-PE Dados Abertos");
@@ -123,7 +129,8 @@ test("recibo de evidências mostra os registros reais, o total e o selo", async 
     "href",
     /^https:\/\/sistemas\.tcepe\.tc\.br\/DadosAbertos\//,
   );
-  await expect(page.getByText(/Total reproduzível: .* = R\$ 1\.250\.000,00/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Valores usados na resposta" })).toContainText("R$ 1.250.000,00");
+  await expect(page.getByRole("region", { name: "Plano e parâmetros" })).toContainText("contratos_vencendo@v1");
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible(); // selo sha256 do recibo
 });
 

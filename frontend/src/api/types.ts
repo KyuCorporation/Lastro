@@ -91,6 +91,8 @@ export interface ConteudoRecibo {
   consulta_id: string;
   perfil: Perfil;
   ufs_autorizadas: string[];
+  /** Carteira escolhida como contexto da consulta (SPEC §3.3, I5). */
+  carteira?: { id: string; finalidade: string } | null;
   pergunta: string;
   plano: { intent: string; parametros: Record<string, unknown> };
   execucao: {
@@ -109,7 +111,8 @@ export interface ConteudoRecibo {
     coletado_em: string;
     hash_conteudo: string;
   }[];
-  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string }>;
+  /** `significado`: rótulo escrito pelo backend para o valor (recibos antigos não têm). */
+  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string; significado?: string }>;
   fontes: { fonte_id: string; nome: string; coletado_em: string; execucao_id: string | null; sintetico?: boolean }[];
   resposta_final: string;
   verificacao: { status: "aprovado" | "fallback" | "abstencao" | "negado"; motivos?: string[] };
@@ -320,6 +323,8 @@ export interface MetricasGabarito {
   citacao_correta?: number | null;
   n_com_citacao?: number;
   taxa_fallback?: number;
+  /** Resultado de cada provedor de LLM com que o gabarito rodou (eval/reports/gabarito.<provedor>.json). */
+  por_provedor?: Record<string, MetricasGabarito>;
 }
 
 /** Resumo de eval/reports/ataques.json (make eval-ataques). */
@@ -331,6 +336,8 @@ export interface MetricasAtaques {
   pct_bloqueado?: number;
   vazamentos?: number;
   por_categoria?: Record<string, { n: number; bloqueados: number; vazamentos: number }>;
+  /** Resultado de cada provedor de LLM com que a suíte rodou (eval/reports/ataques.<provedor>.json). */
+  por_provedor?: Record<string, MetricasAtaques>;
 }
 
 /** GET /metricas: cada parte é null enquanto o relatório não foi gerado. */

@@ -9,10 +9,10 @@ Linhas do SPEC §3. A coluna Status diz o que o código faz hoje:
 
 | Requisito | Implementação | Teste | Status |
 |---|---|---|---|
-| **R1** Captura de um portal estadual | `pipeline/lastro_pipeline/connectors/pe_portal.py` (API do TCE-PE), `runner.py`, `bronze.py` | `pipeline/tests/test_pe_portal.py`, `test_ingestao.py` | Parcial: o conector está pronto e testado contra a fixture `exemplo_manual`. A API do TCE-PE só responde a IP brasileiro, e a amostra real (`ingest pe_portal --amostra 200`) ainda precisa ser coletada por alguém da equipe. Na base atual, os contratos de PE vêm do PNCP |
+| **R1** Captura de um portal estadual | `pipeline/lastro_pipeline/connectors/pe_portal.py` (API do TCE-PE), `runner.py`, `bronze.py` | `pipeline/tests/test_pe_portal.py`, `test_ingestao.py` | Parcial: o conector foi conferido na API real em 15/11/2026 e é testado com a amostra real (`data/fixtures/pe_portal/amostra`) e com o `exemplo_manual`. Falta a primeira carga completa (`make ingest-pe`, só em rede brasileira) |
 | **R2** Normalização e catalogação | `pipeline/lastro_pipeline/normalize/`, `quality/relatorio.py`; `docs/catalogo-fontes.md`, `docs/dicionario-dados.md`; tela 05 Fontes | `pipeline/tests/test_normalize.py`, `test_ingestao.py` (proveniência em toda linha, idempotência, PF descartada, queda de volume) | Pronto |
 | **R3** Acesso por estado e perfil | `db/migrations/002_rls.sql`, `backend/app/core/db.py`, `modules/policy/` | `backend/app/tests/test_acesso.py` (matriz do SPEC §6.4), `modules/policy/tests/test_permissoes.py` | Pronto |
-| **R4** LLM restrita aos dados autorizados | `modules/consulta/guardas.py`, `llm/planejador.py`, `modules/catalogo/executor.py`, `llm/redator.py`, `llm/verificador.py` | `modules/consulta/tests/test_consulta_api.py`, `llm/tests/test_verificador*.py`, `eval/ataques` (58 casos) | Pronto |
+| **R4** LLM restrita aos dados autorizados | `modules/consulta/guardas.py`, `llm/planejador.py`, `modules/catalogo/executor.py`, `llm/redator.py`, `llm/verificador.py` | `modules/consulta/tests/test_consulta_api.py`, `llm/tests/test_verificador*.py`, `eval/ataques` (63 casos) | Pronto |
 | **R5** Registro de consultas e fontes | `modules/consulta/service.py` (consulta + recibo + auditoria numa transação), `modules/recibos/`, `modules/auditoria/` | `modules/recibos/tests/`, `modules/auditoria/tests/`, `test_consulta_api.py::test_falha_na_gravacao_nao_deixa_consulta_sem_recibo` | Pronto |
 
 ## Diferenciais
@@ -21,7 +21,7 @@ Linhas do SPEC §3. A coluna Status diz o que o código faz hoje:
 |---|---|---|---|
 | **D1** RAG com citação | Catálogo SQL (`modules/catalogo/sql/`), `busca_objeto` com full-text em português; citações montadas pelo backend (`modules/consulta/citacoes.py`) | `modules/catalogo/tests/`, `eval/gabarito` (citação correta) | Pronto |
 | **D2** Multi-tenant | RLS por tenant em carteiras, consultas, recibos, alertas e auditoria | `test_acesso.py`, ataques `outro_tenant` e `idor` | Pronto |
-| **D3** Proteção contra ataques de prompt | Guardas por código, Action-Selector, redator com marcadores, verificador; fornecedor envenenado em `db/seeds/020_demo_ataque.sql` | `eval/ataques/ataques.yaml` (58 casos em 11 categorias), `llm/tests/test_verificador_adversarial.py` | Pronto |
+| **D3** Proteção contra ataques de prompt | Guardas por código, Action-Selector, redator com marcadores, verificador; fornecedor envenenado em `db/seeds/020_demo_ataque.sql` | `eval/ataques/ataques.yaml` (63 casos em 11 categorias), `llm/tests/test_verificador_adversarial.py` | Pronto |
 
 ## Inovações
 

@@ -46,7 +46,9 @@ def test_modo_mock_usa_o_modelo_deterministico_preenchido(resultado):
     assert r.status == "aprovado" and r.por_modelo_deterministico and r.modelo is None
     assert r.texto and not MARCADOR.search(r.texto) and "{{" not in r.texto
     assert "11.222.333/0001-81" in r.texto
-    assert r.valores and all(set(v) == {"valor", "tipo", "origem"} for v in r.valores.values())
+    assert r.valores and all(set(v) == {"valor", "tipo", "origem", "significado"} for v in r.valores.values())
+    # O significado vem do código (marcadores.py) e vai para o recibo: a tela rotula cada valor com ele.
+    assert all(v["significado"].strip() for v in r.valores.values())
     assert r.versao_prompt == "redator_v2"
 
 

@@ -61,6 +61,8 @@ class Ambiente:
     hoje: Callable[[], date] = hoje_recife
     agora: Callable[[], datetime] = lambda: datetime.now(UTC)
     timeout_s: float = 20.0  # LLM_TIMEOUT_SECONDS, por chamada ao provedor
+    orcamento_s: float = 12.0  # LLM_ORCAMENTO_SEGUNDOS, soma das chamadas à LLM numa consulta
+    relogio: Callable[[], float] = time.monotonic
 
 
 @dataclass
@@ -109,7 +111,12 @@ def _abstencao(mensagem: str, motivo: str, planejamento) -> Desfecho:
 
 
 def _executar_e_redigir(
-    pergunta: str, plano: PlanoConsulta, ctx: ContextoAcesso, amb: Ambiente, planejamento
+    pergunta: str,
+    plano: PlanoConsulta,
+    ctx: ContextoAcesso,
+    amb: Ambiente,
+    planejamento,
+    restante: Callable[[], float],
 ) -> Desfecho:
     inicio = time.perf_counter()
     try:
@@ -132,16 +139,19 @@ def _executar_e_redigir(
             coleta = fontes.ultima_coleta(conn, resultado.intent)
     # Planejador já caiu nas regras por indisponibilidade: o redator não espera outro timeout (SPEC §8.6).
     llm_caiu = amb.provedor is not None and planejamento.por_regras
+    # Orçamento de tempo da consulta gasto (planejador lento): o texto sai do modelo determinístico.
+    sem_tempo = amb.provedor is not None and not llm_caiu and restante() < planejador.MARGEM_MINIMA_S
     redacao = redator.redigir(
         pergunta,
         resultado,
         ufs_autorizadas=ctx.ufs,
-        provedor=None if llm_caiu else amb.provedor,
-        timeout_s=amb.timeout_s,
+        provedor=None if llm_caiu or sem_tempo else amb.provedor,
+        timeout_s=min(amb.timeout_s, max(restante(), 0.0)),
         fontes_coletadas_em=coleta,
     )
-    if llm_caiu and redacao.status == "aprovado":
-        redacao = replace(redacao, status="fallback", motivos=("provedor_indisponivel",))
+    if (llm_caiu or sem_tempo) and redacao.status == "aprovado":
+        motivo = "provedor_indisponivel" if llm_caiu else "tempo_esgotado"
+        redacao = replace(redacao, status="fallback", motivos=(motivo,))
     linhas = cit.linhas_citaveis(resultado)
     respondida = redacao.status != "abstencao"
     return Desfecho(
@@ -163,8 +173,18 @@ def _decidir(entrada: ConsultaEntrada, ctx: ContextoAcesso, amb: Ambiente) -> De
     if negacao := guardas.checar_pergunta(entrada.pergunta, ctx):
         return _negado(negacao)
 
+    fim = amb.relogio() + amb.orcamento_s
+
+    def restante() -> float:
+        return fim - amb.relogio()
+
     planejamento = planejador.planejar(
-        entrada.pergunta, ufs=ctx.ufs, hoje=amb.hoje(), provedor=amb.provedor, timeout_s=amb.timeout_s
+        entrada.pergunta,
+        ufs=ctx.ufs,
+        hoje=amb.hoje(),
+        provedor=amb.provedor,
+        timeout_s=amb.timeout_s,
+        restante=restante,
     )
     plano = planejamento.plano
     if plano.intent == "esclarecer":
@@ -173,7 +193,7 @@ def _decidir(entrada: ConsultaEntrada, ctx: ContextoAcesso, amb: Ambiente) -> De
         )
     if plano.intent == "fora_de_escopo":
         return _abstencao(MENSAGEM_FORA_DO_CATALOGO, "fora_de_escopo", planejamento)
-    return _executar_e_redigir(entrada.pergunta, plano, ctx, amb, planejamento)
+    return _executar_e_redigir(entrada.pergunta, plano, ctx, amb, planejamento, restante)
 
 
 # ------------------------------------------------------------------ gravação
@@ -248,9 +268,9 @@ def _gravar(
             },
         ).fetchone()[0]
 
-        recibo_id = None
+        recibo = None
         if d.verificacao is not None:
-            recibo_id = recibos.gravar(
+            recibo = recibos.gravar(
                 conn,
                 DadosRecibo(
                     consulta_id=consulta_id,
@@ -271,12 +291,18 @@ def _gravar(
             )
 
         intent = d.planejamento.plano.intent if d.planejamento else None
-        base = {"consulta_id": str(consulta_id), "intent": intent, "recibo_id": recibo_id and str(recibo_id)}
+        # O hash do recibo entra na trilha encadeada: trocar conteúdo e hash na linha do recibo não o apaga daqui.
+        base = {
+            "consulta_id": str(consulta_id),
+            "intent": intent,
+            "recibo_id": recibo and str(recibo.id),
+            "recibo_hash": recibo and recibo.hash,
+        }
         auditoria.registrar_em(conn, d.evento, {**base, **d.detalhes})
         if MOTIVOS_DE_ATAQUE.intersection(d.motivos):
             ataque = {**base, "motivos": sorted(MOTIVOS_DE_ATAQUE.intersection(d.motivos))}
             auditoria.registrar_em(conn, "ataque_detectado", ataque)
-    return consulta_id, recibo_id
+    return consulta_id, recibo and recibo.id
 
 
 def _registrar_erro(entrada: ConsultaEntrada, ctx: ContextoAcesso, erro: Exception) -> None:

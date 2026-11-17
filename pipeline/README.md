@@ -5,7 +5,7 @@ Conecta como `lastro_ingest`. Roda por CLI (`python -m lastro_pipeline.cli ...`)
 ## Uso
 
 ```
-python -m lastro_pipeline.cli ingest pe_portal            # TCE-PE (só em rede brasileira)
+python -m lastro_pipeline.cli ingest pe_portal            # TCE-PE (só em rede brasileira; recorte em TCEPE_*)
 python -m lastro_pipeline.cli ingest pncp                 # PNCP: UFs de PNCP_UFS no período do .env
 python -m lastro_pipeline.cli ingest sancoes              # CEIS + CNEP (ou: ceis, cnep)
 python -m lastro_pipeline.cli ingest todas --offline      # tudo a partir de data/fixtures, sem rede
@@ -23,7 +23,8 @@ lastro_pipeline/
   cli.py            # typer: ingest <fonte> [--offline] [--amostra N], sinais
   config.py         # pydantic-settings (.env)
   modelos.py        # RespostaBruta, Orgao, Fornecedor, Contrato, Pagamento, Sancao, Descarte
-  http.py           # cliente comum: N req/s, retry com backoff, cache em disco do dia, User-Agent lastro-hackathon
+  http.py           # cliente comum: N req/s, retry com backoff, cache em disco (do dia, ou mais se o conector pedir),
+                    # tratamento do corpo antes do cache (saneamento), User-Agent lastro-hackathon
   bronze.py         # resposta bruta em data/raw/<fonte>/<data>/ e em arquivos_brutos (sha256 único por fonte)
   db.py             # SQL explícito: execucoes_ingestao e upsert por (fonte_id, id_origem) só se hash_conteudo mudou
   runner.py         # orquestra uma execução, igual para todas as fontes
@@ -31,7 +32,7 @@ lastro_pipeline/
   connectors/       # base.py (contrato), pe_portal.py, pncp.py, sancoes.py; __init__.py registra as fontes
   normalize/        # cnpj.py, valores.py e o mapeamento campo a campo de cada fonte
   quality/          # relatorio.py: completude, duplicidade, datas fora de faixa, queda de volume > 50%
-  sinais/           # regras.py (regras v1, puras) e calculo.py (lê fatos, grava sinais)
+  sinais/           # regras.py (regras v2, puras) e calculo.py (lê fatos, grava sinais)
 tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 ```
 
@@ -45,19 +46,30 @@ tests/              # usam data/fixtures, nunca rede (exceto @pytest.mark.rede)
 
 Pessoa física (CPF, `tipoPessoa = PF`, `TIPO DE PESSOA = F`) é descartada e contada em `registros_descartados`.
 
+### TCE-PE (`pe_portal`)
+
+A API não pagina e corta em 100 mil registros, então a coleta é fatiada: contratos por ano e esfera (desde
+`TCEPE_CONTRATOS_ANO_INICIAL`), despesas do estado por unidade gestora, despesas dos municípios de
+`TCEPE_MUNICIPIOS` por mês. Fatia de exercício encerrado fica 30 dias no cache (`TCEPE_CACHE_DIAS`); fatia que
+bate no limite falha com `RecorteTruncado`. A resposta é saneada antes de ir para o cache e o bronze: pessoa
+física vira marcador e o CPF nunca é gravado. A liquidação não traz o credor; o conector o busca no empenho, e
+por isso as despesas são coletadas (e ficam na fixture) antes das liquidações. Formato, filtros e mapeamento em
+`docs/catalogo-fontes.md`.
+
 ## Sinais (`make sinais`)
 
-Regras v1 do SPEC §9 em `sinais/regras.py`. Cada sinal tem `explicacao` em uma frase e `evidencias`
+Regras v2 do SPEC §9 em `sinais/regras.py`. Cada sinal tem `explicacao` em uma frase e `evidencias`
 (`[{tabela, id, url_origem}]`, até 50, as de maior valor). Linguagem: "sinal para investigar", nunca acusação.
 
 | Sinal | Regra | UF | Gravidade |
 |---|---|---|---|
 | `sancao_direta` | CNPJ com sanção vigente no CEIS ou CNEP (começou e não terminou; sem data final = vigente) | nula (nacional) | forte |
 | `penhasco` | ≥ 50% do valor dos contratos vigentes (`vigencia_fim >= hoje`) termina em até 180 dias | por UF | atenção |
-| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses | por UF | atenção |
+| `concentracao` | Maior órgão responde por ≥ 70% do valor recebido nos últimos 24 meses, se o recebido na janela somar ao menos R$ 10 mil | por UF | atenção |
 
 - **Por UF:** penhasco e concentração usam só fatos da própria UF, para a RLS de `sinais` não vazar outra UF.
-- **Recebido** = pagamentos e liquidações; empenho (`id_origem` `emp:`) não conta, como no catálogo. Se a UF não
+- **Recebido** = pagamentos e liquidações; empenho (`id_origem` `emp:`) não conta, como no catálogo. Anulação de
+  liquidação (valor negativo, TCE-PE) abate do recebido e não entra como evidência. Se a UF não
   tem nenhum pagamento do fornecedor (o PNCP só traz contratos), usa o valor dos contratos assinados na janela, e a
   explicação diz isso. Órgão desconhecido entra no total, mas nunca como "o maior órgão".
 - **Recálculo idempotente:** o mesmo (fornecedor, UF, tipo) atualiza a mesma linha (o `id` não muda); sinal que

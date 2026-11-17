@@ -89,6 +89,48 @@ describe("08 métricas", () => {
     expect(screen.getByRole("group", { name: "Vazamentos" })).toHaveTextContent("Abaixo da meta");
   });
 
+  it("com dois provedores, cada número aparece sem LLM e com o Gemini, lado a lado", async () => {
+    const gemini = { ...METRICAS.eval!, provedor_llm: "gemini", gerado_em: "2026-11-16T20:00:00+00:00", ok: 94,
+      acerto_intent: 94, taxa_fallback: 6 };
+    const mock = { ...METRICAS.eval!, provedor_llm: "mock" };
+    const atqGemini = { ...METRICAS.ataques!, provedor_llm: "gemini", bloqueados: 45, pct_bloqueado: 90 };
+    const atqMock = { ...METRICAS.ataques!, provedor_llm: "mock" };
+    const api = apiFalsa({
+      metricas: async () => ({
+        ...METRICAS,
+        eval: { ...mock, por_provedor: { gemini, mock } },
+        ataques: { ...atqMock, por_provedor: { mock: atqMock, gemini: atqGemini } },
+      }),
+    });
+    await montarLogado("ana@alfa.demo", "/metricas", api);
+
+    const gabarito = await screen.findByRole("region", { name: "Gabarito de perguntas" });
+    expect(gabarito).toHaveTextContent("Sem LLM, o planejador é o roteador por regras");
+    expect(gabarito).toHaveTextContent("Sem LLM: 100 de 100 perguntas sem falha · Gemini: 94 de 100");
+    const intent = within(gabarito).getByRole("group", { name: "Acerto de intent" });
+    const linhas = within(intent).getAllByRole("listitem").map((li) => li.textContent);
+    expect(linhas).toEqual(["Sem LLM100%", "Gemini94%"]);
+    expect(intent).toHaveTextContent("Meta atingida");
+    expect(within(gabarito).getByRole("group", { name: "Texto trocado pelo modelo padrão" })).toHaveTextContent("Gemini6%");
+
+    const ataques = screen.getByRole("region", { name: "Ataques de injeção e escopo" });
+    const bloqueados = within(ataques).getByRole("group", { name: "Ataques bloqueados" });
+    expect(bloqueados).toHaveTextContent("Sem LLM49 de 50");
+    expect(bloqueados).toHaveTextContent("Gemini45 de 50");
+    expect(bloqueados).toHaveTextContent("Abaixo da meta com Gemini");
+    expect(within(ataques).getByRole("table", { name: "Ataques por categoria, sem LLM" })).toBeInTheDocument();
+  });
+
+  it("com um provedor só, a tela continua com um número por indicador", async () => {
+    const api = apiFalsa({
+      metricas: async () => ({ ...METRICAS, eval: { ...METRICAS.eval!, por_provedor: { mock: METRICAS.eval! } } }),
+    });
+    await montarLogado("ana@alfa.demo", "/metricas", api);
+    const intent = await screen.findByRole("group", { name: "Acerto de intent" });
+    expect(within(intent).queryAllByRole("listitem")).toHaveLength(0);
+    expect(screen.getByRole("region", { name: "Gabarito de perguntas" })).not.toHaveTextContent("roteador por regras");
+  });
+
   it("relatório ainda não gerado vira aviso com o comando, sem quebrar", async () => {
     const api = apiFalsa({ metricas: async () => ({ eval: null, ataques: null, cronometro: null, ultima_atualizacao: null }) });
     await montarLogado("ana@alfa.demo", "/metricas", api);

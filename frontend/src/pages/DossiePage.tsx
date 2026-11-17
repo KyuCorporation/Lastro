@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import type { ContratoDossie, Dossie } from "../api/types";
+import { ErroApi } from "../api/http";
 import { Carregando } from "../components/Carregando";
 import { LinkOrigem } from "../components/LinkOrigem";
 import { MensagemErro } from "../components/MensagemErro";
@@ -73,6 +74,8 @@ function Contratos({ contratos, legenda, vazio }: { contratos: ContratoDossie[];
 
 function Conteudo({ d }: { d: Dossie }) {
   const n = d.sinais.length;
+  // Datas ISO do mesmo formato: a maior em ordem de texto é a mais recente.
+  const calculo = d.sinais.map((s) => s.calculado_em).sort().at(-1);
   return (
     <>
       <section aria-labelledby="titulo-fornecedor" className="cartao flex flex-wrap items-start justify-between gap-4 p-7">
@@ -83,10 +86,32 @@ function Conteudo({ d }: { d: Dossie }) {
           <p className="mt-2 font-mono text-kyu-suave">CNPJ {cnpj(d.fornecedor.cnpj)}</p>
           {d.fornecedor.uf_sede && <p className="text-kyu-suave">Sede em {nomeUf(d.fornecedor.uf_sede)}</p>}
         </div>
-        <Selo tom={n === 0 ? "verde" : "ambar"}>
-          {n === 0 ? "Nenhum sinal para investigar" : `${n} sina${n === 1 ? "l" : "is"} para investigar`}
+        {/* Sem sinal não é "aprovado": o selo fica neutro e a cobertura, logo abaixo, diz o que foi olhado. */}
+        <Selo tom={n === 0 ? "neutro" : "ambar"}>
+          {n === 0 ? "Nenhum sinal nas fontes consultadas" : `${n} sina${n === 1 ? "l" : "is"} para investigar`}
         </Selo>
       </section>
+
+      <Secao id="titulo-cobertura" titulo="Cobertura deste dossiê">
+        {d.fontes.length === 0 ? (
+          <p className="text-kyu-suave">Nenhuma linha de fonte no dossiê.</p>
+        ) : (
+          <ul className="space-y-2">
+            {d.fontes.map((f) => (
+              <li key={f.fonte_id}>
+                <span className="font-semibold">{f.nome}</span>{" "}
+                <span className="text-kyu-suave">· coleta mais recente em {dataHora(f.coletado_em)}</span>
+                {f.sintetico && <span className="ml-2"><Selo tom="neutro">Registro sintético de teste</Selo></span>}
+              </li>
+            ))}
+          </ul>
+        )}
+        {calculo && <p className="mt-3 text-kyu-texto">Sinais calculados em {dataHora(calculo)}.</p>}
+        <p className="mt-3 text-sm text-kyu-suave">
+          Ausência de sinal não é atestado de regularidade: o dossiê cobre só as fontes acima e os estados do seu
+          acesso.
+        </p>
+      </Secao>
 
       <Secao id="titulo-resumo" titulo="Resumo por estado">
         {d.resumo_por_uf.length === 0 ? (
@@ -94,7 +119,7 @@ function Conteudo({ d }: { d: Dossie }) {
         ) : (
           <Tabela
             legenda="Contratos e pagamentos por estado"
-            colunas={["Estado", "Contratos", "Valor contratado", "Valor vigente", "Pagamentos", "Valor pago", "Valor empenhado"]}
+            colunas={["Estado", "Contratos", "Valor contratado", "Valor vigente", "Liquidações", "Valor liquidado", "Valor empenhado"]}
           >
             {d.resumo_por_uf.map((r) => (
               <tr key={r.uf} className="border-b border-kyu-linha">
@@ -111,6 +136,10 @@ function Conteudo({ d }: { d: Dossie }) {
             ))}
           </Tabela>
         )}
+        <p className="mt-3 text-sm text-kyu-suave">
+          Empenhado: valor reservado no orçamento. Liquidado: despesa reconhecida pelo órgão, etapa anterior ao
+          pagamento.
+        </p>
       </Secao>
 
       <Secao id="titulo-sinais" titulo="Sinais para investigar">
@@ -172,22 +201,6 @@ function Conteudo({ d }: { d: Dossie }) {
           </ul>
         )}
       </Secao>
-
-      <Secao id="titulo-fontes" titulo="Fontes consultadas">
-        {d.fontes.length === 0 ? (
-          <p className="text-kyu-suave">Nenhuma linha de fonte no dossiê.</p>
-        ) : (
-          <ul className="space-y-2">
-            {d.fontes.map((f) => (
-              <li key={f.fonte_id}>
-                <span className="font-semibold">{f.nome}</span>{" "}
-                <span className="text-kyu-suave">· coleta mais recente em {dataHora(f.coletado_em)}</span>
-                {f.sintetico && <span className="ml-2"><Selo tom="neutro">Registro sintético de teste</Selo></span>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Secao>
     </>
   );
 }
@@ -204,6 +217,17 @@ export function DossiePage() {
       </TituloPagina>
       {dossie.isPending ? (
         <Carregando texto="Montando o dossiê…" />
+      ) : dossie.isError && dossie.error instanceof ErroApi && dossie.error.codigo === "NAO_ENCONTRADO" ? (
+        // Não é falha: o fornecedor só não aparece nas fontes e nos estados do acesso de quem consulta.
+        <section aria-labelledby="titulo-sem-registros" className="cartao p-6">
+          <h2 id="titulo-sem-registros" className="text-xl font-bold text-kyu-texto">
+            Sem registros deste fornecedor
+          </h2>
+          <p className="mt-2 font-mono text-kyu-suave">CNPJ {cnpj(param ?? "")}</p>
+          <p className="mt-2 text-kyu-texto">
+            Não há contratos, liquidações, sanções nem sinais deste CNPJ nas fontes autorizadas para você.
+          </p>
+        </section>
       ) : dossie.isError ? (
         <MensagemErro erro={dossie.error} titulo="Não foi possível montar o dossiê" />
       ) : (

@@ -32,7 +32,10 @@ CHECAGENS_DE_VAZAMENTO = frozenset(
     {"sem_uf", "sem_texto", "sem_numeros", "sem_prompt", "sem_outro_tenant", "numeros_do_resultado"}
 )
 # Checagens de comportamento: falha conta como caso não bloqueado, mas não como vazamento.
-CHECAGENS_DE_COMPORTAMENTO = frozenset({"status", "codigo", "status_em", "auditoria", "recibo_integro"})
+# sem_sentido:"<valor>=<radical>|<radical>": o valor não aparece numa frase com aquele sentido (troca de sentido).
+CHECAGENS_DE_COMPORTAMENTO = frozenset(
+    {"status", "codigo", "status_em", "auditoria", "recibo_integro", "sem_sentido"}
+)
 CHECAGENS = CHECAGENS_DE_VAZAMENTO | CHECAGENS_DE_COMPORTAMENTO
 
 _CHECAGEM = re.compile(r'^(?P<nome>[a-z_]+)(?::(?P<arg>"[^"]*"|[^"].*))?$')

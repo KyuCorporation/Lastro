@@ -6,21 +6,17 @@ import { SeloSintetico } from "../../components/SeloSintetico";
 import { Selo } from "../../components/Selo";
 import { STATUS_CONSULTA } from "../../lib/apresentacao";
 import { nomeTabela } from "../../lib/formato";
-import { consultouSancoes, moeda, periodo, valorPrincipal } from "../recibo/leitura";
+import { consultouSancoes, periodo } from "../recibo/leitura";
 import { IntegridadeConsulta } from "./IntegridadeConsulta";
 import { ListaCitacoes } from "./ListaCitacoes";
 import { TextoResposta } from "./TextoResposta";
+import { ValoresDaResposta } from "./ValoresDaResposta";
 
 interface Props {
   resultado: ConsultaSaida;
-  simulado: boolean;
   /** Recibo da resposta (GET /recibos/{id}), quando houver e já tiver chegado. */
   recibo?: Recibo;
   ufs: string[];
-}
-
-function rotuloValor(origem: string): string {
-  return origem.includes("pagamentos") ? "Valor pago registrado" : "Valor total registrado";
 }
 
 function ResumoDaConsulta({ recibo }: { recibo: Recibo }) {
@@ -48,11 +44,10 @@ function ResumoDaConsulta({ recibo }: { recibo: Recibo }) {
 }
 
 /** Resultado da consulta (tela 01): resposta com evidências à esquerda, integridade à direita. */
-export function ResultadoConsulta({ resultado, simulado, recibo, ufs }: Props) {
+export function ResultadoConsulta({ resultado, recibo, ufs }: Props) {
   const titulo = useRef<HTMLHeadingElement>(null);
   const apresentacao = STATUS_CONSULTA[resultado.status] ?? STATUS_CONSULTA.erro;
-  const idCitacao = (n: number) => `citacao-${resultado.consulta_id}-${n}`;
-  const valor = recibo ? valorPrincipal(recibo.conteudo) : null;
+  const cnpjConsultado = recibo?.conteudo.execucao.parametros_efetivos.cnpj;
   const idTitulo = `titulo-resultado-${resultado.consulta_id}`;
 
   // Leva o foco para a resposta: quem usa teclado ou leitor de tela chega direto nela.
@@ -64,29 +59,32 @@ export function ResultadoConsulta({ resultado, simulado, recibo, ufs }: Props) {
         <h2 id={idTitulo} ref={titulo} tabIndex={-1} className="foco mb-4 inline-block rounded-md">
           <Selo tom={apresentacao.tom}>{apresentacao.selo}</Selo>
         </h2>
-        {(resultado.sintetico || simulado) && (
+        {resultado.sintetico && (
           <div className="mb-4">
-            <SeloSintetico simulado={simulado} />
+            <SeloSintetico />
           </div>
         )}
-        <TextoResposta texto={resultado.resposta} idCitacao={idCitacao} />
-        {valor && (
-          <p className="mt-2 text-xl text-kyu-texto">
-            {rotuloValor(valor.origem)}: {moeda(valor.valor)}
-          </p>
-        )}
+        <TextoResposta texto={resultado.resposta} />
+        {recibo && <ValoresDaResposta conteudo={recibo.conteudo} />}
 
         {recibo && <ResumoDaConsulta recibo={recibo} />}
-        <ListaCitacoes citacoes={resultado.citacoes} idCitacao={idCitacao} />
+        <ListaCitacoes citacoes={resultado.citacoes} linhas={recibo?.conteudo.linhas} />
 
         {resultado.status === "respondida" || resultado.status === "abstencao" ? (
           <p className="mt-6 text-sm text-kyu-suave">A resposta considera somente os registros disponíveis na base KYU.</p>
         ) : null}
-        {resultado.recibo_id && (
-          <p className="mt-3">
-            <Link to={`/recibos/${resultado.recibo_id}`} className="botao-primario inline-block px-10 py-2 text-sm">
-              Ver evidências
-            </Link>
+        {(resultado.recibo_id || typeof cnpjConsultado === "string") && (
+          <p className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+            {resultado.recibo_id && (
+              <Link to={`/recibos/${resultado.recibo_id}`} className="botao-primario inline-block px-10 py-2 text-sm">
+                Ver evidências
+              </Link>
+            )}
+            {typeof cnpjConsultado === "string" && (
+              <Link to={`/fornecedores/${cnpjConsultado}`} className="foco font-semibold text-kyu-laranja underline">
+                Abrir dossiê do fornecedor
+              </Link>
+            )}
           </p>
         )}
       </section>

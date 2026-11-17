@@ -1,7 +1,8 @@
 // Leituras do recibo para as telas. Tudo vem do backend: aqui só se escolhe e se formata.
 
 import type { ConteudoRecibo } from "../../api/types";
-import { dataCurta, moeda } from "../../lib/formato";
+import { NOME_FINALIDADE } from "../../lib/apresentacao";
+import { cnpj, dataCurta, decimal, moeda } from "../../lib/formato";
 
 export interface ValorDestacado {
   marcador: string;
@@ -23,6 +24,47 @@ export function valoresMoeda(conteudo: ConteudoRecibo): ValorDestacado[] {
     .filter(([, v]) => v.tipo === "moeda")
     .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
     .map(([marcador, v]) => ({ marcador, valor: v.valor, origem: v.origem ?? "" }));
+}
+
+/** Descrição de recibos sem `significado` (gravados antes de o backend mandar o rótulo). */
+export const DESCRICAO_ORIGEM: Record<string, string> = {
+  "sum(contratos.valor_global)": "soma do valor global dos contratos",
+  "sum(valor_global)": "soma do valor global dos contratos",
+  "sum(valor_global) vigentes": "soma do valor dos contratos vigentes",
+  "sum(pagamentos.valor)": "soma dos pagamentos",
+};
+
+export interface ValorRotulado {
+  marcador: string;
+  rotulo: string;
+  texto: string;
+}
+
+function maiuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function formatarValor(valor: string, tipo: string): string {
+  if (tipo === "moeda") return moeda(valor);
+  if (tipo === "data") return dataCurta(valor);
+  if (tipo === "percentual") return `${decimal(Number(valor), 2)}%`;
+  if (tipo === "inteiro" && Number.isFinite(Number(valor))) return Number(valor).toLocaleString("pt-BR");
+  return valor;
+}
+
+/**
+ * Valores que o código inseriu na resposta, com o rótulo escrito pelo backend, na ordem dos marcadores.
+ * Parâmetros da pergunta (CNPJ, estados, prazo, período) ficam de fora: não são resultado.
+ */
+export function valoresDaResposta(conteudo: ConteudoRecibo): ValorRotulado[] {
+  return Object.entries(conteudo.valores ?? {})
+    .filter(([, v]) => !(v.origem ?? "").startsWith("parametros."))
+    .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
+    .map(([marcador, v]) => {
+      const origem = v.origem ?? "";
+      const rotulo = v.significado?.trim() || DESCRICAO_ORIGEM[origem] || origem || marcador;
+      return { marcador, rotulo: maiuscula(rotulo), texto: formatarValor(v.valor, v.tipo) };
+    });
 }
 
 export function valorPrincipal(conteudo: ConteudoRecibo): ValorDestacado | null {
@@ -50,6 +92,14 @@ export function periodo(conteudo: ConteudoRecibo): string | null {
   return null;
 }
 
+/** "Carteira com finalidade Homologação", ou null quando a consulta foi feita sem carteira. */
+export function contextoCarteira(conteudo: ConteudoRecibo): string | null {
+  const c = conteudo.carteira;
+  if (!c) return null;
+  const nome = NOME_FINALIDADE[c.finalidade as keyof typeof NOME_FINALIDADE] ?? c.finalidade;
+  return `Carteira com finalidade ${nome}`;
+}
+
 export function consultouSancoes(conteudo: ConteudoRecibo): boolean {
   return conteudo.execucao.consulta_catalogo.startsWith("sancoes_fornecedor");
 }
@@ -63,3 +113,37 @@ export function nomesFontes(conteudo: ConteudoRecibo): string[] {
 }
 
 export { moeda };
+
+/** Destaque do recibo quando a consulta não tem valor em reais: a primeira contagem do resultado. */
+export function contagemPrincipal(conteudo: ConteudoRecibo): ValorRotulado | null {
+  const inteiros = new Set(
+    Object.entries(conteudo.valores ?? {})
+      .filter(([, v]) => v.tipo === "inteiro")
+      .map(([marcador]) => marcador),
+  );
+  return valoresDaResposta(conteudo).find((v) => inteiros.has(v.marcador)) ?? null;
+}
+
+const NOME_PARAMETRO: Record<string, string> = {
+  cnpj: "CNPJ",
+  ufs: "Estados consultados",
+  hoje: "Data de referência",
+  dias: "Prazo em dias",
+  data_inicio: "Início do período",
+  data_fim: "Fim do período",
+  termo: "Termo pesquisado",
+};
+
+function textoParametro(nome: string, valor: unknown): string {
+  if (Array.isArray(valor)) return valor.join(", ");
+  if (typeof valor !== "string") return String(valor);
+  if (nome === "cnpj") return cnpj(valor);
+  return /^\d{4}-\d{2}-\d{2}/.test(valor) ? dataCurta(valor) : valor;
+}
+
+/** Parâmetros efetivos da consulta do catálogo, com nome legível e na ordem em que foram gravados. */
+export function parametrosLegiveis(conteudo: ConteudoRecibo): { nome: string; texto: string }[] {
+  return Object.entries(conteudo.execucao.parametros_efetivos)
+    .filter(([, valor]) => valor !== null && valor !== undefined && valor !== "")
+    .map(([nome, valor]) => ({ nome: NOME_PARAMETRO[nome] ?? nome, texto: textoParametro(nome, valor) }));
+}
