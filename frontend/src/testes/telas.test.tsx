@@ -29,7 +29,7 @@ describe("moldura", () => {
     ]);
     expect(within(menu).getByRole("link", { name: "Consulta" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("KYU")).toBeInTheDocument();
-    expect(screen.getByText("Portal de transparência")).toBeInTheDocument();
+    expect(screen.getByText("Lastro")).toBeInTheDocument();
     expect(screen.getByLabelText("Estados autorizados: PE")).toHaveTextContent("Pernambuco");
   });
 

@@ -40,7 +40,7 @@ export function Moldura({ children }: { children: ReactNode }) {
       <aside className="flex flex-col bg-kyu-escuro px-3 pb-4 pt-5 text-white lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:shrink-0">
         <div className="px-3">
           <LogoKyu />
-          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/90">Portal de transparência</p>
+          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/90">Lastro</p>
         </div>
         <nav aria-label="Principal" className="mt-6">
           <ul className="flex flex-wrap gap-1 lg:flex-col">

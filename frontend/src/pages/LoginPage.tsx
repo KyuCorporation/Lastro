@@ -52,7 +52,7 @@ export function LoginPage({ demo = ambiente.demo }: { demo?: boolean }) {
       <div className="flex flex-col justify-between bg-kyu-escuro px-8 py-8 text-white lg:py-12">
         <div>
           <LogoKyu />
-          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/90">Portal de transparência</p>
+          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/90">Lastro</p>
         </div>
         <p className="mt-8 max-w-sm text-lg text-white/90">
           Contratos, pagamentos e sanções de fornecedores, com a fonte oficial de cada número e o acesso decidido pelo
