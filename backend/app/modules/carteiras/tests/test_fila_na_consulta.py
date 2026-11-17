@@ -15,7 +15,7 @@ from app.modules.recibos.tests.esquema import erros
 
 PERGUNTA = "Quem eu devo olhar primeiro na fila desta carteira?"
 TEXTO_ANA = (
-    "A carteira tem 3 fornecedores: 1 com sinal para investigar, 1 deles com sinal forte. "
+    "A carteira tem 3 fornecedores: 1 com sinal para investigar (1 com sinal forte). "
     "Nas fontes autorizadas para você (PE), os contratos vigentes deles somam R$ 400.000,00. "
     "O primeiro da fila é o fornecedor 11.222.333/0001-81, com concentração em um órgão, sanção vigente: "
     "sinal para investigar."

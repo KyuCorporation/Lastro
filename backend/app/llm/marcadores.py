@@ -525,13 +525,6 @@ def _fila(r: ResultadoConsulta) -> Material:
         "count(fornecedores com sinal)",
         ancoras=("sina",),
     )
-    n_f = m.add(
-        t["n_com_sinal_forte"],
-        "inteiro",
-        "número de fornecedores com sinal forte",
-        "count(fornecedores com sinal forte)",
-        ancoras=("fort",),
-    )
     valor = m.add(
         t["valor_exposto"],
         "moeda",
@@ -543,7 +536,17 @@ def _fila(r: ResultadoConsulta) -> Material:
     fornecedores = _p(t["n_fornecedores"], "fornecedor", "fornecedores")
     modelo = f"A carteira tem {n} {fornecedores}"
     if t["n_com_sinal"]:
-        modelo += f": {n_s} com sinal para investigar, {n_f} deles com sinal forte."
+        modelo += f": {n_s} com sinal para investigar"
+        if t["n_com_sinal_forte"]:
+            n_f = m.add(
+                t["n_com_sinal_forte"],
+                "inteiro",
+                "número de fornecedores com sinal forte",
+                "count(fornecedores com sinal forte)",
+                ancoras=("fort",),
+            )
+            modelo += f" ({n_f} com sinal forte)"
+        modelo += "."
     else:
         modelo += ", nenhum com sinal para investigar."
     modelo += f" Nas fontes autorizadas para você ({ufs}), os contratos vigentes deles somam {valor}."

@@ -26,7 +26,6 @@ Situação do código em 08/11/2026.
 - O catálogo cobre 8 intents. `socios_sancionados` está no contrato do plano, mas vira abstenção ("ainda não está disponível").
 - A finalidade da carteira (homologação, monitoramento, renovação) fica no recibo, mas ainda não muda a resposta de `fila_carteira`.
 - Perguntas fora do catálogo não são respondidas. Isso é deliberado (ADR-002), mas limita o que a pessoa pode perguntar.
-- A finalidade da carteira entra no recibo, mas não muda a resposta.
 - A busca por objeto ignora acento dos dois lados (`busca_objeto@v2`) e roda sem índice, o que basta no volume da demo; o índice sem acento depende de migration (extensão `unaccent`). Sem acento, palavras diferentes podem cair no mesmo radical: "médica" e "medicamentos" viram "medic".
 - No modo `mock` (sem LLM), o planejador é um roteador por regras e o texto vem de modelos fixos por intent. As respostas ficam corretas e citadas, porém mais engessadas.
 

@@ -120,7 +120,7 @@ def test_texto_pronto_da_fila():
     redigida = redigir("Qual a fila da carteira?", r, ufs_autorizadas=("PE",), provedor=None)
     assert redigida.status == "aprovado"
     assert redigida.texto == (
-        "A carteira tem 3 fornecedores: 1 com sinal para investigar, 1 deles com sinal forte. "
+        "A carteira tem 3 fornecedores: 1 com sinal para investigar (1 com sinal forte). "
         "Nas fontes autorizadas para você (PE), os contratos vigentes deles somam R$ 400.000,00. "
         "O primeiro da fila é o fornecedor 11.222.333/0001-81, com concentração em um órgão, sanção vigente: "
         "sinal para investigar."

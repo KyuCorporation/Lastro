@@ -83,7 +83,11 @@ def dados_t18(dados_catalogo) -> Iterator[None]:  # noqa: F811
         su.execute(
             "delete from alertas where carteira_id in (select id from carteiras where nome like 'T18 %%')"
         )
-        su.execute("delete from carteiras where nome like 'T18 %%'")
+        # Carteira usada numa consulta fica: o histórico de consultas é imutável e aponta para ela.
+        su.execute(
+            "delete from carteiras c where c.nome like 'T18 %%'"
+            " and not exists (select 1 from consultas q where q.carteira_id = c.id)"
+        )
 
 
 @pytest.fixture
