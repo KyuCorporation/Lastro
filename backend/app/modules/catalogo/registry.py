@@ -55,7 +55,7 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
         ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
         ConsultaCatalogo("sancoes_fornecedor", "v2", ("linhas",), ("linhas",), usa_uf=False),
         ConsultaCatalogo("orgaos_fornecedor", "v2", ("ranking", "contratos"), ("contratos",)),
-        ConsultaCatalogo("busca_objeto", "v2", ("linhas",), ("linhas",), usa_cnpj=False),
+        ConsultaCatalogo("busca_objeto", "v3", ("linhas",), ("linhas",), usa_cnpj=False),
         # fila: um registro por fornecedor (derivado); contratos vigentes e sanções vigentes são as evidências.
         ConsultaCatalogo(
             "fila_carteira",
