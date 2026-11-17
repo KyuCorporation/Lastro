@@ -4,6 +4,7 @@ import { cnpj, urlSegura } from "./formato";
 import { valoresDaResposta } from "../features/recibo/leitura";
 import { RECIBO_ANA } from "../testes/montar";
 import { separarCnpjs } from "../features/carteiras/hooks";
+import { POR_UF, SANCOES, sugestoesPara } from "../features/consulta/perguntasSugeridas";
 
 describe("extenso", () => {
   it.each([
@@ -73,6 +74,34 @@ describe("formatos do N2", () => {
       "123",
       "456",
     ]);
+  });
+});
+
+function cnpjValido(texto: string): boolean {
+  const d = texto.replace(/\D/g, "");
+  if (d.length !== 14 || /^(\d)+$/.test(d)) return false;
+  const digito = (base: string) => {
+    const pesos = base.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const resto = [...base].reduce((soma, n, i) => soma + Number(n) * pesos[i], 0) % 11;
+    return resto < 2 ? "0" : String(11 - resto);
+  };
+  const d1 = digito(d.slice(0, 12));
+  return d.slice(12) === d1 + digito(d.slice(0, 12) + d1);
+}
+
+describe("perguntas sugeridas", () => {
+  it("Pernambuco tem sugestões próprias, antes das de sanção", () => {
+    const pe = sugestoesPara(["PE"]);
+    expect(pe.slice(0, POR_UF.PE.length)).toEqual(POR_UF.PE);
+    expect(POR_UF.PE.length).toBeGreaterThanOrEqual(4);
+    expect(pe.some((s) => /Alagoas|AL/.test(s))).toBe(false);
+  });
+
+  it("todo CNPJ citado tem dígito verificador válido", () => {
+    const perguntas = [...Object.values(POR_UF).flat(), ...SANCOES];
+    const cnpjs = perguntas.flatMap((p) => p.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g) ?? []);
+    expect(cnpjs.length).toBeGreaterThan(0);
+    expect(cnpjs.filter((c) => !cnpjValido(c))).toEqual([]);
   });
 });
 
