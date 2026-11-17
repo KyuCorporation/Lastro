@@ -18,13 +18,14 @@ Códigos de erro: `NAO_AUTENTICADO` (401), `PERFIL_SEM_PERMISSAO` (403), `ESCOPO
 | GET | `/fontes/execucoes` | todos | `?fonte_id` | `[{id, fonte_id, status, iniciada_em, finalizada_em, registros_lidos, registros_novos, registros_descartados, erro}]` |
 | POST | `/carteiras` | analista, admin | `{nome, finalidade, cnpjs: [string]}` | `{id, nome, finalidade, n_itens, cnpjs_invalidos: []}` |
 | GET | `/carteiras` | todos | — | `[{id, nome, finalidade, n_itens, criada_em}]` |
-| GET | `/carteiras/{id}/fila` | todos | — | `{carteira, itens: [{cnpj, razao_social, prioridade, valor_exposto, sinais: [{tipo, gravidade, explicacao, evidencias}]}]}` |
+| GET | `/carteiras/{id}/fila` | todos | — | `{carteira, itens: [{cnpj, razao_social, prioridade, valor_exposto, sinais: [{tipo, gravidade, explicacao, evidencias, calculado_em, versao_regra}]}]}` |
 | GET | `/fornecedores/{cnpj}/dossie` | todos | — | `{fornecedor, resumo_por_uf, contratos_vigentes, vencendo_180d, sancoes, sinais, socios?, fontes}` (cada item com `fonte_id`, `url_origem`, `coletado_em`) |
 | POST | `/consultas` | analista, admin | `{pergunta (≤500 chars), carteira_id?}` | `{consulta_id, status, resposta, citacoes: [{n, tabela, id, fonte_id, url_origem, coletado_em}], recibo_id, sintetico: bool}` |
 | GET | `/consultas` | todos | `?limite` | consultas visíveis pela RLS |
 | GET | `/recibos/{id}` | dono, auditor, admin | — | `{id, conteudo (recibo.schema.json), hash, criado_em}` |
 | GET | `/recibos/{id}/verificar` | dono, auditor, admin | — | `{integro: bool, hash_gravado, hash_recalculado}` |
 | GET | `/alertas` | todos | `?status` | `[{id, carteira_id, cnpj, sinal, status, criado_em}]` |
+| PATCH | `/alertas/{id}` | analista, admin | `{status: "visto" \| "resolvido"}` | `{id, status}` (só avança: aberto → visto → resolvido; voltar é `ENTRADA_INVALIDA`) |
 | GET | `/auditoria` | auditor, admin | `?evento&limite` | `[{seq, usuario_id, evento, detalhes, criado_em, hash}]` |
 | GET | `/auditoria/verificar` | auditor, admin | — | `{integra: bool, n_eventos, primeiro_seq_quebrado?}` |
 | GET | `/metricas` | todos | — | `{eval: {...}, ataques: {...}, cronometro: {...}, ultima_atualizacao}` (lê `eval/reports/`) |
