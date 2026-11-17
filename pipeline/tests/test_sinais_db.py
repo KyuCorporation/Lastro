@@ -220,3 +220,10 @@ def test_sinal_vencido_com_alerta_e_apagado_e_o_alerta_guarda_a_copia(como_super
         "select sinal_id, sinal_tipo from alertas where id = %s", (alerta,)
     ).fetchone()
     assert sinal_id is None and tipo == "sancao_direta"
+
+
+def test_sancao_retirada_do_cadastro_nao_gera_sinal(semeado):
+    """Migration 008: sanção que saiu do CEIS fica no banco com `removida_em` e deixa de ser vigente."""
+    semeado.execute("update sancoes set removida_em = now() where fonte_id = 'ceis' and id_origem = 'T17-S1'")
+    calculo.recalcular(semeado, HOJE)
+    assert (F_PE, None, "sancao_direta") not in _sinais(semeado)
