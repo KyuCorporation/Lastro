@@ -192,7 +192,7 @@ Um CNPJ só traz resultado se estiver nos dados carregados. A LLM não busca nad
 | Comando | Cobertura | Precisa |
 |---|---|---|
 | `make test` | Matriz de acesso do SPEC §6.4, pipeline, API (TestClient + Postgres), harness do eval e interface (Vitest) | banco de pé |
-| `make eval-ataques` | Suíte de ataques contra a API: zero vazamento e ≥ 95% bloqueado; relatório em `eval/reports/` | banco de pé (`make demo` para ter dados de AL) |
+| `make eval-ataques` | Suíte de ataques contra a API: zero vazamento e ≥ 95% bloqueado; relatório em `eval/reports/`. Sem LLM por padrão; com o Gemini, `EVAL_LLM=gemini` | banco de pé (`make demo` para ter dados de AL) |
 | `make test-integracao` | API real por HTTP com os dados da pipeline: escopo por UF, injeção armazenada, concorrência na auditoria | `make demo` |
 | `make test-e2e` | Navegador real nas 5 telas: login, consulta, recibo, acesso negado, auditoria, teclado. `E2E_CANAL=msedge` usa o Edge | `make demo` |
 | `bash scripts/teste_resiliencia.sh` | API reiniciada, banco fora e de volta, fonte fora na ingestão | `make demo` |

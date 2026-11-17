@@ -18,7 +18,9 @@ make eval-ataques   # aplica os seeds e roda a suíte; sai com erro se houver va
 make test-eval      # testes do próprio harness, sem banco (inclui vazamentos plantados que ele tem de pegar)
 ```
 
-A suíte usa o provedor de LLM do `.env` (`LLM_PROVIDER=mock` ou `gemini`). Com dados das fixtures carregados
+O eval roda sem LLM por padrão (`EVAL_LLM=mock`), qualquer que seja o `LLM_PROVIDER` do `.env`. Com o Gemini:
+`make eval-ataques EVAL_LLM=gemini` e `make eval EVAL_LLM=gemini` (gastam cota: 58 e 100 perguntas, cada uma com
+planejador e redator), ou `EVAL_COM_GEMINI=1 make demo`. Com dados das fixtures carregados
 (`make demo`), os casos de outra UF passam a ter linhas reais de AL para tentar vazar.
 
 ## Como um caso é julgado
