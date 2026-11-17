@@ -14,7 +14,10 @@ export function useCriarCarteira() {
   const cliente = useQueryClient();
   return useMutation<CarteiraCriada, ErroApi, CarteiraEntrada>({
     mutationFn: (entrada) => api.carteiras.criar(entrada),
-    onSuccess: () => cliente.invalidateQueries({ queryKey: ["carteiras"] }),
+    onSuccess: () => {
+      void cliente.invalidateQueries({ queryKey: ["carteiras"] });
+      void cliente.invalidateQueries({ queryKey: ["alertas"] }); // a carteira nasce com os alertas dos sinais atuais
+    },
   });
 }
 

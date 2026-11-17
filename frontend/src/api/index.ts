@@ -4,6 +4,7 @@
 
 import type { Http } from "./http";
 import type {
+  Alerta,
   CarteiraCriada,
   CarteiraEntrada,
   CarteiraListada,
@@ -19,6 +20,7 @@ import type {
   LoginSaida,
   Metricas,
   Recibo,
+  StatusAlerta,
   Usuario,
   VerificacaoCadeia,
   VerificacaoRecibo,
@@ -47,6 +49,11 @@ export interface ApiCarteiras {
   fila(id: string): Promise<Fila>;
 }
 
+export interface ApiAlertas {
+  /** GET /alertas: os do tenant, mais recentes primeiro. */
+  listar(status?: StatusAlerta): Promise<Alerta[]>;
+}
+
 export interface ApiFornecedores {
   dossie(cnpj: string): Promise<Dossie>;
 }
@@ -73,6 +80,7 @@ export interface Api {
   recibos: ApiRecibos;
   fontes: ApiFontes;
   carteiras: ApiCarteiras;
+  alertas: ApiAlertas;
   fornecedores: ApiFornecedores;
   auditoria: ApiAuditoria;
   metricas: ApiMetricas;
@@ -105,6 +113,10 @@ export function criarApiCarteiras(http: Http): ApiCarteiras {
     criar: (entrada) => http.post<CarteiraCriada>("/carteiras", entrada),
     fila: (id) => http.get<Fila>(`/carteiras/${encodeURIComponent(id)}/fila`),
   };
+}
+
+export function criarApiAlertas(http: Http): ApiAlertas {
+  return { listar: (status) => http.get<Alerta[]>(status ? `/alertas?status=${encodeURIComponent(status)}` : "/alertas") };
 }
 
 export function criarApiFornecedores(http: Http): ApiFornecedores {
@@ -140,6 +152,7 @@ export function criarApi(http: Http): Api {
     recibos: criarApiRecibos(http),
     fontes: criarApiFontes(http),
     carteiras: criarApiCarteiras(http),
+    alertas: criarApiAlertas(http),
     fornecedores: criarApiFornecedores(http),
     auditoria: criarApiAuditoria(http),
     metricas: criarApiMetricas(http),

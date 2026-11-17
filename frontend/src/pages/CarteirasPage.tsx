@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import type { Finalidade } from "../api/types";
+import type { Alerta, CarteiraListada, Finalidade } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { pode } from "../auth/permissoes";
 import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
+import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
+import { useAlertas } from "../features/alertas/hooks";
 import { separarCnpjs, useCarteiras, useCriarCarteira } from "../features/carteiras/hooks";
-import { NOME_FINALIDADE } from "../lib/apresentacao";
-import { dataCurta } from "../lib/formato";
+import { GRAVIDADE, NOME_FINALIDADE, nomeSinal } from "../lib/apresentacao";
+import { cnpj as formatarCnpj, dataCurta } from "../lib/formato";
 
 const FINALIDADES = Object.keys(NOME_FINALIDADE) as Finalidade[];
 
@@ -112,6 +114,80 @@ function NovaCarteira() {
   );
 }
 
+function SinalDoAlerta({ sinal }: { sinal: Alerta["sinal"] }) {
+  if (!sinal) return <span className="text-kyu-suave">Sinal de UF fora do seu escopo</span>;
+  const gravidade = GRAVIDADE[sinal.gravidade] ?? GRAVIDADE.info;
+  return (
+    <div>
+      <p className="flex flex-wrap items-center gap-2 font-semibold">
+        {nomeSinal(sinal.tipo)}
+        {sinal.uf && <span className="font-normal text-kyu-suave">em {sinal.uf}</span>}
+        <Selo tom={gravidade.tom}>{gravidade.rotulo}</Selo>
+      </p>
+      <p className="mt-1 text-sm">{sinal.explicacao}</p>
+      {sinal.id === null && (
+        <p className="mt-1 text-sm text-kyu-suave">Deixou de valer no último cálculo dos sinais.</p>
+      )}
+    </div>
+  );
+}
+
+/** Alertas abertos (GET /alertas?status=aberto): sinal novo de fornecedor de carteira. Some se não houver nenhum. */
+function AlertasAbertos({ carteiras }: { carteiras: CarteiraListada[] }) {
+  const alertas = useAlertas("aberto");
+  if (!alertas.isSuccess || alertas.data.length === 0) return null;
+  const nomes = new Map(carteiras.map((c) => [c.id, c.nome]));
+  const n = alertas.data.length;
+  return (
+    <section aria-labelledby="titulo-alertas" className="cartao p-6">
+      <h2 id="titulo-alertas" className="text-xl font-bold text-kyu-texto">
+        Alertas abertos
+      </h2>
+      <p className="mt-1 text-sm text-kyu-suave">
+        {n} sina{n === 1 ? "l" : "is"} para investigar em fornecedores das suas carteiras. O alerta nasce quando a
+        carteira é criada ou a fila é aberta depois de um novo cálculo dos sinais.
+      </p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[40rem] border-collapse text-left">
+          <caption className="sr-only">Alertas abertos do cliente</caption>
+          <thead className="tabela-cabecalho">
+            <tr>
+              <th scope="col" className="rounded-l-md px-4 py-3">Fornecedor</th>
+              <th scope="col" className="px-4 py-3">Sinal</th>
+              <th scope="col" className="px-4 py-3">Carteira</th>
+              <th scope="col" className="rounded-r-md px-4 py-3">Desde</th>
+            </tr>
+          </thead>
+          <tbody>
+            {alertas.data.map((a) => (
+              <tr key={a.id} className="border-b border-kyu-linha align-top">
+                <th scope="row" className="px-4 py-4 font-normal">
+                  <Link to={`/fornecedores/${a.cnpj}`} className="foco font-mono text-kyu-laranja underline">
+                    {formatarCnpj(a.cnpj)}
+                  </Link>
+                </th>
+                <td className="px-4 py-4">
+                  <SinalDoAlerta sinal={a.sinal} />
+                </td>
+                <td className="px-4 py-4">
+                  {a.carteira_id ? (
+                    <Link to={`/carteiras/${a.carteira_id}`} className="foco text-kyu-laranja underline">
+                      {nomes.get(a.carteira_id) ?? "Abrir a fila"}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td className="px-4 py-4">{dataCurta(a.criado_em)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 /** Tela 06: carteiras do cliente e criação por colagem de CNPJs (GET e POST /carteiras). */
 export function CarteirasPage() {
   const { usuario } = useAuth();
@@ -123,6 +199,8 @@ export function CarteirasPage() {
       <TituloPagina numero="06" titulo="Carteiras e fila">
         Fornecedores agrupados por finalidade, com a fila de quem olhar primeiro.
       </TituloPagina>
+
+      <AlertasAbertos carteiras={carteiras.data ?? []} />
 
       {pode(usuario.perfil, "editar_carteira") && <NovaCarteira />}
 

@@ -6,6 +6,7 @@ import { Provedores } from "../Provedores";
 import type { Api } from "../api";
 import { ErroApi } from "../api/http";
 import type {
+  Alerta,
   CarteiraCriada,
   CarteiraEntrada,
   CarteiraListada,
@@ -235,6 +236,7 @@ export function apiFalsa(
     verificarRecibo?: (id: string) => Promise<VerificacaoRecibo>;
     criarCarteira?: (entrada: CarteiraEntrada) => Promise<CarteiraCriada>;
     fila?: (id: string) => Promise<Fila>;
+    alertas?: () => Promise<Alerta[]>;
     dossie?: (cnpj: string) => Promise<Dossie>;
     cadeia?: () => Promise<VerificacaoCadeia>;
     eventos?: () => Promise<EventoAuditoria[]>;
@@ -286,6 +288,7 @@ export function apiFalsa(
           }),
       ),
     },
+    alertas: { listar: vi.fn(opcoes.alertas ?? (async () => [])) },
     fornecedores: { dossie: vi.fn(opcoes.dossie ?? (async () => DOSSIE)) },
     auditoria: {
       listar: vi.fn(opcoes.eventos ?? (async () => EVENTOS)),
