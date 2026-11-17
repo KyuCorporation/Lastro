@@ -28,6 +28,7 @@ Situação do código em 08/11/2026.
 - O limite de 30 consultas por minuto fica na memória do processo da API.
 - O JWT vale 480 minutos e não tem revogação no servidor.
 - A auditoria registra o login que deu certo. Tentativa com senha errada não entra: a trilha é por tenant e, sem sessão, não há tenant.
+- A tela do recibo procura a âncora na trilha entre as 500 respostas e as 500 abstenções mais recentes do tenant (teto de `GET /auditoria`). Recibo mais antigo aparece como "âncora não localizada", sem acusar alteração. Busca direta por recibo (`?recibo_id=`) depende de mudança de contrato.
 
 **Avaliação**
 - Das 100 perguntas do gabarito, só a G001 tem `sql_referencia` escrita por alguém fora do catálogo (SPEC §14.1). As outras conferem intent, comportamento e citação, mas não o valor contra uma consulta independente.
