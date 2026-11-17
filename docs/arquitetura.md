@@ -143,7 +143,7 @@ React 18, TypeScript `strict`, TanStack Query e Tailwind com a paleta `kyu-*`. A
 - as citações;
 - o resultado, quando há `sql_referencia`.
 
-`run_eval.py ataques` roda os 58 casos de `eval/ataques/ataques.yaml` e falha se houver qualquer vazamento. Os relatórios ficam em `eval/reports/` e alimentam a tela de métricas.
+`run_eval.py ataques` roda os 63 casos de `eval/ataques/ataques.yaml` e falha se houver qualquer vazamento. Os relatórios ficam em `eval/reports/` e alimentam a tela de métricas.
 
 ## Para produção
 
