@@ -1,5 +1,6 @@
 import type { Citacao, ConteudoRecibo } from "../../api/types";
-import { dataHora, nomeFonte, nomeTabela, urlSegura } from "../../lib/formato";
+import { LinkOrigem } from "../../components/LinkOrigem";
+import { dataHora, nomeFonte, nomeTabela } from "../../lib/formato";
 
 /** Quantas citações aparecem abertas; o resto fica recolhido. */
 const VISIVEIS = 5;
@@ -7,30 +8,22 @@ const VISIVEIS = 5;
 type Linha = ConteudoRecibo["linhas"][number];
 
 function Item({ c, linha }: { c: Citacao; linha?: Linha }) {
-  const url = urlSegura(c.url_origem);
   return (
     <li className="rounded-md border border-kyu-linha p-3 text-sm text-kyu-texto">
       <p>
         <strong>[{c.n}]</strong> {nomeTabela(c.tabela)} · {nomeFonte(c.fonte_id)} · coletado em {dataHora(c.coletado_em)}
       </p>
       <p className="mt-1 break-all text-kyu-suave">
-        {url ? (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="foco font-semibold text-kyu-laranja underline">
-            Abrir na fonte oficial<span className="sr-only"> (abre em nova aba)</span>
-          </a>
-        ) : (
-          <span>Registro sem link público</span>
-        )}{" "}
+        <LinkOrigem url={c.url_origem} semLink="Registro sem link público">
+          Abrir na fonte oficial
+        </LinkOrigem>{" "}
         · <span title={c.id}>{linha ? `registro ${linha.id_origem}` : `registro ${c.id}`}</span>
       </p>
     </li>
   );
 }
 
-/**
- * Fontes citadas pela resposta. O identificador de origem vem das linhas do recibo, quando já chegou;
- * link só para http(s), porque `url_origem` vem de fonte externa.
- */
+/** Fontes citadas pela resposta. O identificador de origem vem das linhas do recibo, quando já chegou. */
 export function ListaCitacoes({ citacoes, linhas }: { citacoes: Citacao[]; linhas?: Linha[] }) {
   if (citacoes.length === 0) return null;
   const porId = new Map((linhas ?? []).map((l) => [l.id, l]));
