@@ -90,7 +90,10 @@ def test_busca_ignora_acento_dos_dois_lados(ctx_admin):
     # O roteador por regras tira o acento do termo, quem pergunta pode digitar sem acento, e a fonte grava
     # objeto com acento ("manutenção") e sem acento ("MANUTENCAO"): os quatro casos têm de se achar.
     for termo in ("manutencao tcat", "manutenção tcat", "MANUTENÇÃO TCAT"):
-        assert origens(executar(busca(termo), ctx_admin, HOJE).conjuntos["linhas"]) == {"TCAT-C3", "TCAT-C4"}, termo
+        assert origens(executar(busca(termo), ctx_admin, HOJE).conjuntos["linhas"]) == {
+            "TCAT-C3",
+            "TCAT-C4",
+        }, termo
 
 
 def test_busca_respeita_o_escopo(ctx_bia, ctx_admin):

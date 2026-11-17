@@ -40,7 +40,14 @@ CONTRATOS = [
     ("TCAT-C1", "PE", "demo_sintetico:TCAT-PE1", "100000.00", d(60), "Limpeza predial das escolas tcat"),
     ("TCAT-C2", "PE", "demo_sintetico:TCAT-PE2", "300000.00", d(400), "Fornecimento de merenda escolar tcat"),
     # encerrado
-    ("TCAT-C3", "PE", "demo_sintetico:TCAT-PE1", "50000.00", d(-10), "Limpeza urbana, coleta de lixo e manutenção tcat"),
+    (
+        "TCAT-C3",
+        "PE",
+        "demo_sintetico:TCAT-PE1",
+        "50000.00",
+        d(-10),
+        "Limpeza urbana, coleta de lixo e manutenção tcat",
+    ),
     # vigente em AL
     ("TCAT-C4", "AL", "demo_sintetico:TCAT-AL1", "70000.00", d(30), "LIMPEZA HOSPITALAR E MANUTENCAO TCAT"),
 ]
