@@ -33,7 +33,8 @@ SQL_TRAVAR = "select pg_advisory_xact_lock(hashtext('lastro_sinais'))"
 
 # Só o que as regras usam: contratos que ainda podem estar vigentes ou foram assinados na janela da concentração.
 SQL_CONTRATOS = """
-select id, fornecedor_cnpj, uf, orgao_id, valor_global, data_assinatura, vigencia_inicio, vigencia_fim, url_origem
+select id, fornecedor_cnpj, uf, orgao_id, valor_global, data_assinatura, vigencia_inicio, vigencia_fim, url_origem,
+       situacao
   from contratos
  where vigencia_fim >= %(hoje)s
     or coalesce(data_assinatura, vigencia_inicio) between %(inicio)s and %(hoje)s
@@ -50,7 +51,8 @@ select id, fornecedor_cnpj, uf, orgao_id, valor, data_pagamento, url_origem
 SQL_SANCOES = """
 select id, fonte_id, cnpj, tipo, data_inicio, data_fim, url_origem
   from sancoes
- where (data_inicio is null or data_inicio <= %(hoje)s)
+ where removida_em is null
+   and (data_inicio is null or data_inicio <= %(hoje)s)
    and (data_fim is null or data_fim >= %(hoje)s)
 """
 
@@ -123,7 +125,8 @@ def _parametros(sinal: Sinal) -> dict[str, Any]:
 
 
 def _apagar(conn: psycopg.Connection, sinal_id: UUID) -> bool:
-    """Apaga um sinal que deixou de valer. Se um alerta (T28) ainda aponta para ele, o banco recusa: fica."""
+    """Apaga um sinal que deixou de valer. Desde a migration 007 o alerta que aponta para ele fica com o vínculo nulo
+    e a cópia do sinal. A recusa por chave estrangeira só acontece num banco sem a 007: aí o sinal fica."""
     try:
         with conn.transaction():
             conn.execute(SQL_APAGAR, {"id": sinal_id})

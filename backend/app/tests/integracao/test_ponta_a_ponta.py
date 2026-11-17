@@ -60,7 +60,7 @@ def test_contrato_encerrado_vira_abstencao_com_data_da_coleta(perguntar):
 def test_valor_pago_nao_soma_empenho_com_liquidacao(perguntar):
     """Garanhuns: empenho de R$ 40.000 e duas liquidações de R$ 20.000 dele. Pago é R$ 40.000, empenhado à parte."""
     corpo = perguntar("ana@alfa.demo", f"Qual o resumo do fornecedor {GARANHUNS}?").json()
-    assert "Foram registrados 2 pagamentos, num total de R$ 40.000,00." in corpo["resposta"]
+    assert "Foram registradas 2 liquidações ou pagamentos, num total de R$ 40.000,00." in corpo["resposta"]
     assert "R$ 40.000,00 empenhados em 1 empenho" in corpo["resposta"]
     assert "R$ 80.000,00" not in corpo["resposta"]  # (o contrato é R$ 480.000,50: comparar o valor inteiro)
 
@@ -149,3 +149,21 @@ def test_consultas_em_paralelo_mantem_a_trilha_encadeada(perguntar, banco_superu
     ).fetchone()
     assert quebras[:2] == (0, 0), f"cadeia quebrada: {quebras}"
     assert quebras[2] >= 16
+
+
+# ------------------------------------------------------------------ perguntas sugeridas da tela de consulta
+# As mesmas de frontend/src/features/consulta/perguntasSugeridas.ts (PE). Os CNPJs vêm da amostra real do TCE-PE
+# (data/fixtures/pe_portal/amostra): sugestão que a demo oferece tem de responder com dado.
+SUGESTOES_PE = [
+    "Qual o resumo do fornecedor 17.238.558/0001-02?",
+    "Quais contratos do CNPJ 17.238.558/0001-02 vencem nos próximos 6 meses?",
+    "Quais contratos vigentes o CNPJ 19.452.240/0001-55 tem?",
+    "Quais órgãos mais contratam o CNPJ 05.342.580/0001-19?",
+]
+
+
+@pytest.mark.parametrize("pergunta", SUGESTOES_PE)
+def test_sugestao_de_pe_responde_com_registros(perguntar, pergunta):
+    corpo = perguntar("ana@alfa.demo", pergunta).json()
+    assert corpo["status"] == "respondida", corpo["resposta"]
+    assert corpo["citacoes"] and all(c["fonte_id"] == "pe_portal" for c in corpo["citacoes"])

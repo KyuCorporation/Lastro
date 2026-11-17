@@ -2,7 +2,10 @@
 
 - no máximo N requisições por segundo (`REQUESTS_PER_SECOND`, padrão 1), por cliente;
 - retry com backoff exponencial em erro de rede, 404 intermitente, 429 e 5xx;
-- cache em disco por URL, válido no dia (reexecução no mesmo dia não volta à fonte);
+- cache em disco por URL, válido no dia (reexecução no mesmo dia não volta à fonte); o conector pode pedir
+  validade maior para recortes que quase não mudam (`validade_dias`, ex.: exercício fechado do TCE-PE);
+- `tratar`: o conector pode transformar o corpo antes de ele ser gravado no cache e devolvido (ex.: tirar dado
+  pessoal). O que a fonte mandou e não passou pelo tratamento nunca toca o disco;
 - cabeçalho `User-Agent: lastro-hackathon`, sem e-mail.
 
 Bloqueio (403, firewall) não é contornado: vira `FonteBloqueada` e o conector usa o download manual.
@@ -13,8 +16,8 @@ import json
 import logging
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from dataclasses import dataclass, replace
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Self
 from urllib.parse import urlencode
@@ -27,7 +30,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from lastro_pipeline.config import USER_AGENT
+from lastro_pipeline.config import USER_AGENT, hoje_recife
 
 log = logging.getLogger(__name__)
 
@@ -123,13 +126,25 @@ class ClienteHttp:
     def __exit__(self, *_: object) -> None:
         self._http.close()
 
-    def get(self, url: str, aceitar: frozenset[int] = frozenset({200})) -> Resposta:
-        """GET com cache, limite de taxa e retry. `aceitar` lista os status tratados como resposta válida."""
-        em_cache = self._ler_cache(url)
+    def get(
+        self,
+        url: str,
+        aceitar: frozenset[int] = frozenset({200}),
+        validade_dias: int = 1,
+        tratar: Callable[[bytes], bytes] | None = None,
+    ) -> Resposta:
+        """GET com cache, limite de taxa e retry. `aceitar` lista os status tratados como resposta válida.
+
+        `validade_dias`: aceita cache gravado até esse número de dias atrás (1 = só o de hoje).
+        `tratar`: aplicado ao corpo 200 antes de gravar o cache e devolver.
+        """
+        em_cache = self._ler_cache(url, validade_dias)
         if em_cache is not None:
             return em_cache
         try:
             resposta = self._buscar_com_retry(url, aceitar)
+            if tratar is not None and resposta.status == 200:
+                resposta = replace(resposta, conteudo=tratar(resposta.conteudo))
         except _Repetir as erro:
             raise FonteIndisponivel(f"{self.fonte_id}: {url} respondeu {erro.status}") from erro
         except httpx.TransportError as erro:
@@ -149,15 +164,19 @@ class ClienteHttp:
             raise _Repetir(r.status_code)
         raise FonteIndisponivel(f"{self.fonte_id}: {url} respondeu {r.status_code}")
 
-    def _caminho_cache(self, url: str) -> Path | None:
+    def _caminho_cache(self, url: str, dia: date | None = None) -> Path | None:
         if self._cache_dir is None:
             return None
         chave = hashlib.sha256(url.encode()).hexdigest()
-        return self._cache_dir / date.today().isoformat() / chave
+        return self._cache_dir / (dia or hoje_recife()).isoformat() / chave
 
-    def _ler_cache(self, url: str) -> Resposta | None:
-        caminho = self._caminho_cache(url)
-        if caminho is None or not caminho.exists():
+    def _ler_cache(self, url: str, validade_dias: int = 1) -> Resposta | None:
+        hoje = hoje_recife()
+        candidatos = (
+            self._caminho_cache(url, hoje - timedelta(days=d)) for d in range(max(1, validade_dias))
+        )
+        caminho = next((c for c in candidatos if c is not None and c.exists()), None)
+        if caminho is None:
             return None
         meta = json.loads(caminho.with_suffix(".json").read_text())
         return Resposta(

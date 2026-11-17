@@ -9,3 +9,9 @@
 **Alternativas:** citação gerada pela LLM (pode inventar fonte); só log textual (não detecta adulteração).
 
 **Consequências:** respostas um pouco mais engessadas; em troca, nenhum número sem lastro e prova de integridade para auditoria.
+
+**No código (08/11/2026):**
+- Modelos determinísticos por intent em `backend/app/llm/marcadores.py`; redator em `llm/redator.py`; verificador em `llm/verificador.py`.
+- Recibo montado em `modules/recibos/montagem.py`, com JSON canônico em `canonico.py`. O selo aparece na tela 02 a partir de `GET /recibos/{id}/verificar`.
+- Auditoria encadeada pelo trigger de `db/migrations/006_auditoria_seq_no_trigger.sql`, verificada em `GET /auditoria/verificar`.
+- Provas: `llm/tests/test_verificador*.py`, `modules/recibos/tests/test_verificar.py`, `modules/auditoria/tests/test_cadeia_concorrente.py`.

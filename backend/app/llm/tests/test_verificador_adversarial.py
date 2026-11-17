@@ -5,7 +5,7 @@ determinístico (fallback), então errar para o lado de reprovar é seguro."""
 import pytest
 
 from app.llm.marcadores import montar_material
-from app.llm.tests.resultados import vencendo
+from app.llm.tests.resultados import resumo, sancoes, vencendo
 from app.llm.verificador import verificar
 
 PE = ("PE",)
@@ -136,3 +136,44 @@ def test_simbolo_de_moeda_e_de_percentual_nao_duplicam():
     assert "R$ R$" not in v.texto_final
     assert "%%" not in v.texto_final
     assert v.texto_final == "Vence 1 contrato, somando R$ 100.000,00, ou 25,00% do vigente."
+
+
+# ------------------------------------------------------------------ valor certo, sentido trocado
+# O número vem do resultado, mas o redator o apresenta como outra coisa (contratado como pago, total como
+# vigente). resumo: v2 nº contratos, v3 contratado, v4 vigente, v5 nº pagamentos, v6 pago.
+# sanções: v2 registradas, v3 vigentes.
+@pytest.mark.parametrize(
+    ("resultado", "texto"),
+    [
+        (resumo(), "O fornecedor {{v1}} tem {{v2}} contratos. O valor pago foi de {{v3}}."),
+        (resumo(), "Foram pagos {{v3}} ao fornecedor {{v1}}."),
+        (
+            resumo(),
+            "O fornecedor {{v1}} tem {{v2}} contratos, somando {{v4}}, dos quais {{v3}} em contratos ainda vigentes.",
+        ),
+        (resumo(), "O fornecedor {{v1}} tem {{v2}} contratos e já recebeu {{v4}}."),
+        (resumo(), "O fornecedor {{v1}} tem {{v5}} contratos, somando {{v3}}."),
+        (sancoes(), "O fornecedor {{v1}} tem {{v3}} sanções registradas, das quais {{v2}} vigentes."),
+    ],
+    ids=[
+        "contratado_como_pago",
+        "contratado_como_pago_sem_contexto",
+        "vigente_e_total_trocados",
+        "vigente_como_recebido",
+        "pagamentos_como_contratos",
+        "vigentes_e_registradas_trocadas",
+    ],
+)
+def test_valor_do_resultado_com_o_sentido_trocado_e_reprovado(resultado, texto):
+    m = montar_material(resultado)
+    v = verificar(texto, m.marcadores, ufs_autorizadas=PE, essenciais=m.essenciais)
+    assert not v.aprovado
+    assert "marcador_fora_de_contexto" in v.motivos
+
+
+def test_marcador_sem_ancora_nao_e_cobrado():
+    """Identificação e parâmetros (CNPJ, UFs, prazo) não carregam a resposta: podem aparecer em qualquer frase."""
+    m = material()
+    assert not m.marcadores["v1"].ancoras and not m.marcadores["v2"].ancoras
+    v = _verificar("Sobre {{v1}} ({{v6}}), em {{v2}} dias: vencem {{v3}} contratos, somando {{v4}}.")
+    assert v.aprovado, v.motivos

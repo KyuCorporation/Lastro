@@ -44,7 +44,10 @@ FORA_DO_PERMITIDO = re.compile(
 # Assuntos do catálogo, em ordem de prioridade.
 ASSUNTOS: list[tuple[str, re.Pattern[str]]] = [
     ("socios_sancionados", re.compile(r"\bsoci[oa]s?\b|quadro societario")),
-    ("sancoes_fornecedor", re.compile(r"sanc|sancion|\bceis\b|\bcnep\b|inidone|punid|impedid")),
+    (
+        "sancoes_fornecedor",
+        re.compile(r"sanc|sancion|\bceis\b|\bcnep\b|inidone|punid|punic|penalidad|impedi"),
+    ),
     ("contratos_vencendo", re.compile(r"\bvenc|terminam|\btermina\b|\bacaba|expira")),
     ("contratos_vigentes", re.compile(r"vigent|em vigor|\bativos?\b|em andamento|em execucao")),
     ("pagamentos_periodo", re.compile(r"pagament|\bpag[oa]s?\b|\bpagou|liquidac|empenh")),
@@ -52,6 +55,9 @@ ASSUNTOS: list[tuple[str, re.Pattern[str]]] = [
     ("resumo_fornecedor", re.compile(r"resum|receb|\btotal\b|\bvalor|historico|panorama|faturou")),
 ]
 
+PEDE_RESUMO = re.compile(r"\bresum|panorama")
+RECEBIMENTO = re.compile(r"receb|\bpag")
+SOBRE_CONTRATOS = re.compile(r"contrat|objeto")
 DOMINIO = re.compile(r"gast|govern|contrat|fornecedor|empresa|cnpj|pag|receb|licitac|despesa|orgao|valor")
 # Em ordem: "objeto" tem prioridade, então em "contratos com objeto de X" o termo é X.
 _TERMO = r"\s+(?:de\s+|do\s+|da\s+)?(?P<termo>[a-z0-9 ]{2,80})"
@@ -86,20 +92,47 @@ def extrair_cnpj(texto: str) -> Cnpj:
     return Cnpj(None, invalido)
 
 
+_SIGLA = "|".join(sorted(UFS))
+SIGLA_QUALQUER = re.compile(rf"\b({_SIGLA})\b")
+# Sigla usada como lugar: depois de preposição ("em AL", "de SP", "AL e PE") ou de pontuação ("- AL", "(AL)",
+# "uf=AL", "uf":"AL"), e não seguida de um nome próprio ("MS Informática", "RN Construções" são empresas).
+SIGLA_EM_CONTEXTO = re.compile(
+    r"(?:(?<!\w)(?i:em|no|na|nos|nas|de|do|da|dos|das|para|pra|uf|estado|estados|e|ou)\s+|[-/(,=:\"']\s*)"
+    rf"({_SIGLA})\b(?!\s+[A-ZÀ-Ý][a-zà-ÿ])"
+)
+
+
 def extrair_uf(original: str, normalizado: str) -> str | None:
     for nome in sorted(ESTADOS, key=len, reverse=True):
         # "para" sem acento é também a preposição: só vale como Pará com artigo antes.
         padrao = r"\b(?:no|do|estado do) para\b" if nome == "para" else rf"\b{nome}\b"
         if re.search(padrao, normalizado):
             return ESTADOS[nome]
-    for sigla in re.findall(r"\b([A-Z]{2})\b", original):
-        if sigla in UFS:
-            return sigla
-    return None
+    achada = SIGLA_EM_CONTEXTO.search(original)
+    return achada.group(1) if achada else None
 
 
-def ufs_mencionadas(texto: str) -> set[str]:
-    """Todas as UFs citadas no texto, por nome ou por sigla em maiúsculas."""
+# "merenda escolar em pernambuco": o estado vira o parâmetro `uf`, não parte do termo da busca textual.
+_ESTADO_NO_FIM = re.compile(
+    r"\s+(?:em|no|na|do|da|de)\s+(?:estado\s+d[eo]\s+)?(?:"
+    + "|".join(sorted(ESTADOS, key=len, reverse=True))
+    + "|"
+    + "|".join(uf.lower() for uf in sorted(UFS))
+    + r")\s*$"
+)
+
+
+def _sem_estado_no_fim(termo: str) -> str:
+    return _ESTADO_NO_FIM.sub("", termo.strip()).strip()
+
+
+def ufs_mencionadas(texto: str, *, siglas_em_contexto: bool = False) -> set[str]:
+    """Todas as UFs citadas no texto, por nome ou por sigla em maiúsculas.
+
+    `siglas_em_contexto=True` (guarda da pergunta) só conta a sigla usada como lugar, para o nome de uma empresa
+    ("MS Informática") não virar pedido de outro estado. O padrão é estrito (verificador): no texto do redator,
+    qualquer sigla fora do escopo reprova. O acesso não depende disto: o executor e a RLS barram a UF.
+    """
     t = normalizar(texto)
     achadas: set[str] = set()
     for nome in sorted(ESTADOS, key=len, reverse=True):
@@ -107,7 +140,8 @@ def ufs_mencionadas(texto: str) -> set[str]:
         if re.search(padrao, t):
             achadas.add(ESTADOS[nome])
             t = re.sub(padrao, " ", t)  # "mato grosso do sul" não conta também como "mato grosso"
-    achadas.update(s for s in re.findall(r"\b([A-Z]{2})\b", texto) if s in UFS)
+    siglas = SIGLA_EM_CONTEXTO if siglas_em_contexto else SIGLA_QUALQUER
+    achadas.update(siglas.findall(texto))
     return achadas
 
 
@@ -160,14 +194,24 @@ def planejar_por_regras(pergunta: str, hoje: date) -> PlanoConsulta:
         return esclarecer(PERGUNTA_CARTEIRA)
 
     assunto = next((intent for intent, padrao in ASSUNTOS if padrao.search(t)), None)
+    if PEDE_RESUMO.search(t):  # "resumo de contratos e pagamentos" é resumo, não pagamentos sem período
+        assunto = "resumo_fornecedor"
+    elif assunto == "resumo_fornecedor" and RECEBIMENTO.search(t) and extrair_periodo(t, hoje):
+        assunto = "pagamentos_periodo"  # "quanto recebeu entre X e Y" pede o período, não o histórico todo
 
-    busca = next((m for padrao in BUSCAS if (m := padrao.search(t))), None)
+    # Busca textual só quando a pergunta fala de contrato ou objeto ("um poema sobre o agreste" não é busca).
+    busca = None
+    if SOBRE_CONTRATOS.search(t):
+        busca = next((m for padrao in BUSCAS if (m := padrao.search(t))), None)
     if assunto is None and cnpj.valor is None and (m := busca):
-        termo = m.group("termo").strip()
+        termo = _sem_estado_no_fim(m.group("termo"))
         if len(termo) >= 2:
             return PlanoConsulta(
                 intent="busca_objeto", parametros=Parametros(termo=termo[:80].strip(), uf=uf)
             )
+
+    if assunto is None and cnpj.valor and DOMINIO.search(t):
+        assunto = "resumo_fornecedor"  # pergunta geral sobre um CNPJ válido: o resumo é a resposta útil
 
     if assunto is None:
         if DOMINIO.search(t) or cnpj.valor or cnpj.invalido:

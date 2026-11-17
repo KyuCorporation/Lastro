@@ -11,6 +11,7 @@ import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { Indicador } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
+import { CabecaDaCadeia, CadeiaAuditoria } from "../features/auditoria/CadeiaAuditoria";
 import { NOME_PERFIL, STATUS_CONSULTA, nomeIntent } from "../lib/apresentacao";
 import { hora } from "../lib/formato";
 
@@ -81,7 +82,7 @@ export function AuditoriaPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="04" titulo="Auditoria de consultas">
+      <TituloPagina titulo="Auditoria de consultas">
         Histórico de perguntas, validações de acesso, fontes recuperadas e decisões do sistema.
       </TituloPagina>
 
@@ -152,6 +153,9 @@ export function AuditoriaPage() {
           </section>
         </>
       )}
+
+      {veTenant && <CadeiaAuditoria />}
+      {veTenant && <CabecaDaCadeia />}
 
       <p className="cartao p-5 text-kyu-texto">
         O histórico não guarda senhas nem tokens. Cada consulta respondida tem um recibo com selo sha256.

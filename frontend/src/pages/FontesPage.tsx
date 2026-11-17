@@ -2,21 +2,22 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useApi } from "../api/ApiProvider";
 import type { ErroApi } from "../api/http";
-import type { Fonte } from "../api/types";
+import type { ExecucaoIngestao, Fonte } from "../api/types";
 import { Carregando } from "../components/Carregando";
 import { MensagemErro } from "../components/MensagemErro";
 import { Selo } from "../components/Selo";
 import { TituloPagina } from "../components/TituloPagina";
 import type { Tom } from "../lib/apresentacao";
-import { dataHora } from "../lib/formato";
+import { dataHora, nomeFonte } from "../lib/formato";
 
 // O que cada fonte traz para o Lastro (docs/catalogo-fontes.md). A coleta vem de GET /fontes.
 const CONTEUDO: Record<string, { conteudo: string; ordem: number }> = {
   pe_portal: {
-    conteudo: "Contratos, empenhos e liquidações de PE (amostra de homologação; nesta base, os contratos de PE vêm do PNCP)",
+    conteudo:
+      "Contratos do estado e dos municípios de PE; empenhos e liquidações do estado e dos municípios configurados",
     ordem: 1,
   },
-  pncp: { conteudo: "Contratos públicos de todas as esferas (PE e AL)", ordem: 2 },
+  pncp: { conteudo: "Contratos públicos dos outros estados carregados (Alagoas na demo); PE vem do TCE-PE", ordem: 2 },
   ceis: { conteudo: "Empresas inidôneas e suspensas, de todo o país", ordem: 3 },
   cnep: { conteudo: "Empresas punidas pela Lei Anticorrupção, de todo o país", ordem: 4 },
 };
@@ -25,7 +26,77 @@ const SITUACAO: Record<string, { rotulo: string; tom: Tom }> = {
   ok: { rotulo: "Coletada", tom: "verde" },
   parcial: { rotulo: "Coleta parcial", tom: "ambar" },
   falhou: { rotulo: "Falhou", tom: "vermelho" },
+  // Sem fim registrado: coleta em curso ou interrompida antes de fechar a execução.
+  rodando: { rotulo: "Sem conclusão", tom: "neutro" },
 };
+
+const LIMITE_HISTORICO = 20;
+
+function contagem(n: number | null): string {
+  return n === null ? "—" : n.toLocaleString("pt-BR");
+}
+
+/** Últimas execuções da ingestão (GET /fontes/execucoes): o que foi lido, gravado e descartado, e por que falhou. */
+function HistoricoColetas() {
+  const api = useApi();
+  const execucoes = useQuery<ExecucaoIngestao[], ErroApi>({
+    queryKey: ["fontes-execucoes"],
+    queryFn: () => api.fontes.execucoes(),
+  });
+  return (
+    <section aria-labelledby="titulo-historico" className="cartao p-6">
+      <h2 id="titulo-historico" className="text-xl font-bold text-kyu-texto">
+        Histórico de coletas
+      </h2>
+      <p className="mt-1 text-sm text-kyu-suave">
+        Últimas {LIMITE_HISTORICO} execuções. Coleta que falha fica registrada e não apaga o que já estava no banco.
+      </p>
+      {execucoes.isPending ? (
+        <Carregando texto="Carregando o histórico…" />
+      ) : execucoes.isError ? (
+        <div className="mt-4">
+          <MensagemErro erro={execucoes.error} titulo="Não foi possível carregar o histórico" />
+        </div>
+      ) : execucoes.data.length === 0 ? (
+        <p className="mt-4 text-kyu-suave">Nenhuma coleta registrada.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[48rem] border-collapse text-left">
+            <caption className="sr-only">Histórico de coletas, das mais recentes para as mais antigas</caption>
+            <thead className="tabela-cabecalho">
+              <tr>
+                <th scope="col" className="rounded-l-md px-4 py-3">Fonte</th>
+                <th scope="col" className="px-4 py-3">Iniciada em</th>
+                <th scope="col" className="px-4 py-3 text-right">Lidos</th>
+                <th scope="col" className="px-4 py-3 text-right">Novos</th>
+                <th scope="col" className="px-4 py-3 text-right">Descartados</th>
+                <th scope="col" className="rounded-r-md px-4 py-3">Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {execucoes.data.slice(0, LIMITE_HISTORICO).map((e) => {
+                const situacao = SITUACAO[e.status] ?? { rotulo: e.status, tom: "neutro" as Tom };
+                return (
+                  <tr key={e.id} className="border-b border-kyu-linha align-top">
+                    <th scope="row" className="px-4 py-4 font-bold">{nomeFonte(e.fonte_id)}</th>
+                    <td className="px-4 py-4">{dataHora(e.iniciada_em)}</td>
+                    <td className="px-4 py-4 text-right">{contagem(e.registros_lidos)}</td>
+                    <td className="px-4 py-4 text-right">{contagem(e.registros_novos)}</td>
+                    <td className="px-4 py-4 text-right">{contagem(e.registros_descartados)}</td>
+                    <td className="px-4 py-4">
+                      <Selo tom={situacao.tom}>{situacao.rotulo}</Selo>
+                      {e.erro && <span className="mt-1 block break-words font-mono text-sm text-kyu-vermelho">{e.erro}</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
 
 const CATALOGO = [
   { conjunto: "Contratos", fontes: "TCE-PE, PNCP", campos: "Órgão, fornecedor, objeto, valor, vigência" },
@@ -34,7 +105,7 @@ const CATALOGO = [
   { conjunto: "Fornecedores", fontes: "Todas", campos: "CNPJ e razão social (pessoa física é descartada)" },
 ];
 
-const ETAPAS = ["Fontes oficiais", "Captura", "Normalização", "Catálogo KYU"];
+const ETAPAS = ["Fontes oficiais", "Captura", "Normalização", "Catálogo do Lastro"];
 
 function LinhaFonte({ f }: { f: Fonte }) {
   const e = f.ultima_execucao;
@@ -64,7 +135,7 @@ export function FontesPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="05" titulo="Fonte e catálogo de dados">
+      <TituloPagina titulo="Fonte e catálogo de dados">
         Dados públicos oficiais. Cada registro guarda a origem, a data da coleta e o hash do conteúdo.
       </TituloPagina>
 
@@ -99,6 +170,8 @@ export function FontesPage() {
           </div>
         )}
       </section>
+
+      <HistoricoColetas />
 
       <section aria-labelledby="titulo-catalogo" className="cartao p-6">
         <h2 id="titulo-catalogo" className="text-xl font-bold text-kyu-texto">
@@ -147,8 +220,9 @@ export function FontesPage() {
           ))}
         </ol>
         <p className="mt-5 text-kyu-suave">
-          Captura a 1 requisição por segundo, guarda a resposta bruta com sha256, normaliza campo a campo, descarta
-          pessoa física e grava sem duplicar: rodar de novo não muda as contagens.
+          Captura a 1 requisição por segundo, guarda cada resposta com sha256, normaliza campo a campo, descarta pessoa
+          física e grava sem duplicar: rodar de novo não muda as contagens. No TCE-PE, o dado de pessoa física é
+          retirado antes de a resposta ser guardada.
         </p>
       </section>
     </div>

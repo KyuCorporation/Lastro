@@ -72,3 +72,19 @@ def test_referencias_de_linha_em_citacoes_e_evidencias():
         "sinais": [{"evidencias": [{"tabela": "pagamentos", "id": "p1", "url_origem": None}]}],
     }
     assert ch.referencias_de_linha(corpo) == {("contratos", "c1"), ("pagamentos", "p1")}
+
+
+def test_valor_com_sentido_trocado_aparece_por_frase():
+    radicais = ("pag", "receb", "liquid")
+    texto = (
+        "O fornecedor tem 1 contrato, somando R$ 120.000,00. "
+        "Foram registradas 0 liquidações ou pagamentos, num total de R$ 0,00."
+    )
+    assert ch.valor_com_sentido(texto, "120.000", radicais) == []
+    trocado = "O fornecedor tem 1 contrato. Já foram pagos R$ 120.000,00 ao fornecedor."
+    assert ch.valor_com_sentido(trocado, "120.000", radicais) == [
+        "Já foram pagos R$ 120.000,00 ao fornecedor."
+    ]
+    assert ch.valor_com_sentido("Ele RECEBEU R$ 120.000,00; nada mais.", "120.000", radicais) == [
+        "Ele RECEBEU R$ 120.000,00;"
+    ]

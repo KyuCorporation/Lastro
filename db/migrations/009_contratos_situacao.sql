@@ -1,0 +1,11 @@
+-- 009_contratos_situacao.sql — contrato rescindido, concluído ou suspenso deixa de contar como vigente.
+-- Aprovada em 17/11/2026 (AGENTS.md §4, plano 5.3). Só acrescenta uma coluna a `contratos`; grants e policies
+-- continuam os de 002_rls.sql.
+--
+-- Problema: a vigência era decidida só pela data final. O TCE-PE traz `Situacao` ("Regular", "Concluído",
+-- "Rescindido por Acordo Entre as Partes", "Suspenso por Decisão Administrativa"); na coleta de 15/11/2026, 35 de
+-- 7.294 contratos com data final no futuro estavam encerrados ou suspensos (R$ 20,8 milhões), inflando valor
+-- vigente, valor exposto e o sinal de penhasco.
+-- Correção: `situacao` guarda o texto da fonte (nulo onde a fonte não informa, como no PNCP). Vigente passa a ser
+-- data final a partir de hoje e situação nula ou "Regular".
+alter table contratos add column situacao text;

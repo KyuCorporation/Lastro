@@ -49,7 +49,12 @@ def test_texto_so_com_marcadores_e_aprovado_e_preenchido():
         r.texto
         == "Nos próximos 180 dias vence 1 contrato do fornecedor 11.222.333/0001-81, somando R$ 100.000,00."
     )
-    assert r.valores["v4"] == {"valor": "100000.00", "tipo": "moeda", "origem": "sum(valor_global)"}
+    assert r.valores["v4"] == {
+        "valor": "100000.00",
+        "tipo": "moeda",
+        "origem": "sum(valor_global)",
+        "significado": "valor somado dos contratos que vencem",
+    }
     assert set(r.valores) == {"v1", "v2", "v3", "v4"}
 
 

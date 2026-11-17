@@ -24,7 +24,11 @@ def limitador_consultas() -> LimitadorJanela:
 @cache
 def _ambiente_padrao() -> Ambiente:
     settings = get_settings()
-    return Ambiente(provedor=obter_provedor(settings), timeout_s=settings.llm_timeout_seconds)
+    return Ambiente(
+        provedor=obter_provedor(settings),
+        timeout_s=settings.llm_timeout_seconds,
+        orcamento_s=settings.llm_orcamento_segundos,
+    )
 
 
 def ambiente() -> Ambiente:

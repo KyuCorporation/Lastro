@@ -41,6 +41,7 @@ exposto as (
     from contratos c
     join itens i on i.cnpj = c.fornecedor_cnpj
    where c.vigencia_fim >= %(hoje)s
+     and coalesce(c.situacao, 'Regular') = 'Regular'
      and c.uf::text = any (ctx_ufs())
    group by c.fornecedor_cnpj
 ),
@@ -48,7 +49,8 @@ sinais_item as (
   select s.fornecedor_cnpj as cnpj,
          jsonb_agg(
            jsonb_build_object('tipo', s.tipo, 'gravidade', s.gravidade, 'explicacao', s.explicacao,
-                              'evidencias', s.evidencias)
+                              'evidencias', s.evidencias, 'calculado_em', s.calculado_em,
+                              'versao_regra', s.versao_regra)
            order by case s.gravidade when 'forte' then 0 when 'atencao' then 1 else 2 end, s.tipo, s.uf
          ) as lista
     from sinais s

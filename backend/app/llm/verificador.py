@@ -14,7 +14,10 @@ O que é reprovado (motivo):
 - texto sobre as próprias instruções (`vazamento`) ou de acusação (`linguagem_de_acusacao`);
 - UF fora do escopo da sessão (`uf_fora_do_escopo`);
 - negar registros que o resultado tem (`contradiz_resultado`) ou não usar nenhum valor do resultado
-  (`sem_valor_do_resultado`).
+  (`sem_valor_do_resultado`);
+- valor do resultado apresentado com outro sentido, por exemplo o contratado como pago
+  (`marcador_fora_de_contexto`). A checagem é por vocabulário e reduz a troca, não a elimina: a garantia forte
+  é a tela, que mostra cada valor com o rótulo escrito pelo código (recibo, `valores[].significado`).
 """
 
 import re
@@ -143,6 +146,28 @@ def _sem_valor_do_resultado(t: TextoAnalisado, c: Contexto) -> str | None:
     return None if c.essenciais.intersection(t.usados) else "sem_valor_do_resultado"
 
 
+_FIM_DE_FRASE = re.compile(r"(?<=[.!?;])\s+")
+
+
+def _marcador_fora_de_contexto(t: TextoAnalisado, c: Contexto) -> str | None:
+    """Cada marcador com âncoras precisa de uma delas no trecho que é dele: dentro da mesma frase, do marcador
+    ancorado anterior até o seguinte. Assim "somando {{vigente}}, dos quais {{total}} vigentes" não passa só
+    porque a palavra "vigentes" está em algum lugar da frase."""
+    for frase in _FIM_DE_FRASE.split(t.texto):
+        ancorados = [
+            (m.start(), m.end(), c.marcadores[m.group(1)].ancoras)
+            for m in MARCADOR.finditer(frase)
+            if m.group(1) in c.marcadores and c.marcadores[m.group(1)].ancoras
+        ]
+        for i, (_inicio, _fim, ancoras) in enumerate(ancorados):
+            esquerda = ancorados[i - 1][1] if i else 0
+            direita = ancorados[i + 1][0] if i + 1 < len(ancorados) else len(frase)
+            vizinhanca = normalizar(MARCADOR.sub(" ", frase[esquerda:direita]))
+            if not any(ancora in vizinhanca for ancora in ancoras):
+                return "marcador_fora_de_contexto"
+    return None
+
+
 REGRAS: tuple[Regra, ...] = (
     _texto_vazio,
     _texto_longo,
@@ -156,6 +181,7 @@ REGRAS: tuple[Regra, ...] = (
     _uf_fora_do_escopo,
     _contradiz_resultado,
     _sem_valor_do_resultado,
+    _marcador_fora_de_contexto,
 )
 
 

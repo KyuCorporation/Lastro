@@ -1,18 +1,30 @@
 // Interface da API usada pelas telas. Telas nunca chamam fetch: recebem uma `Api` pelo ApiProvider.
-// Isso permite trocar a implementação (real, simulada, de teste) sem tocar nas telas.
+// Isso permite trocar a implementação (real ou de teste) sem tocar nas telas.
 // Tela nova = um módulo novo aqui (ex.: carteiras) + um campo em `Api`.
 
-import { consultasSimuladas } from "./adaptadores/consultasSimuladas";
 import type { Http } from "./http";
 import type {
+  Alerta,
+  CabecaCadeia,
+  CarteiraCriada,
+  CarteiraEntrada,
+  CarteiraListada,
   ConsultaEntrada,
   ConsultaListada,
   ConsultaSaida,
+  Dossie,
+  EventoAuditoria,
+  ExecucaoIngestao,
+  Fila,
   Fonte,
   LoginEntrada,
   LoginSaida,
+  Metricas,
   Recibo,
+  StatusAlerta,
   Usuario,
+  VerificacaoCadeia,
+  VerificacaoRecibo,
 } from "./types";
 
 export interface ApiAuth {
@@ -28,10 +40,43 @@ export interface ApiConsultas {
 
 export interface ApiRecibos {
   obter(id: string): Promise<Recibo>;
+  /** GET /recibos/{id}/verificar: recalcula o hash no servidor. */
+  verificar(id: string): Promise<VerificacaoRecibo>;
+}
+
+export interface ApiCarteiras {
+  listar(): Promise<CarteiraListada[]>;
+  criar(entrada: CarteiraEntrada): Promise<CarteiraCriada>;
+  fila(id: string): Promise<Fila>;
+}
+
+export interface ApiAlertas {
+  /** GET /alertas: os do tenant, mais recentes primeiro. */
+  listar(status?: StatusAlerta): Promise<Alerta[]>;
+  /** PATCH /alertas/{id}: o status só avança (aberto → visto → resolvido). */
+  atualizar(id: string, status: "visto" | "resolvido"): Promise<{ id: string; status: StatusAlerta }>;
+}
+
+export interface ApiFornecedores {
+  dossie(cnpj: string): Promise<Dossie>;
+}
+
+export interface ApiAuditoria {
+  /** `evento` filtra pelo tipo (consulta, negado, login…), como o `?evento` de GET /auditoria. */
+  listar(limite?: number, evento?: string): Promise<EventoAuditoria[]>;
+  verificar(): Promise<VerificacaoCadeia>;
+  /** GET /auditoria/cabeca: o hash do último evento, para publicar fora do Lastro. */
+  cabeca(): Promise<CabecaCadeia>;
 }
 
 export interface ApiFontes {
   listar(): Promise<Fonte[]>;
+  /** GET /fontes/execucoes: todas as fontes, ou só `fonteId`. */
+  execucoes(fonteId?: string): Promise<ExecucaoIngestao[]>;
+}
+
+export interface ApiMetricas {
+  obter(): Promise<Metricas>;
 }
 
 export interface Api {
@@ -39,6 +84,11 @@ export interface Api {
   consultas: ApiConsultas;
   recibos: ApiRecibos;
   fontes: ApiFontes;
+  carteiras: ApiCarteiras;
+  alertas: ApiAlertas;
+  fornecedores: ApiFornecedores;
+  auditoria: ApiAuditoria;
+  metricas: ApiMetricas;
 }
 
 export function criarApiAuth(http: Http): ApiAuth {
@@ -58,23 +108,63 @@ export function criarApiConsultas(http: Http): ApiConsultas {
 export function criarApiRecibos(http: Http): ApiRecibos {
   return {
     obter: (id) => http.get<Recibo>(`/recibos/${encodeURIComponent(id)}`),
+    verificar: (id) => http.get<VerificacaoRecibo>(`/recibos/${encodeURIComponent(id)}/verificar`),
+  };
+}
+
+export function criarApiCarteiras(http: Http): ApiCarteiras {
+  return {
+    listar: () => http.get<CarteiraListada[]>("/carteiras"),
+    criar: (entrada) => http.post<CarteiraCriada>("/carteiras", entrada),
+    fila: (id) => http.get<Fila>(`/carteiras/${encodeURIComponent(id)}/fila`),
+  };
+}
+
+export function criarApiAlertas(http: Http): ApiAlertas {
+  return {
+    listar: (status) => http.get<Alerta[]>(status ? `/alertas?status=${encodeURIComponent(status)}` : "/alertas"),
+    atualizar: (id, status) =>
+      http.patch<{ id: string; status: StatusAlerta }>(`/alertas/${encodeURIComponent(id)}`, { status }),
+  };
+}
+
+export function criarApiFornecedores(http: Http): ApiFornecedores {
+  return { dossie: (cnpj) => http.get<Dossie>(`/fornecedores/${encodeURIComponent(cnpj)}/dossie`) };
+}
+
+export function criarApiAuditoria(http: Http): ApiAuditoria {
+  return {
+    listar: (limite = 100, evento?: string) =>
+      http.get<EventoAuditoria[]>(
+        `/auditoria?limite=${encodeURIComponent(limite)}${evento ? `&evento=${encodeURIComponent(evento)}` : ""}`,
+      ),
+    verificar: () => http.get<VerificacaoCadeia>("/auditoria/verificar"),
+    cabeca: () => http.get<CabecaCadeia>("/auditoria/cabeca"),
   };
 }
 
 export function criarApiFontes(http: Http): ApiFontes {
-  return { listar: () => http.get<Fonte[]>("/fontes") };
+  return {
+    listar: () => http.get<Fonte[]>("/fontes"),
+    execucoes: (fonteId) =>
+      http.get<ExecucaoIngestao[]>(fonteId ? `/fontes/execucoes?fonte_id=${encodeURIComponent(fonteId)}` : "/fontes/execucoes"),
+  };
 }
 
-export interface OpcoesApi {
-  /** Troca POST /consultas pelo adaptador simulado (só para desenvolver a tela sem backend). */
-  consultasSimuladas?: boolean;
+export function criarApiMetricas(http: Http): ApiMetricas {
+  return { obter: () => http.get<Metricas>("/metricas") };
 }
 
-export function criarApi(http: Http, opcoes: OpcoesApi = {}): Api {
+export function criarApi(http: Http): Api {
   return {
     auth: criarApiAuth(http),
-    consultas: opcoes.consultasSimuladas ? consultasSimuladas() : criarApiConsultas(http),
+    consultas: criarApiConsultas(http),
     recibos: criarApiRecibos(http),
     fontes: criarApiFontes(http),
+    carteiras: criarApiCarteiras(http),
+    alertas: criarApiAlertas(http),
+    fornecedores: criarApiFornecedores(http),
+    auditoria: criarApiAuditoria(http),
+    metricas: criarApiMetricas(http),
   };
 }

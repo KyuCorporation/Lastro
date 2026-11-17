@@ -107,6 +107,27 @@ def lidos_na_execucao_anterior(
     return None if linha is None else linha[0]
 
 
+# ===================== Sanção retirada do cadastro (migration 008) =====================
+
+SQL_SANCOES_VISTAS = """
+update sancoes set vista_em = now(), removida_em = null
+ where fonte_id = %(fonte_id)s and id_origem = any(%(ids)s)
+"""
+
+SQL_SANCOES_REMOVIDAS = """
+update sancoes set removida_em = now()
+ where fonte_id = %(fonte_id)s and removida_em is null and not (id_origem = any(%(ids)s))
+"""
+
+
+def marcar_sancoes_do_cadastro(conn: psycopg.Connection, fonte_id: str, ids: set[str]) -> int:
+    """Coleta completa do cadastro: quem veio está visto (e volta, se tinha saído); quem não veio foi retirado.
+    Devolve quantas sanções foram marcadas como retiradas agora."""
+    params = {"fonte_id": fonte_id, "ids": sorted(ids)}
+    conn.execute(SQL_SANCOES_VISTAS, params)
+    return conn.execute(SQL_SANCOES_REMOVIDAS, params).rowcount
+
+
 # ===================== Dimensões =====================
 
 SQL_UPSERT_ORGAO = """
@@ -163,6 +184,7 @@ _COLUNAS: dict[type[Fato], tuple[str, ...]] = {
         "data_assinatura",
         "vigencia_inicio",
         "vigencia_fim",
+        "situacao",
     ),
     Pagamento: ("uf", "orgao_id", "fornecedor_cnpj", "data_pagamento", "valor", "descricao"),
     Sancao: (

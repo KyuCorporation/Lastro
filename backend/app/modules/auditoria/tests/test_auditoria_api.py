@@ -32,7 +32,8 @@ def test_auditor_lista_a_trilha_do_tenant(api, autenticar, evento_alfa):
     r = api.get("/auditoria", headers=autenticar("caio@alfa.demo"))
     assert r.status_code == 200
     eventos = r.json()
-    assert eventos[0]["seq"] == evento_alfa  # mais recente primeiro
+    # Mais recente primeiro: o login do próprio auditor (feito agora) e, logo antes, a negação da Ana.
+    assert eventos[0]["evento"] == "login" and eventos[1]["seq"] == evento_alfa
     assert set(eventos[0]) == {"seq", "usuario_id", "evento", "detalhes", "criado_em", "hash"}
     assert [e["seq"] for e in eventos] == sorted((e["seq"] for e in eventos), reverse=True)
 
@@ -63,7 +64,7 @@ def test_admin_de_um_tenant_nao_ve_o_outro(api, autenticar):
 
 
 @pytest.mark.parametrize("email", ["ana@alfa.demo", "gil@alfa.demo", "bia@beta.demo"])
-@pytest.mark.parametrize("rota", ["/auditoria", "/auditoria/verificar"])
+@pytest.mark.parametrize("rota", ["/auditoria", "/auditoria/verificar", "/auditoria/cabeca"])
 def test_quem_nao_e_auditor_recebe_403_auditado(api, autenticar, email, rota):
     with _superusuario() as su:
         antes = su.execute("select coalesce(max(seq), 0) from auditoria").fetchone()[0]
@@ -80,6 +81,32 @@ def test_quem_nao_e_auditor_recebe_403_auditado(api, autenticar, email, rota):
 @pytest.mark.parametrize("consulta", ["evento=DROP%20TABLE", "limite=0", "limite=501"])
 def test_parametros_invalidos_422(api, autenticar, consulta):
     assert api.get(f"/auditoria?{consulta}", headers=autenticar("caio@alfa.demo")).status_code == 422
+
+
+# ------------------------------------------------------------------ GET /auditoria/cabeca (P4.5)
+def test_cabeca_e_o_ultimo_evento_do_tenant(api, autenticar, evento_alfa):
+    caio = autenticar("caio@alfa.demo")  # o login do caio entra na trilha antes da leitura
+    r = api.get("/auditoria/cabeca", headers=caio)
+    assert r.status_code == 200
+    cabeca = r.json()
+    assert set(cabeca) == {"seq", "hash", "criado_em", "n_eventos"}
+    with _superusuario() as su:
+        seq, hash_, n = su.execute(
+            "select seq, hash, (select count(*) from auditoria where tenant_id = %s) "
+            "from auditoria where tenant_id = %s order by seq desc limit 1",
+            (TENANT_ALFA, TENANT_ALFA),
+        ).fetchone()
+    assert (cabeca["seq"], cabeca["hash"], cabeca["n_eventos"]) == (seq, hash_, n)
+
+
+def test_cabeca_e_so_do_proprio_tenant(api, autenticar):
+    autenticar("bia@beta.demo")
+    r = api.get("/auditoria/cabeca", headers=autenticar("admin@alfa.demo"))
+    with _superusuario() as su:
+        seqs_alfa = {
+            s for (s,) in su.execute("select seq from auditoria where tenant_id = %s", (TENANT_ALFA,))
+        }
+    assert r.json()["seq"] in seqs_alfa
 
 
 # ------------------------------------------------------------------ GET /auditoria/verificar
@@ -113,9 +140,13 @@ def restaurar_evento(evento_alfa) -> Iterator[int]:
     ids=["detalhes", "hash"],
 )
 def test_adulterar_um_evento_quebra_a_cadeia_nele(api, autenticar, restaurar_evento, adulteracao):
+    # O login grava um evento na trilha. Feito depois da adulteração, ele se encadearia ao hash adulterado, e a
+    # restauração no fim do teste deixaria a cadeia quebrada de verdade. Por isso o login vem antes, e a
+    # verificação aponta o evento seguinte quando o hash do adulterado mudou.
+    cabecalho = autenticar("caio@alfa.demo")
     with _superusuario() as su:
         assert su.execute(adulteracao, (restaurar_evento,)).rowcount == 1
-    corpo = api.get("/auditoria/verificar", headers=autenticar("caio@alfa.demo")).json()
+    corpo = api.get("/auditoria/verificar", headers=cabecalho).json()
     assert corpo["integra"] is False
     assert corpo["primeiro_seq_quebrado"] == restaurar_evento
 

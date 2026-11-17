@@ -65,7 +65,7 @@ def _plano(intent: str, **parametros) -> PlanoConsulta:
 
 def test_resumo_separa_pago_de_empenhado(ctx_ana):
     r = executar(_plano("resumo_fornecedor"), ctx_ana, HOJE)
-    assert r.versao == "resumo_fornecedor@v2"
+    assert r.versao == "resumo_fornecedor@v4"
     assert r.totais["n_pagamentos"] == 2
     assert r.totais["valor_pago"] == Decimal("40000.00")
     assert r.totais["n_empenhos"] == 1
@@ -106,7 +106,7 @@ def test_texto_do_resumo_diz_pago_e_empenhado_separados(ctx_ana):
     texto = redigir(
         "p", executar(_plano("resumo_fornecedor"), ctx_ana, HOJE), ufs_autorizadas=("PE",), provedor=None
     ).texto
-    assert "Foram registrados 2 pagamentos, num total de R$ 40.000,00." in texto
+    assert "Foram registradas 2 liquidações ou pagamentos, num total de R$ 40.000,00." in texto
     assert "R$ 40.000,00 empenhados em 1 empenho" in texto
     assert "80.000" not in texto
 
@@ -116,5 +116,5 @@ def test_texto_dos_pagamentos_no_periodo(ctx_ana):
         _plano("pagamentos_periodo", data_inicio=date(2025, 1, 1), data_fim=date(2025, 12, 31)), ctx_ana, HOJE
     )
     texto = redigir("p", resultado, ufs_autorizadas=("PE",), provedor=None).texto
-    assert "recebeu 2 pagamentos" in texto and "num total de R$ 40.000,00" in texto
+    assert "teve 2 liquidações ou pagamentos registrados" in texto and "num total de R$ 40.000,00" in texto
     assert "R$ 40.000,00 empenhados em 1 empenho" in texto

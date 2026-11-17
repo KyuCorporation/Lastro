@@ -168,5 +168,22 @@ def contem(texto: str, trecho: str) -> bool:
     return trecho.lower() in texto.lower()
 
 
+_FIM_DE_FRASE = re.compile(r"(?<=[.!?;])\s+")
+
+
+def valor_com_sentido(texto: str, valor: str, radicais: Iterable[str]) -> list[str]:
+    """Frases em que `valor` aparece junto de uma palavra de outro sentido ("pag", "receb", "liquid").
+
+    Pega a troca de sentido (SPEC §8.3, plano 2.2): o valor contratado escrito como se tivesse sido pago. O ponto
+    de milhar ("120.000") não separa frases: só pontuação seguida de espaço.
+    """
+    radicais = [r.lower() for r in radicais]
+    return [
+        frase
+        for frase in _FIM_DE_FRASE.split(texto)
+        if valor in frase and any(r in frase.lower() for r in radicais)
+    ]
+
+
 def tem_digito(texto: str) -> bool:
     return bool(re.search(r"\d", texto))

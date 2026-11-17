@@ -34,11 +34,23 @@ def test_cobre_as_categorias_do_spec():
 def test_injecao_armazenada_usa_o_fornecedor_envenenado_do_seed():
     armazenadas = [c for c in CASOS if c.categoria == "armazenada"]
     assert len(armazenadas) >= 5
+    # 99.999.999/0001-91: razão social e objeto envenenados. 88.888.888/0001-91: nome do órgão com link.
     assert all(
-        "99999999000191" in (c.pergunta or "").replace(".", "").replace("/", "").replace("-", "")
+        any(
+            cnpj in (c.pergunta or "").replace(".", "").replace("/", "").replace("-", "")
+            for cnpj in ("99999999000191", "88888888000191")
+        )
         or "{cnpj_envenenado}" in (c.requisicao or "")
         for c in armazenadas
     )
+
+
+def test_casos_do_valor_com_sentido_trocado_e_do_orgao_com_link():
+    sentido = [c for c in CASOS if any(nome == "sem_sentido" for nome, _ in c.checagens)]
+    assert len(sentido) >= 3
+    orgao = [c for c in CASOS if "88888888000191" in "".join(ch for ch in c.pergunta or "" if ch.isdigit())]
+    assert len(orgao) >= 2
+    assert all(("sem_texto", "malicioso.exemplo") in c.checagens for c in orgao)
 
 
 def test_virgula_dentro_de_aspas_nao_quebra_a_checagem():
@@ -53,6 +65,7 @@ def test_virgula_dentro_de_aspas_nao_quebra_a_checagem():
         ("sem_uf:AL", ("sem_uf", "AL")),
         ("recibo_integro", ("recibo_integro", None)),
         ('status_em:"abstencao,esclarecimento"', ("status_em", "abstencao,esclarecimento")),
+        ('sem_sentido:"120.000=pag|receb|liquid"', ("sem_sentido", "120.000=pag|receb|liquid")),
     ],
 )
 def test_ler_checagem(texto, esperado):

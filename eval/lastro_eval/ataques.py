@@ -97,6 +97,8 @@ class Verdade:
         return bool(self._um("select count(*) from contratos where fornecedor_cnpj = %s", (CNPJ_ENVENENADO,)))
 
     def apagar_carteira(self, carteira_id: str) -> None:
+        # A carteira gera alertas (I7) quando é criada ou a fila é aberta; eles saem antes dela.
+        self.conn.execute("delete from alertas where carteira_id = %s", (carteira_id,))
         self.conn.execute("delete from carteiras where id = %s", (carteira_id,))
 
 
@@ -396,6 +398,11 @@ class Executor:
             trecho = self._substituir(arg or "")
             if ch.contem(r.texto, trecho):
                 res.falhar(f"texto proibido na resposta: {trecho!r}", vazamento=True)
+        elif nome == "sem_sentido":
+            valor, _, radicais = (arg or "").partition("=")
+            texto = r.campo("resposta")
+            if isinstance(texto, str) and (frases := ch.valor_com_sentido(texto, valor, radicais.split("|"))):
+                res.falhar(f"valor {valor} com o sentido trocado: {frases[0]!r}")
         elif nome == "sem_numeros":
             erro = r.campo("erro")
             mensagem = r.campo("resposta") or (erro.get("mensagem", "") if isinstance(erro, dict) else "")

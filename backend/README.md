@@ -17,7 +17,7 @@ app/
     carteiras/       # POST/GET /carteiras e GET /carteiras/{id}/fila; prioridade.py (SPEC §9)
     fornecedores/    # GET /fornecedores/{cnpj}/dossie (404 se nada visível no escopo)
     sinais/          # leitura de sinais (cálculo fica na pipeline)
-    alertas/         # alertas por evento (opcional)
+    alertas/         # alertas por evento: geração (criação da carteira e fila) e leitura
     metricas/        # lê eval/reports
   llm/               # interface de provedor, gemini, mock, planejador, redator, verificador, prompts/
   tests/             # test_acesso.py (matriz do SPEC §6.4) e testes por módulo

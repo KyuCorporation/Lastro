@@ -2,7 +2,8 @@
 
 - A UF do plano é interseccionada com as UFs da sessão. Pedido fora do escopo vira ESCOPO_NEGADO.
 - A RLS filtra de novo no banco: mesmo um parâmetro errado não traz linha fora do escopo.
-- Totais vêm do SQL (funções de janela antes do LIMIT), então ficam certos mesmo com a lista truncada.
+- Totais vêm do SQL (funções de janela antes do LIMIT) ou da soma dos conjuntos derivados, que não são cortados:
+  ficam certos mesmo com a lista de linhas citáveis truncada em `LIMITE_LINHAS`.
 """
 
 from dataclasses import dataclass, field
@@ -55,17 +56,23 @@ def ufs_efetivas(uf_pedida: str | None, ctx: ContextoAcesso) -> tuple[str, ...]:
     return (uf_pedida,)
 
 
-def _parametros(plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date, usa_uf: bool) -> dict[str, Any]:
+def _parametros(
+    plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date, usa_uf: bool, usa_cnpj: bool = True
+) -> dict[str, Any]:
     p = plano.parametros
-    if p.cnpj is None or not cnpj_valido(p.cnpj):
-        raise ErroApi(422, "ENTRADA_INVALIDA", "CNPJ inválido: confira os 14 dígitos.")
-    params: dict[str, Any] = {"cnpj": p.cnpj, "hoje": hoje, "limite": LIMITE_LINHAS + 1}
+    params: dict[str, Any] = {"hoje": hoje, "limite": LIMITE_LINHAS + 1}
+    if usa_cnpj:
+        if p.cnpj is None or not cnpj_valido(p.cnpj):
+            raise ErroApi(422, "ENTRADA_INVALIDA", "CNPJ inválido: confira os 14 dígitos.")
+        params["cnpj"] = p.cnpj
     if usa_uf:
         params["ufs"] = list(ufs_efetivas(p.uf, ctx))
     if plano.intent == "contratos_vencendo":
         params["dias"] = p.dias or DIAS_PADRAO
     if plano.intent == "pagamentos_periodo":
         params["data_inicio"], params["data_fim"] = p.data_inicio, p.data_fim
+    if plano.intent == "busca_objeto":
+        params["termo"] = (p.termo or "").strip()
     return params
 
 
@@ -115,6 +122,18 @@ def _totais(intent: str, conjuntos: dict[str, list[dict]], janelas: dict[str, di
         }
     if intent == "sancoes_fornecedor":
         return {"n_sancoes": n, "n_vigentes": sum(1 for s in conjuntos["linhas"] if s["vigente"])}
+    if intent == "orgaos_fornecedor":
+        ranking = conjuntos["ranking"]
+        maior = ranking[0] if ranking else None
+        return {
+            "n_orgaos": len(ranking),
+            "n_contratos": sum(g["n_contratos"] for g in ranking),
+            "valor_total": sum((g["valor_contratado"] for g in ranking), Decimal(0)),
+            "maior_orgao": (maior["orgao_nome"] or maior["orgao_id"]) if maior else None,
+            "maior_participacao": maior["participacao"] if maior else None,
+        }
+    if intent == "busca_objeto":
+        return {"n_contratos": n, "valor_total": j.get("valor_total") or Decimal(0)}
     return {}
 
 
@@ -122,7 +141,7 @@ def executar(plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date) -> Resultado
     consulta = CONSULTAS.get(plano.intent)
     if consulta is None:
         raise IntentSemConsulta(plano.intent)
-    params = _parametros(plano, ctx, hoje, consulta.usa_uf)
+    params = _parametros(plano, ctx, hoje, consulta.usa_uf, consulta.usa_cnpj)
 
     conjuntos: dict[str, list[dict[str, Any]]] = {}
     janelas: dict[str, dict[str, Any]] = {}
@@ -131,7 +150,8 @@ def executar(plano: PlanoConsulta, ctx: ContextoAcesso, hoje: date) -> Resultado
         cur = conn.cursor(row_factory=dict_row)
         for nome in consulta.conjuntos:
             linhas = cur.execute(sql(consulta.intent, nome), params).fetchall()
-            if len(linhas) > LIMITE_LINHAS:
+            # Só as linhas citáveis têm teto. Os conjuntos derivados (grupos por órgão) alimentam os totais.
+            if nome in consulta.citaveis and len(linhas) > LIMITE_LINHAS:
                 linhas, truncado = linhas[:LIMITE_LINHAS], True
             janelas[nome] = _separar_totais(linhas)
             conjuntos[nome] = linhas

@@ -1,12 +1,19 @@
 """Configuração da pipeline. Tudo vem de variáveis de ambiente (.env); nenhum segredo no código."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 USER_AGENT = "lastro-hackathon"
+FUSO_RECIFE = timezone(timedelta(hours=-3))  # Pernambuco não tem horário de verão
+
+
+def hoje_recife(agora: datetime | None = None) -> date:
+    """O dia em Pernambuco, igual ao "hoje" da API. O container roda em UTC: entre 21h e meia-noite de Recife,
+    a data do servidor já seria o dia seguinte, e sinal e vigência mudariam de dia antes da hora."""
+    return (agora or datetime.now(FUSO_RECIFE)).astimezone(FUSO_RECIFE).date()
 
 
 def _lista(valor: str) -> list[str]:
@@ -19,6 +26,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     data_dir: Path = Path("/data")
     requests_per_second: float = 1.0
+    http_timeout: float = 180.0  # o TCE-PE leva dezenas de segundos em recortes grandes
 
     pncp_base_url: str = "https://pncp.gov.br/api/consulta"
     pncp_ufs: str = "AL"
@@ -28,9 +36,15 @@ class Settings(BaseSettings):
     pncp_tamanho_pagina: int = 500
 
     tcepe_base_url: str = "https://sistemas.tcepe.tc.br/DadosAbertos"
+    # TCE-PE (docs/catalogo-fontes.md). Contratos: todos os anos desde `tcepe_contratos_ano_inicial`, estado e
+    # municípios. Despesas (empenho e liquidação): exercícios de `tcepe_anos`; no estado, por unidade gestora
+    # (`tcepe_ugs_estaduais`, vazio = todas); nos municípios, só os de `tcepe_municipios` (nomes; vazio = nenhum).
     tcepe_anos: str = "2025,2026"
     tcepe_esferas: str = "E,M"
-    tcepe_municipios: str = ""
+    tcepe_municipios: str = "Garanhuns"
+    tcepe_ugs_estaduais: str = ""
+    tcepe_contratos_ano_inicial: int = 2010
+    tcepe_cache_dias: int = 30  # validade do cache de recortes de exercício já encerrado
 
     sancoes_download_url: str = "https://portaldatransparencia.gov.br/download-de-dados"
     sancoes_dias_retroativos: int = 7
@@ -73,6 +87,16 @@ class Settings(BaseSettings):
     @property
     def municipios_tcepe(self) -> list[str]:
         return _lista(self.tcepe_municipios)
+
+    @property
+    def ugs_estaduais_tcepe(self) -> list[str]:
+        return _lista(self.tcepe_ugs_estaduais)
+
+    @property
+    def anos_contratos_tcepe(self) -> list[int]:
+        """Contratos antigos ainda podem estar vigentes: do ano inicial ao último exercício de `tcepe_anos`."""
+        ultimo = max(self.anos_tcepe)
+        return list(range(min(self.tcepe_contratos_ano_inicial, ultimo), ultimo + 1))
 
 
 @lru_cache

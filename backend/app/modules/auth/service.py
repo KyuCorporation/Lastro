@@ -4,6 +4,7 @@ from app.core.contexto import ContextoAcesso
 from app.core.db import sessao
 from app.core.errors import nao_autenticado
 from app.core.security import criar_token, verificar_senha
+from app.modules.auditoria import service as auditoria
 from app.modules.auth import queries
 from app.modules.auth.schemas import LoginSaida, TenantSaida, UsuarioSaida
 
@@ -32,4 +33,7 @@ def login(email: str, senha: str) -> LoginSaida:
     if linha is None or not senha_ok:
         raise nao_autenticado(MENSAGEM_LOGIN_INVALIDO)
     ctx = ContextoAcesso(linha["tenant_id"], linha["id"], linha["perfil"], tuple(linha["ufs"]))
-    return LoginSaida(token=criar_token(ctx), usuario=usuario_atual(ctx))
+    saida = LoginSaida(token=criar_token(ctx), usuario=usuario_atual(ctx))
+    # Só o login que deu certo entra na trilha: sem sessão não há tenant, e a trilha é por tenant.
+    auditoria.registrar(ctx, "login", {"perfil": ctx.perfil, "ufs": list(ctx.ufs)})
+    return saida

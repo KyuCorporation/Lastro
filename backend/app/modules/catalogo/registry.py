@@ -1,6 +1,6 @@
 """Consultas executáveis do catálogo: intent → versão e conjuntos de SQL (`sql/<intent>.<conjunto>.sql`).
 
-Só as intents N1 com SQL estão aqui. `fora_de_escopo` e `esclarecer` não consultam o banco.
+Intents N1 e as N2 `orgaos_fornecedor` e `busca_objeto`. `fora_de_escopo` e `esclarecer` não consultam o banco.
 """
 
 from dataclasses import dataclass
@@ -29,6 +29,7 @@ class ConsultaCatalogo:
     # Conjuntos com linhas citáveis (têm proveniência). Os demais são derivados delas.
     citaveis: tuple[str, ...]
     usa_uf: bool = True
+    usa_cnpj: bool = True
 
     @property
     def id_versao(self) -> str:
@@ -39,16 +40,20 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
     c.intent: c
     for c in [
         # v2 em resumo_fornecedor e pagamentos_periodo: empenho separado do pago (o recibo guarda a versão).
+        # v3 em resumo_fornecedor e v2 em orgaos_fornecedor: os agregados por órgão deixam de ter limite de linhas.
+        # v4 em resumo_fornecedor e v2 em contratos_vigentes e contratos_vencendo: situação da fonte (migration 009).
         ConsultaCatalogo(
             "resumo_fornecedor",
-            "v2",
+            "v4",
             ("por_uf_orgao", "contratos", "pagamentos"),
             ("contratos", "pagamentos"),
         ),
-        ConsultaCatalogo("contratos_vigentes", "v1", ("linhas",), ("linhas",)),
-        ConsultaCatalogo("contratos_vencendo", "v1", ("linhas",), ("linhas",)),
+        ConsultaCatalogo("contratos_vigentes", "v2", ("linhas",), ("linhas",)),
+        ConsultaCatalogo("contratos_vencendo", "v2", ("linhas",), ("linhas",)),
         ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
-        ConsultaCatalogo("sancoes_fornecedor", "v1", ("linhas",), ("linhas",), usa_uf=False),
+        ConsultaCatalogo("sancoes_fornecedor", "v2", ("linhas",), ("linhas",), usa_uf=False),
+        ConsultaCatalogo("orgaos_fornecedor", "v2", ("ranking", "contratos"), ("contratos",)),
+        ConsultaCatalogo("busca_objeto", "v2", ("linhas",), ("linhas",), usa_cnpj=False),
     ]
 }
 

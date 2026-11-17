@@ -27,6 +27,20 @@ select set_config('app.tenant_id', %(tenant_id)s, true),
 _pool: ConnectionPool | None = None
 
 
+def _verificar_conexao(conn: psycopg.Connection) -> None:
+    """Testa a conexão antes de entregar (SPEC §14.5: reinício no meio da consulta).
+
+    Postgres reiniciado mata todas as conexões ociosas de uma vez. Descartá-las uma a uma faz o pool esperar
+    com backoff a cada uma e estourar o tempo; na primeira morta, o pool inteiro é verificado e reposto.
+    """
+    try:
+        ConnectionPool.check_connection(conn)
+    except psycopg.OperationalError:
+        if _pool is not None:
+            _pool.check()
+        raise
+
+
 def get_pool() -> ConnectionPool:
     global _pool
     if _pool is None:
@@ -35,6 +49,7 @@ def get_pool() -> ConnectionPool:
             min_size=1,
             max_size=10,
             kwargs={"autocommit": True},
+            check=_verificar_conexao,
             open=True,
         )
     return _pool

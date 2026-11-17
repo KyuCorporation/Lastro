@@ -21,7 +21,7 @@ export function AcessoPage() {
 
   return (
     <div className="space-y-6">
-      <TituloPagina numero="03" titulo="Controle de acesso por perfil">
+      <TituloPagina titulo="Controle de acesso por perfil">
         A autorização é validada no servidor antes que a consulta alcance a IA.
       </TituloPagina>
 

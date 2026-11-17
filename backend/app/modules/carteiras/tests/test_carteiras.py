@@ -114,7 +114,8 @@ def test_fila_priorizada_com_sinais_so_das_ufs_do_usuario(cliente, autenticar, c
     assert [s["tipo"] for s in primeiro["sinais"]] == ["sancao_direta", "concentracao"]  # forte antes
     assert primeiro["prioridade"] == pytest.approx(13 * math.log10(400001), abs=1e-4)
     for s in primeiro["sinais"]:
-        assert set(s) == {"tipo", "gravidade", "explicacao", "evidencias"}
+        assert set(s) == {"tipo", "gravidade", "explicacao", "evidencias", "calculado_em", "versao_regra"}
+        assert s["versao_regra"] == "teste-t18" and s["calculado_em"].startswith("20")
 
     # F2 e F3 sem sinal visível para ana (o penhasco de F3 é de AL): prioridade 0, sem exposição
     assert {(i["cnpj"], i["prioridade"], i["valor_exposto"], tuple(i["sinais"])) for i in resto} == {
@@ -122,6 +123,13 @@ def test_fila_priorizada_com_sinais_so_das_ufs_do_usuario(cliente, autenticar, c
         (F3, 0, "0.00", ()),
     }
     assert "em AL" not in r.text  # nenhuma explicação de sinal de AL
+
+
+def test_contrato_rescindido_nao_conta_no_valor_exposto(cliente, autenticar, carteira, c2_rescindido):
+    itens = {
+        i["cnpj"]: i for i in _fila(cliente, autenticar("ana@alfa.demo"), carteira["id"]).json()["itens"]
+    }
+    assert itens[F1]["valor_exposto"] == "100000.00"  # só C1; C2 foi rescindido
 
 
 def test_admin_com_pe_e_al_ve_o_sinal_e_a_exposicao_de_al(cliente, autenticar, carteira):

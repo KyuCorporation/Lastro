@@ -1,7 +1,7 @@
 # catalogo/ — consultas parametrizadas
 
 - `intents.py`: as 11 intents do SPEC §7, com parâmetros obrigatórios e opcionais e a descrição curta que vai no prompt do planejador.
-- `registry.py`: intents que consultam o banco, com versão (vai para o recibo como `intent@versao`) e conjuntos de SQL. Hoje: as 5 intents N1 (`resumo_fornecedor`, `contratos_vigentes`, `contratos_vencendo`, `pagamentos_periodo`, `sancoes_fornecedor`).
+- `registry.py`: intents que consultam o banco, com versão (vai para o recibo como `intent@versao`) e conjuntos de SQL. Hoje: as 5 intents N1 e as N2 `orgaos_fornecedor` e `busca_objeto` (N1: `resumo_fornecedor`, `contratos_vigentes`, `contratos_vencendo`, `pagamentos_periodo`, `sancoes_fornecedor`).
 - `sql/<intent>.<conjunto>.sql`: SQL fixo e parametrizado. `resumo_fornecedor` tem três conjuntos (`por_uf_orgao`, `contratos`, `pagamentos`); as demais têm `linhas`.
 - `executor.py`: `executar(plano, ctx, hoje)` valida o CNPJ (dígitos verificadores), resolve a UF efetiva, roda os conjuntos dentro de `sessao(ctx)` e devolve um `ResultadoConsulta` com linhas, totais e a marca de truncado.
 
@@ -11,7 +11,9 @@ Regras:
 - Sanções são nacionais: `sancoes_fornecedor` não filtra por UF.
 - Totais vêm do SQL (funções de janela antes do `LIMIT`), então ficam certos mesmo quando as linhas são cortadas em 200.
 - Nada de SQL dinâmico além de parâmetros. `statement_timeout` de 5 s pela sessão.
-- `fora_de_escopo` e `esclarecer` não consultam o banco (`IntentSemConsulta`). As intents N2 e N3 ainda não têm SQL.
+- `fora_de_escopo` e `esclarecer` não consultam o banco (`IntentSemConsulta`). `fila_carteira` e `socios_sancionados` ainda não têm SQL.
+- `orgaos_fornecedor`: ranking de órgãos com participação no valor contratado (conjuntos `ranking`, derivado, e `contratos`, citável).
+- `busca_objeto`: busca textual em português (`plainto_tsquery`) no objeto dos contratos, nacional (sem CNPJ), nas UFs da sessão; cita os 20 mais relevantes e soma o total de todos.
 
 Os marcadores e o modelo de resposta determinístico de cada intent ficam em `app/llm/marcadores.py`.
 

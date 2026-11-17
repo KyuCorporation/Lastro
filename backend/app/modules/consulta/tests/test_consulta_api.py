@@ -56,6 +56,7 @@ def test_pergunta_vira_resposta_com_citacoes_recibo_e_auditoria(api, autenticar,
     (citacao,) = corpo["citacoes"]
     assert citacao["tabela"] == "contratos" and citacao["fonte_id"] == "demo_sintetico"
     assert citacao["url_origem"] == "about:blank#teste-TCAT-C1"
+    assert citacao["id_origem"] == "TCAT-C1" and citacao["resumo"].startswith("Contrato com ")
     assert corpo["recibo_id"]
 
     # consulta gravada com plano, intent e versões
@@ -69,6 +70,9 @@ def test_pergunta_vira_resposta_com_citacoes_recibo_e_auditoria(api, autenticar,
     evento, detalhes = _ultimo_evento(ctx_caio, corpo["consulta_id"])
     assert evento == "consulta"
     assert detalhes["recibo_id"] == corpo["recibo_id"] and detalhes["intent"] == "contratos_vencendo"
+    # O selo do recibo fica ancorado na trilha encadeada: trocar conteúdo e hash juntos no recibo não o apaga.
+    recibo = api.get(f"/recibos/{corpo['recibo_id']}", headers=autenticar("ana@alfa.demo")).json()
+    assert detalhes["recibo_hash"] == recibo["hash"] and len(recibo["hash"]) == 64
 
 
 def test_recibo_segue_o_contrato_e_o_hash_confere_depois_de_gravado(api, autenticar):
@@ -85,7 +89,7 @@ def test_recibo_segue_o_contrato_e_o_hash_confere_depois_de_gravado(api, autenti
     assert conteudo["consulta_id"] == corpo["consulta_id"]
     assert conteudo["resposta_final"] == corpo["resposta"]
     assert conteudo["ufs_autorizadas"] == ["PE"]
-    assert conteudo["execucao"]["consulta_catalogo"] == "contratos_vencendo@v1"
+    assert conteudo["execucao"]["consulta_catalogo"] == "contratos_vencendo@v2"
     assert conteudo["execucao"]["ufs_efetivas"] == ["PE"] and conteudo["execucao"]["n_linhas"] == 1
     assert [linha["id_origem"] for linha in conteudo["linhas"]] == ["TCAT-C1"]
     assert conteudo["verificacao"] == {"status": "aprovado", "motivos": []}
@@ -99,7 +103,12 @@ def test_recibo_segue_o_contrato_e_o_hash_confere_depois_de_gravado(api, autenti
             "sintetico": True,
         }
     ]
-    assert conteudo["valores"]["v4"] == {"valor": "100000.00", "tipo": "moeda", "origem": "sum(valor_global)"}
+    assert conteudo["valores"]["v4"] == {
+        "valor": "100000.00",
+        "tipo": "moeda",
+        "origem": "sum(valor_global)",
+        "significado": "valor somado dos contratos que vencem",
+    }
 
 
 # ------------------------------------------------------------------ negação (403, gravada antes)
@@ -197,10 +206,10 @@ def test_fornecedor_sem_registros_e_abstencao_que_nao_inventa(api, autenticar):
 
 
 def test_intent_sem_sql_ainda_e_abstencao(api, autenticar, com_ambiente):
-    plano = {"versao": "v1", "intent": "orgaos_fornecedor", "parametros": {"cnpj": "11222333000181"}}
+    plano = {"versao": "v1", "intent": "socios_sancionados", "parametros": {"cnpj": "11222333000181"}}
     com_ambiente(provedor=ProvedorFalso(plano=plano))
     corpo = api.post(
-        "/consultas", json={"pergunta": "Órgãos do 11222333000181"}, headers=autenticar("ana@alfa.demo")
+        "/consultas", json={"pergunta": "Sócios do 11222333000181"}, headers=autenticar("ana@alfa.demo")
     )
     assert corpo.json()["status"] == "abstencao"
     assert "ainda não está disponível" in corpo.json()["resposta"]

@@ -49,17 +49,17 @@ def _semear(conn: psycopg.Connection) -> None:
     for org, uf in (("T17-PE1", "PE"), ("T17-PE2", "PE"), ("T17-AL1", "AL")):
         conn.execute(ORGAO, (f"demo_sintetico:{org}", f"Órgão {org}", uf))
     pe1, pe2, al1 = "demo_sintetico:T17-PE1", "demo_sintetico:T17-PE2", "demo_sintetico:T17-AL1"
-    # F_PE em PE: 300 de 400 vigentes vencem em 60 dias (75%) → penhasco
-    conn.execute(CONTRATO, ("T17-C1", "PE", pe1, F_PE, "300.00", d(-100), d(60)))
-    conn.execute(CONTRATO, ("T17-C2", "PE", pe2, F_PE, "100.00", d(-100), d(400)))
+    # F_PE em PE: 300 mil de 400 mil vigentes vencem em 60 dias (75%) → penhasco
+    conn.execute(CONTRATO, ("T17-C1", "PE", pe1, F_PE, "300000.00", d(-100), d(60)))
+    conn.execute(CONTRATO, ("T17-C2", "PE", pe2, F_PE, "100000.00", d(-100), d(400)))
     # F_PE em PE: 80% do pago vem de pe1 → concentração (o empenho grande de pe2 não conta)
-    conn.execute(PAGAMENTO, ("liq:T17-P1", "PE", pe1, F_PE, d(-30), "80.00"))
-    conn.execute(PAGAMENTO, ("liq:T17-P2", "PE", pe2, F_PE, d(-30), "20.00"))
-    conn.execute(PAGAMENTO, ("emp:T17-P3", "PE", pe2, F_PE, d(-30), "100000.00"))
+    conn.execute(PAGAMENTO, ("liq:T17-P1", "PE", pe1, F_PE, d(-30), "80000.00"))
+    conn.execute(PAGAMENTO, ("liq:T17-P2", "PE", pe2, F_PE, d(-30), "20000.00"))
+    conn.execute(PAGAMENTO, ("emp:T17-P3", "PE", pe2, F_PE, d(-30), "100000000.00"))
     conn.execute(SANCAO, ("T17-S1", F_PE, d(-10), d(100)))
     conn.execute(SANCAO, ("T17-S2", F_AL, d(-400), d(-1)))  # vencida: sem sinal
     # F_AL: só em AL, tudo vence em 30 dias → penhasco e concentração (por contratos) em AL
-    conn.execute(CONTRATO, ("T17-C3", "AL", al1, F_AL, "500.00", d(-20), d(30)))
+    conn.execute(CONTRATO, ("T17-C3", "AL", al1, F_AL, "500000.00", d(-20), d(30)))
     # F_EMP: só empenho → nada
     conn.execute(PAGAMENTO, ("emp:T17-P4", "PE", pe1, F_EMP, d(-30), "999.00"))
 
@@ -92,8 +92,8 @@ def test_calcula_os_tres_sinais_por_uf(semeado):
     }
     assert sinais[(F_PE, None, "sancao_direta")][1] == "forte"
     assert sinais[(F_PE, "PE", "penhasco")][2] == 75
-    assert sinais[(F_PE, "PE", "concentracao")][2] == 80  # empenho de 100 mil fora da conta
-    assert all(s[3] == "v1" for s in sinais.values())
+    assert sinais[(F_PE, "PE", "concentracao")][2] == 80  # empenho de 100 milhões fora da conta
+    assert all(s[3] == "v2" for s in sinais.values())
     assert resumo.novos >= 5
 
 
@@ -190,4 +190,40 @@ def test_recalculo_fica_na_trilha_global_de_auditoria(como_superusuario):
         "order by seq desc limit 1"
     ).fetchone()
     assert evento == "sinais_recalculados" and tenant is None
-    assert detalhes["versao_regra"] == "v1" and detalhes["hoje"] == HOJE.isoformat()
+    assert detalhes["versao_regra"] == "v2" and detalhes["hoje"] == HOJE.isoformat()
+
+
+ALERTA = """
+insert into alertas (tenant_id, fornecedor_cnpj, sinal_id, sinal_tipo, sinal_gravidade, sinal_uf, sinal_explicacao)
+select %s, fornecedor_cnpj, id, tipo, gravidade, uf, explicacao from sinais where id = %s
+returning id
+"""
+
+
+def test_sinal_vencido_com_alerta_e_apagado_e_o_alerta_guarda_a_copia(como_superusuario):
+    """Migration 007: o alerta não segura mais o sinal vencido (on delete set null) e a pipeline não lê alertas."""
+    conn = como_superusuario
+    conn.execute("set local role lastro_ingest")
+    _semear(conn)
+    calculo.recalcular(conn, HOJE)
+    conn.execute("reset role")
+    sancao = _sinais(conn)[(F_PE, None, "sancao_direta")][0]
+    (alerta,) = conn.execute(ALERTA, (ANA[0], sancao)).fetchone()
+
+    conn.execute("set local role lastro_ingest")
+    resumo = calculo.recalcular(conn, d(200))  # a sanção venceu
+    conn.execute("reset role")
+
+    assert (F_PE, None, "sancao_direta") not in _sinais(conn)
+    assert resumo.mantidos_por_alerta == 0
+    sinal_id, tipo = conn.execute(
+        "select sinal_id, sinal_tipo from alertas where id = %s", (alerta,)
+    ).fetchone()
+    assert sinal_id is None and tipo == "sancao_direta"
+
+
+def test_sancao_retirada_do_cadastro_nao_gera_sinal(semeado):
+    """Migration 008: sanção que saiu do CEIS fica no banco com `removida_em` e deixa de ser vigente."""
+    semeado.execute("update sancoes set removida_em = now() where fonte_id = 'ceis' and id_origem = 'T17-S1'")
+    calculo.recalcular(semeado, HOJE)
+    assert (F_PE, None, "sancao_direta") not in _sinais(semeado)

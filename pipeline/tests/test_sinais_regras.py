@@ -1,4 +1,4 @@
-"""Regras dos sinais v1 (SPEC §9), sem banco."""
+"""Regras dos sinais v2 (SPEC §9), sem banco."""
 
 import re
 from datetime import date, timedelta
@@ -28,7 +28,9 @@ def d(dias: int) -> date:
     return HOJE + timedelta(days=dias)
 
 
-def contrato(valor, fim, *, uf="PE", cnpj=F1, orgao="o:1", assinatura=None, id_=None) -> ContratoFato:
+def contrato(
+    valor, fim, *, uf="PE", cnpj=F1, orgao="o:1", assinatura=None, id_=None, situacao=None
+) -> ContratoFato:
     return ContratoFato(
         id=id_ or uuid4(),
         cnpj=cnpj,
@@ -39,6 +41,7 @@ def contrato(valor, fim, *, uf="PE", cnpj=F1, orgao="o:1", assinatura=None, id_=
         vigencia_inicio=None,
         vigencia_fim=fim,
         url_origem="https://exemplo/c",
+        situacao=situacao,
     )
 
 
@@ -111,6 +114,22 @@ def test_contrato_encerrado_ou_sem_valor_nao_entra_no_vigente():
     assert sinal.valor == Decimal("100.0")
 
 
+@pytest.mark.parametrize(
+    "situacao",
+    ["Concluído", "Rescindido por Acordo Entre as Partes", "Suspenso por Decisão Administrativa"],
+)
+def test_contrato_encerrado_ou_suspenso_na_fonte_nao_entra_no_vigente(situacao):
+    """Data final no futuro, mas a fonte diz que acabou (migration 009): fora do total e do vencendo."""
+    (sinal,) = penhasco([contrato("100", d(30)), contrato("900", d(400), situacao=situacao)], HOJE)
+    assert sinal.valor == Decimal("100.0")
+    assert penhasco([contrato("900", d(30), situacao=situacao)], HOJE) == []
+
+
+def test_contrato_regular_ou_sem_situacao_conta():
+    (sinal,) = penhasco([contrato("100", d(30), situacao="Regular"), contrato("100", d(400))], HOJE)
+    assert sinal.valor == Decimal("50.0")
+
+
 def test_penhasco_e_calculado_por_uf_sem_misturar():
     """Em PE vence 20% (não dispara); em AL vence 100%. Somado daria 60% e vazaria AL para quem só vê PE."""
     sinais = penhasco(
@@ -129,33 +148,68 @@ def test_penhasco_e_calculado_por_uf_sem_misturar():
 def test_um_orgao_com_70_por_cento_do_recebido_dispara():
     sinais = concentracao(
         [],
-        [pagamento("70", d(-30), orgao="o:1"), pagamento("30", d(-30), orgao="o:2")],
+        [pagamento("70000", d(-30), orgao="o:1"), pagamento("30000", d(-30), orgao="o:2")],
         HOJE,
         {"o:1": "Secretaria de Saúde"},
     )
     (sinal,) = sinais
     assert (sinal.tipo, sinal.gravidade, sinal.uf, sinal.valor) == ("concentracao", "atencao", "PE", 70)
     assert sinal.explicacao.endswith("vem de um único órgão: Secretaria de Saúde.")
-    assert "do valor recebido em PE nos últimos 24 meses (R$ 70,00 de R$ 100,00)" in sinal.explicacao
+    assert (
+        "do valor liquidado ou pago em PE nos últimos 24 meses (R$ 70.000,00 de R$ 100.000,00)"
+        in sinal.explicacao
+    )
     assert len(sinal.evidencias) == 1 and sinal.evidencias[0]["tabela"] == "pagamentos"
 
 
 def test_abaixo_de_70_por_cento_nao_dispara():
-    assert concentracao([], [pagamento("69", d(-1)), pagamento("31", d(-1), orgao="o:2")], HOJE) == []
+    pagos = [pagamento("69000", d(-1)), pagamento("31000", d(-1), orgao="o:2")]
+    assert concentracao([], pagos, HOJE) == []
+
+
+def test_total_abaixo_do_piso_nao_dispara():
+    """Um pagamento pequeno de um só órgão dá 100%, mas não diz nada sobre dependência."""
+    assert concentracao([], [pagamento("9999.99", d(-1))], HOJE) == []
+    assert len(concentracao([], [pagamento("10000", d(-1))], HOJE)) == 1
+    assert concentracao([contrato("9999.99", d(100), assinatura=d(-5))], [], HOJE) == []
+
+
+def test_anulacao_de_liquidacao_abate_do_recebido():
+    """TCE-PE: a anulação vem negativa. Sem ela o:1 teria 80%; com ela, 60 mil de 80 mil (75%)."""
+    pagos = [
+        pagamento("80000", d(-10), orgao="o:1"),
+        pagamento("-20000", d(-5), orgao="o:1"),
+        pagamento("20000", d(-10), orgao="o:2"),
+    ]
+    (sinal,) = concentracao([], pagos, HOJE)
+    assert sinal.valor == 75 and "(R$ 60.000,00 de R$ 80.000,00)" in sinal.explicacao
+    assert len(sinal.evidencias) == 1  # a anulação abate o total, mas não é listada como evidência
+
+
+def test_orgao_com_saldo_negativo_na_janela_conta_como_zero():
+    """Anulação na janela de uma liquidação de fora dela: o órgão fica negativo e a fatia do outro não passa de 100%."""
+    pagos = [pagamento("20000", d(-10), orgao="o:1"), pagamento("-5000", d(-5), orgao="o:2")]
+    (sinal,) = concentracao([], pagos, HOJE)
+    assert sinal.valor == 100 and "(R$ 20.000,00 de R$ 20.000,00)" in sinal.explicacao
+
+
+def test_anulacao_que_derruba_o_total_abaixo_do_piso_tira_o_sinal():
+    pagos = [pagamento("12000", d(-10)), pagamento("-5000", d(-5))]
+    assert concentracao([], pagos, HOJE) == []
 
 
 def test_janela_ignora_pagamento_antigo_que_mudaria_o_resultado():
     antigo = subtrair_meses(HOJE, 24) - timedelta(days=1)
     pagos = [
-        pagamento("1000", antigo, orgao="o:1"),
-        pagamento("50", d(-1), orgao="o:2"),
-        pagamento("50", d(-1)),
+        pagamento("1000000", antigo, orgao="o:1"),
+        pagamento("50000", d(-1), orgao="o:2"),
+        pagamento("50000", d(-1)),
     ]
     assert concentracao([], pagos, HOJE) == []  # na janela: 50/50; com o antigo seria 91% de o:1
 
 
 def test_orgao_desconhecido_entra_no_total_mas_nao_e_o_maior():
-    pagos = [pagamento("60", d(-1), orgao=None), pagamento("40", d(-1), orgao="o:1")]
+    pagos = [pagamento("60000", d(-1), orgao=None), pagamento("40000", d(-1), orgao="o:1")]
     assert concentracao([], pagos, HOJE) == []  # o:1 tem 40% do total
 
 
@@ -163,8 +217,8 @@ def test_sem_pagamentos_usa_contratos_assinados_na_janela_e_avisa():
     """O PNCP (AL) só traz contratos: a concentração usa o valor contratado e a explicação diz isso."""
     sinais = concentracao(
         [
-            contrato("900", d(100), uf="AL", assinatura=d(-60)),
-            contrato("100", d(100), uf="AL", orgao="o:2", assinatura=d(-60)),
+            contrato("900000", d(100), uf="AL", assinatura=d(-60)),
+            contrato("100000", d(100), uf="AL", orgao="o:2", assinatura=d(-60)),
         ],
         [],
         HOJE,
@@ -177,7 +231,7 @@ def test_sem_pagamentos_usa_contratos_assinados_na_janela_e_avisa():
 def test_com_pagamentos_na_uf_os_contratos_nao_entram():
     sinais = concentracao(
         [contrato("1000000", d(100), orgao="o:9", assinatura=d(-10))],
-        [pagamento("50", d(-1), orgao="o:1"), pagamento("50", d(-1), orgao="o:2")],
+        [pagamento("50000", d(-1), orgao="o:1"), pagamento("50000", d(-1), orgao="o:2")],
         HOJE,
     )
     assert sinais == []
@@ -185,7 +239,7 @@ def test_com_pagamentos_na_uf_os_contratos_nao_entram():
 
 def test_nome_do_orgao_externo_vira_uma_linha_curta():
     nome = "Órgão\ncom quebra " + "x" * 300
-    (sinal,) = concentracao([], [pagamento("100", d(-1))], HOJE, {"o:1": nome})
+    (sinal,) = concentracao([], [pagamento("100000", d(-1))], HOJE, {"o:1": nome})
     assert "\n" not in sinal.explicacao and len(sinal.explicacao) < 300
 
 
@@ -195,8 +249,8 @@ PALAVRAS_PROIBIDAS = re.compile(r"fraude|irregular|suspeit|corrup", re.IGNORECAS
 
 def _todos():
     return calcular_todos(
-        [contrato("100", d(30)), contrato("100", d(30), uf="AL", cnpj=F2, assinatura=d(-5))],
-        [pagamento("100", d(-1))],
+        [contrato("100000", d(30)), contrato("100000", d(30), uf="AL", cnpj=F2, assinatura=d(-5))],
+        [pagamento("100000", d(-1))],
         [sancao(d(-1), None), sancao(d(-1), d(5), cnpj=F2, fonte="cnep")],
         HOJE,
     )
@@ -208,7 +262,7 @@ def test_explicacoes_sao_uma_frase_sem_linguagem_acusatoria():
     for s in sinais:
         assert not PALAVRAS_PROIBIDAS.search(s.explicacao), s.explicacao
         assert s.explicacao.endswith(".") and "\n" not in s.explicacao
-        assert s.versao_regra == "v1"
+        assert s.versao_regra == "v2"
 
 
 def test_toda_evidencia_aponta_para_uma_linha_de_origem():

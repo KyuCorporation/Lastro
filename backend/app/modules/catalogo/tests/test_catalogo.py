@@ -13,7 +13,7 @@ from app.llm.plano import Parametros, PlanoConsulta
 from app.modules.catalogo.executor import IntentSemConsulta, executar
 from app.modules.catalogo.intents import INTENTS
 from app.modules.catalogo.registry import CONSULTAS, PROVENIENCIA, sql
-from app.modules.catalogo.tests.conftest import F1, F2, HOJE
+from app.modules.catalogo.tests.conftest import F1, F2, HOJE, _superusuario
 
 pytestmark = pytest.mark.usefixtures("dados_catalogo")
 
@@ -24,6 +24,7 @@ N1_COM_SQL = {
     "pagamentos_periodo",
     "sancoes_fornecedor",
 }
+N2_COM_SQL = {"orgaos_fornecedor", "busca_objeto"}
 
 
 def plano(intent: str, **parametros) -> PlanoConsulta:
@@ -50,7 +51,7 @@ def test_cnpjs_sinteticos_sao_validos():
 
 
 def test_registro_cobre_as_intents_n1_e_os_arquivos_existem():
-    assert set(CONSULTAS) == N1_COM_SQL
+    assert set(CONSULTAS) == N1_COM_SQL | N2_COM_SQL
     assert set(CONSULTAS) <= set(INTENTS)
     for consulta in CONSULTAS.values():
         for conjunto in consulta.conjuntos:
@@ -60,7 +61,7 @@ def test_registro_cobre_as_intents_n1_e_os_arquivos_existem():
 # ---------------------------------------------------------------- resumo_fornecedor
 def test_resumo_so_com_as_ufs_da_ana(ctx_ana):
     r = executar(plano("resumo_fornecedor"), ctx_ana, HOJE)
-    assert r.versao == "resumo_fornecedor@v2"
+    assert r.versao == "resumo_fornecedor@v4"
     assert r.parametros["ufs"] == ["PE"]
     assert origens(r.conjuntos["contratos"]) == {"TCAT-C1", "TCAT-C2", "TCAT-C3"}
     assert origens(r.conjuntos["pagamentos"]) == {"TCAT-P1", "TCAT-P2", "TCAT-P3"}
@@ -127,6 +128,16 @@ def test_contratos_vigentes(ctx_ana):
     assert_proveniencia(r)
 
 
+def test_contrato_rescindido_na_fonte_nao_e_vigente(ctx_ana, c2_rescindido):
+    r = executar(plano("contratos_vigentes"), ctx_ana, HOJE)
+    assert origens(r.conjuntos["linhas"]) == {"TCAT-C1"} and r.versao == "contratos_vigentes@v2"
+    vencendo = executar(plano("contratos_vencendo", dias=180), ctx_ana, HOJE)
+    assert vencendo.totais["valor_vigente_total"] == Decimal("100000.00")
+    assert vencendo.totais["percentual_do_vigente"] == Decimal("100.00")
+    resumo = executar(plano("resumo_fornecedor"), ctx_ana, HOJE)
+    assert resumo.totais["valor_vigente"] == Decimal("100000.00")
+
+
 # ---------------------------------------------------------------- contratos_vencendo
 def test_contratos_vencendo_com_percentual_do_vigente(ctx_ana):
     r = executar(plano("contratos_vencendo", dias=180), ctx_ana, HOJE)
@@ -176,6 +187,25 @@ def test_sancoes_vigentes_e_passadas(ctx_ana):
     assert_proveniencia(r)
 
 
+@pytest.fixture
+def s1_retirada():
+    """TCAT-S1 (vigente pela data) marcada como retirada do cadastro pela pipeline (migration 008)."""
+    with _superusuario() as su:
+        su.execute("update sancoes set removida_em = '2026-11-10T12:00:00Z' where id_origem = 'TCAT-S1'")
+    yield
+    with _superusuario() as su:
+        su.execute("update sancoes set removida_em = null where id_origem = 'TCAT-S1'")
+
+
+def test_sancao_retirada_do_cadastro_nao_e_vigente(ctx_ana, s1_retirada):
+    r = executar(plano("sancoes_fornecedor"), ctx_ana, HOJE)
+    por_id = {s["id_origem"]: s for s in r.conjuntos["linhas"]}
+    assert por_id["TCAT-S1"]["vigente"] is False and por_id["TCAT-S1"]["removida_em"] is not None
+    assert por_id["TCAT-S2"]["removida_em"] is None
+    assert r.totais == {"n_sancoes": 2, "n_vigentes": 0}
+    assert r.versao == "sancoes_fornecedor@v2"
+
+
 def test_sancao_e_nacional_e_aparece_para_qualquer_uf(ctx_bia):
     r = executar(plano("sancoes_fornecedor"), ctx_bia, HOJE)
     assert r.totais["n_sancoes"] == 2
@@ -203,6 +233,92 @@ def test_intents_sem_consulta(intent, ctx_ana):
         executar(PlanoConsulta(intent=intent), ctx_ana, HOJE)
 
 
-def test_intent_n2_ainda_sem_sql(ctx_ana):
+def test_intent_n3_ainda_sem_sql(ctx_ana):
     with pytest.raises(IntentSemConsulta):
-        executar(PlanoConsulta(intent="orgaos_fornecedor", parametros=Parametros(cnpj=F1)), ctx_ana, HOJE)
+        executar(PlanoConsulta(intent="socios_sancionados", parametros=Parametros(cnpj=F1)), ctx_ana, HOJE)
+
+
+# ------------------------------------------------------------------ acima do limite de linhas (SPEC §7: 200)
+N_MUITOS = 201
+
+
+@pytest.fixture
+def fornecedor_com_muitos_contratos():
+    """F2 com 201 contratos vigentes em PE, cada um num órgão diferente, de R$ 1.000,00."""
+    from app.modules.catalogo.tests.conftest import (
+        INSERIR_CONTRATO,
+        INSERIR_ORGAO,
+        _hash,
+        _superusuario,
+        _url,
+        d,
+    )
+
+    limpar = (
+        "delete from contratos where id_origem like 'TCAT-T%'",
+        "delete from orgaos where id like 'demo_sintetico:TCAT-T%'",
+    )
+    with _superusuario() as conn:
+        for comando in limpar:
+            conn.execute(comando)
+        cur = conn.cursor()
+        orgaos = [
+            (f"demo_sintetico:TCAT-T{i:03d}", f"Órgão Teste {i:03d}", "PE", "municipal")
+            for i in range(N_MUITOS)
+        ]
+        cur.executemany(INSERIR_ORGAO, orgaos)
+        cur.executemany(
+            INSERIR_CONTRATO,
+            [
+                (f"TCAT-T{i:03d}", "PE", orgaos[i][0], F2, "Serviço tcat", "1000.00", d(-30), d(-30), d(90),
+                 _url(f"TCAT-T{i:03d}"), _hash(f"TCAT-T{i:03d}"))
+                for i in range(N_MUITOS)
+            ],
+        )  # fmt: skip
+    yield
+    with _superusuario() as conn:
+        for comando in limpar:
+            conn.execute(comando)
+
+
+def _plano_f2(intent: str) -> PlanoConsulta:
+    return PlanoConsulta(intent=intent, parametros=Parametros(cnpj=F2))
+
+
+@pytest.mark.usefixtures("fornecedor_com_muitos_contratos")
+def test_lista_acima_do_limite_e_truncada_com_total_certo_e_aviso(ctx_ana):
+    from app.llm.redator import AVISO_TRUNCADO, redigir
+
+    r = executar(_plano_f2("contratos_vigentes"), ctx_ana, HOJE)
+    assert r.truncado and len(r.conjuntos["linhas"]) == 200
+    assert r.totais == {"n_contratos": N_MUITOS, "valor_total": Decimal("201000.00")}
+
+    texto = redigir("p", r, ufs_autorizadas=("PE",), provedor=None).texto
+    assert "201 contratos vigentes" in texto and "R$ 201.000,00" in texto
+    assert texto.endswith(AVISO_TRUNCADO)
+    assert not any(c.isdigit() for c in AVISO_TRUNCADO)  # o harness do eval reprova número fora do recibo
+
+
+@pytest.mark.usefixtures("fornecedor_com_muitos_contratos")
+def test_totais_por_orgao_nao_param_no_limite_de_linhas(ctx_ana):
+    """Os conjuntos derivados (grupos por órgão) não são cortados: o total soma todos os grupos."""
+    resumo = executar(_plano_f2("resumo_fornecedor"), ctx_ana, HOJE)
+    assert resumo.versao == "resumo_fornecedor@v4"
+    assert resumo.totais["n_contratos"] == N_MUITOS
+    assert resumo.totais["valor_contratado"] == Decimal("201000.00")
+    assert (
+        resumo.truncado and len(resumo.conjuntos["contratos"]) == 200
+    )  # as linhas citáveis continuam limitadas
+
+    orgaos = executar(_plano_f2("orgaos_fornecedor"), ctx_ana, HOJE)
+    assert orgaos.versao == "orgaos_fornecedor@v2"
+    assert orgaos.totais["n_orgaos"] == N_MUITOS and orgaos.totais["n_contratos"] == N_MUITOS
+    assert orgaos.totais["valor_total"] == Decimal("201000.00")
+
+
+def test_sem_truncar_nao_ha_aviso(ctx_ana):
+    from app.llm.redator import AVISO_TRUNCADO, redigir
+
+    r = executar(plano("contratos_vigentes"), ctx_ana, HOJE)
+    assert not r.truncado
+    assert AVISO_TRUNCADO.strip() not in redigir("p", r, ufs_autorizadas=("PE",), provedor=None).texto

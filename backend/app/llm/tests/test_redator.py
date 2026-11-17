@@ -1,6 +1,6 @@
 """Redator: modo mock, abstenção, provedor fora, prompt e formatação."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -46,7 +46,9 @@ def test_modo_mock_usa_o_modelo_deterministico_preenchido(resultado):
     assert r.status == "aprovado" and r.por_modelo_deterministico and r.modelo is None
     assert r.texto and not MARCADOR.search(r.texto) and "{{" not in r.texto
     assert "11.222.333/0001-81" in r.texto
-    assert r.valores and all(set(v) == {"valor", "tipo", "origem"} for v in r.valores.values())
+    assert r.valores and all(set(v) == {"valor", "tipo", "origem", "significado"} for v in r.valores.values())
+    # O significado vem do código (marcadores.py) e vai para o recibo: a tela rotula cada valor com ele.
+    assert all(v["significado"].strip() for v in r.valores.values())
     assert r.versao_prompt == "redator_v2"
 
 
@@ -65,6 +67,12 @@ def test_textos_deterministicos():
     assert redigir("p", resultados.sancoes(), ufs_autorizadas=PE, provedor=None).texto.endswith(
         "no CEIS ou no CNEP, ainda vigente. Sanção vigente é um sinal para investigar."
     )
+
+
+def test_sancao_retirada_do_cadastro_e_dita_assim():
+    retirada = resultados.sancoes(vigente=False, removida_em=datetime(2026, 11, 10, 12, tzinfo=UTC))
+    material = redigir("p", retirada, ufs_autorizadas=PE, provedor=None)
+    assert material.texto.endswith("no CEIS ou no CNEP, retirada do cadastro pela fonte.")
 
 
 @pytest.mark.parametrize(

@@ -17,6 +17,8 @@ NAO_VAZIOS = [
     resultados.pagamentos(),
     resultados.sancoes(),
     resultados.sancoes(vigente=False),
+    resultados.orgaos(),
+    resultados.busca(),
 ]
 
 
@@ -87,3 +89,52 @@ def test_parafrases_corretas_sao_aprovadas(resultado, texto):
     r = redigir("pergunta", resultado, ufs_autorizadas=PE, provedor=Provedor())
     assert r.status == "aprovado", r.motivos
     assert "{{" not in r.texto
+
+
+# Frases corretas com mais de um valor: a regra do sentido do marcador não pode derrubá-las.
+@pytest.mark.parametrize(
+    ("resultado", "texto"),
+    [
+        (
+            resultados.resumo(),
+            (
+                "O fornecedor {{v1}} possui {{v2}} contratos que somam {{v3}}; {{v4}} referem-se a contratos ainda "
+                "vigentes. Já foram pagos {{v6}} em {{v5}} pagamentos."
+            ),
+        ),
+        (
+            resultados.resumo(),
+            "O valor total contratado é {{v3}} e o vigente é {{v4}}, em {{v2}} contratos. O fornecedor recebeu {{v6}}.",
+        ),
+        (
+            resultados.resumo(empenhado="25000.00"),
+            (
+                "São {{v2}} contratos no valor de {{v3}}. Ainda estão em vigor {{v4}}. As liquidações somam {{v6}} em "
+                "{{v5}} pagamentos, e há {{v8}} reservados em {{v9}} empenhos."
+            ),
+        ),
+        (
+            resultados.vencendo(),
+            (
+                "Vencem {{v3}} contratos nos próximos {{v2}} dias. Juntos somam {{v4}}, o que corresponde a {{v7}} do "
+                "valor vigente. O primeiro termina em {{v5}}."
+            ),
+        ),
+        (
+            resultados.sancoes(),
+            "Há {{v2}} sanção registrada para o fornecedor {{v1}}, e {{v3}} continua vigente.",
+        ),
+        (
+            resultados.vigentes(),
+            (
+                "Estão vigentes {{v2}} contratos do fornecedor {{v1}}, num total de {{v3}}. O mais próximo do fim "
+                "encerra em {{v4}}."
+            ),
+        ),
+    ],
+    ids=["resumo", "resumo_ordem_livre", "resumo_com_empenho", "vencendo", "sancoes", "vigentes"],
+)
+def test_frase_correta_com_varios_valores_passa(resultado, texto):
+    m = montar_material(resultado)
+    v = verificar(texto, m.marcadores, ufs_autorizadas=PE, essenciais=m.essenciais, resultado_vazio=m.vazio)
+    assert v.aprovado, v.motivos

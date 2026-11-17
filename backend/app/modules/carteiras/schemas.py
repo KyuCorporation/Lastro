@@ -56,6 +56,8 @@ class SinalFila(BaseModel):
     gravidade: Literal["forte", "atencao", "info"]
     explicacao: str
     evidencias: list[dict[str, Any]]
+    calculado_em: datetime
+    versao_regra: str
 
 
 class ItemFila(BaseModel):

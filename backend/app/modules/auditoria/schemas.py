@@ -19,6 +19,13 @@ class EventoAuditoria(BaseModel):
     hash: str
 
 
+class CabecaCadeia(BaseModel):
+    seq: int | None
+    hash: str | None
+    criado_em: datetime | None
+    n_eventos: int
+
+
 class VerificacaoCadeiaSaida(BaseModel):
     integra: bool
     n_eventos: int

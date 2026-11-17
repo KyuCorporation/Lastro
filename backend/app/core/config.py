@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     llm_model: str = ""
     gemini_api_key: str = ""
     llm_timeout_seconds: float = 20.0
+    # Teto de tempo das chamadas à LLM numa consulta (planejador + redator). Esgotado, a resposta sai pelo
+    # roteador por regras e pelo modelo determinístico (SPEC §14.6: P95 abaixo de 10 s com LLM).
+    llm_orcamento_segundos: float = 12.0
     # Raciocínio interno do modelo (Gemini 2.5+). Desligado: mesma resposta, de 5 a 8 vezes mais rápido.
     llm_raciocinio: bool = False
 

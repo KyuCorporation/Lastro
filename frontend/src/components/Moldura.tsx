@@ -25,11 +25,15 @@ export function Moldura({ children }: { children: ReactNode }) {
   if (!usuario) return null;
 
   const itens: ItemMenu[] = [
-    // O recibo é aberto a partir da consulta: o menu continua marcando "Consulta" (tela 02 do design).
+    // O recibo é aberto a partir da consulta: o menu continua marcando "Consulta".
     { rotulo: "Consulta", para: "/", ativoEm: /^\/(recibos\/.*)?$/ },
+    // A fila e o dossiê são abertos a partir da carteira: o menu continua marcando "Carteiras".
+    { rotulo: "Carteiras", para: "/carteiras", ativoEm: /^\/(carteiras|fornecedores)(\/|$)/ },
+    // Ordem do uso: perguntar, acompanhar, conferir de onde vêm os dados, auditar; acesso e métricas por último.
     { rotulo: "Fontes e catálogo", para: "/fontes" },
-    { rotulo: "Acesso", para: "/acesso" },
     ...(pode(usuario.perfil, "ver_historico") ? [{ rotulo: "Auditoria", para: "/auditoria" }] : []),
+    { rotulo: "Acesso", para: "/acesso" },
+    { rotulo: "Métricas", para: "/metricas" },
   ];
 
   return (
@@ -37,7 +41,7 @@ export function Moldura({ children }: { children: ReactNode }) {
       <aside className="flex flex-col bg-kyu-escuro px-3 pb-4 pt-5 text-white lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:shrink-0">
         <div className="px-3">
           <LogoKyu />
-          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/90">Portal de transparência</p>
+          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/90">Lastro</p>
         </div>
         <nav aria-label="Principal" className="mt-6">
           <ul className="flex flex-wrap gap-1 lg:flex-col">

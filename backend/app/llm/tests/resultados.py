@@ -88,7 +88,7 @@ def resumo(vazio: bool = False, empenhado: str = "0") -> ResultadoConsulta:
     soma = lambda k: sum((g[k] for g in grupos), Decimal(0))
     return ResultadoConsulta(
         intent="resumo_fornecedor",
-        versao="resumo_fornecedor@v2",
+        versao="resumo_fornecedor@v3",
         parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
         conjuntos={"por_uf_orgao": grupos, "contratos": [], "pagamentos": []},
         totais={
@@ -103,16 +103,16 @@ def resumo(vazio: bool = False, empenhado: str = "0") -> ResultadoConsulta:
     )
 
 
-def sancoes(vigente: bool = True) -> ResultadoConsulta:
+def sancoes(vigente: bool = True, removida_em: datetime | None = None) -> ResultadoConsulta:
     linhas = [
         {"id": "s1", "fonte_id": "ceis", "id_origem": "S1", "url_origem": "https://x/s1",
          "coletado_em": COLETA, "hash_conteudo": "c" * 64, "arquivo_bruto_id": None, "tipo": "Impedimento",
          "orgao_sancionador": "Órgão X", "uf_orgao": "PE", "data_inicio": date(2026, 1, 1),
-         "data_fim": date(2027, 1, 1), "fundamentacao": "Lei", "vigente": vigente},
+         "data_fim": date(2027, 1, 1), "fundamentacao": "Lei", "vigente": vigente, "removida_em": removida_em},
     ]  # fmt: skip
     return ResultadoConsulta(
         intent="sancoes_fornecedor",
-        versao="sancoes_fornecedor@v1",
+        versao="sancoes_fornecedor@v2",
         parametros={"cnpj": CNPJ, "hoje": HOJE},
         conjuntos={"linhas": linhas},
         totais={"n_sancoes": 1, "n_vigentes": int(vigente)},
@@ -127,4 +127,37 @@ def vigentes() -> ResultadoConsulta:
         parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
         conjuntos={"linhas": linhas},
         totais={"n_contratos": 2, "valor_total": Decimal("400000.00")},
+    )
+
+
+def orgaos(maior: str = "Secretaria de Saúde") -> ResultadoConsulta:
+    ranking = [
+        {"uf": "PE", "orgao_id": "pe_portal:1", "orgao_nome": maior, "esfera": "estadual", "n_contratos": 2,
+         "valor_contratado": Decimal("300000.00"), "participacao": Decimal("75.00")},
+        {"uf": "PE", "orgao_id": "pe_portal:2", "orgao_nome": "Secretaria de Educação", "esfera": "estadual",
+         "n_contratos": 1, "valor_contratado": Decimal("100000.00"), "participacao": Decimal("25.00")},
+    ]  # fmt: skip
+    return ResultadoConsulta(
+        intent="orgaos_fornecedor",
+        versao="orgaos_fornecedor@v2",
+        parametros={"cnpj": CNPJ, "hoje": HOJE, "ufs": ["PE"]},
+        conjuntos={"ranking": ranking, "contratos": [contrato("C1", "300000.00", date(2027, 1, 1), maior)]},
+        totais={
+            "n_orgaos": 2,
+            "n_contratos": 3,
+            "valor_total": Decimal("400000.00"),
+            "maior_orgao": maior,
+            "maior_participacao": Decimal("75.00"),
+        },
+    )
+
+
+def busca(termo: str = "limpeza") -> ResultadoConsulta:
+    linhas = [contrato("C1", "100000.00", date(2027, 1, 1))]
+    return ResultadoConsulta(
+        intent="busca_objeto",
+        versao="busca_objeto@v1",
+        parametros={"termo": termo, "hoje": HOJE, "ufs": ["PE"]},
+        conjuntos={"linhas": linhas},
+        totais={"n_contratos": 1, "valor_total": Decimal("100000.00")},
     )

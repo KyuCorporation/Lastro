@@ -49,6 +49,10 @@ export interface Citacao {
   n: number;
   tabela: TabelaCitada | string;
   id: string;
+  /** Identificador do registro na fonte (ex.: ctr:2025:001). */
+  id_origem: string;
+  /** Uma linha legível do registro, montada pelo backend (órgão, valor, data). Os valores crus ficam no recibo. */
+  resumo: string;
   fonte_id: string;
   url_origem: string | null;
   coletado_em: string;
@@ -91,6 +95,8 @@ export interface ConteudoRecibo {
   consulta_id: string;
   perfil: Perfil;
   ufs_autorizadas: string[];
+  /** Carteira escolhida como contexto da consulta (SPEC §3.3, I5). */
+  carteira?: { id: string; finalidade: string } | null;
   pergunta: string;
   plano: { intent: string; parametros: Record<string, unknown> };
   execucao: {
@@ -109,7 +115,8 @@ export interface ConteudoRecibo {
     coletado_em: string;
     hash_conteudo: string;
   }[];
-  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string }>;
+  /** `significado`: rótulo escrito pelo backend para o valor (recibos antigos não têm). */
+  valores?: Record<string, { valor: string; tipo: TipoValor; origem?: string; significado?: string }>;
   fontes: { fonte_id: string; nome: string; coletado_em: string; execucao_id: string | null; sintetico?: boolean }[];
   resposta_final: string;
   verificacao: { status: "aprovado" | "fallback" | "abstencao" | "negado"; motivos?: string[] };
@@ -142,4 +149,232 @@ export interface Recibo {
   conteudo: ConteudoRecibo;
   hash: string;
   criado_em: string;
+}
+
+/** GET /recibos/{id}/verificar: `integro=false` quando conteúdo ou hash mudaram depois de gravados. */
+export interface VerificacaoRecibo {
+  integro: boolean;
+  hash_gravado: string;
+  hash_recalculado: string;
+}
+
+// ------------------------------------------------------------------ carteiras e fila
+export type Finalidade = "homologacao" | "monitoramento" | "renovacao";
+
+/** POST /carteiras: CNPJs com ou sem máscara; os inválidos voltam em `cnpjs_invalidos`. */
+export interface CarteiraEntrada {
+  nome: string;
+  finalidade: Finalidade;
+  cnpjs: string[];
+}
+
+export interface CarteiraCriada {
+  id: string;
+  nome: string;
+  finalidade: Finalidade;
+  n_itens: number;
+  cnpjs_invalidos: string[];
+}
+
+/** GET /carteiras */
+export interface CarteiraListada {
+  id: string;
+  nome: string;
+  finalidade: Finalidade;
+  n_itens: number;
+  criada_em: string;
+}
+
+export type Gravidade = "forte" | "atencao" | "info";
+
+/** Linha de origem que sustenta um sinal. */
+export interface Evidencia {
+  tabela?: string;
+  id?: string;
+  url_origem?: string | null;
+  [campo: string]: unknown;
+}
+
+export interface SinalFila {
+  tipo: string;
+  gravidade: Gravidade;
+  explicacao: string;
+  evidencias: Evidencia[];
+  calculado_em: string;
+  versao_regra: string;
+}
+
+export interface ItemFila {
+  cnpj: string;
+  razao_social: string | null;
+  prioridade: number;
+  valor_exposto: string;
+  sinais: SinalFila[];
+}
+
+// ------------------------------------------------------------------ alertas
+
+export type StatusAlerta = "aberto" | "visto" | "resolvido";
+
+/** GET /alertas: sinal novo de fornecedor de carteira (SPEC I7). `sinal` nulo: UF fora do seu escopo. */
+export interface Alerta {
+  id: string;
+  carteira_id: string | null;
+  cnpj: string;
+  /** `id` nulo: o sinal deixou de valer no último cálculo; o texto é o que ele dizia quando o alerta nasceu. */
+  sinal: { id: string | null; tipo: string; gravidade: Gravidade; uf: string | null; explicacao: string } | null;
+  status: StatusAlerta;
+  criado_em: string;
+}
+
+/** GET /carteiras/{id}/fila: itens já ordenados por prioridade. */
+export interface Fila {
+  carteira: { id: string; nome: string; finalidade: Finalidade; criada_em: string };
+  itens: ItemFila[];
+}
+
+// ------------------------------------------------------------------ dossiê
+interface Proveniencia {
+  id: string;
+  fonte_id: string;
+  id_origem: string;
+  url_origem: string | null;
+  coletado_em: string;
+}
+
+export interface ContratoDossie extends Proveniencia {
+  uf: string;
+  orgao_id: string | null;
+  orgao_nome: string | null;
+  objeto: string | null;
+  valor_global: string | null;
+  data_assinatura: string | null;
+  vigencia_inicio: string | null;
+  vigencia_fim: string | null;
+}
+
+export interface SancaoDossie extends Proveniencia {
+  tipo: string | null;
+  orgao_sancionador: string | null;
+  uf_orgao: string | null;
+  data_inicio: string | null;
+  data_fim: string | null;
+  fundamentacao: string | null;
+  vigente: boolean;
+  /** Saiu do cadastro da CGU (revogada ou anulada): não é vigente, mesmo com data final no futuro. */
+  removida_em: string | null;
+}
+
+export interface SinalDossie {
+  id: string;
+  tipo: string;
+  gravidade: Gravidade;
+  uf: string | null;
+  valor: string | null;
+  explicacao: string;
+  evidencias: Evidencia[];
+  versao_regra: string;
+  calculado_em: string;
+}
+
+export interface ResumoUf {
+  uf: string;
+  n_contratos: number;
+  valor_contratado: string;
+  valor_vigente: string;
+  n_pagamentos: number;
+  valor_pago: string;
+  valor_empenhado: string;
+}
+
+/** GET /fornecedores/{cnpj}/dossie. `socios` é null para o perfil que não vê sócios (gestor). */
+export interface Dossie {
+  fornecedor: { cnpj: string; razao_social: string | null; uf_sede: string | null };
+  resumo_por_uf: ResumoUf[];
+  contratos_vigentes: ContratoDossie[];
+  vencendo_180d: ContratoDossie[];
+  sancoes: SancaoDossie[];
+  sinais: SinalDossie[];
+  socios: { socio_tipo: "PF" | "PJ"; socio_exibicao: string; fonte_id: string; coletado_em: string }[] | null;
+  fontes: { fonte_id: string; nome: string; coletado_em: string; sintetico: boolean }[];
+}
+
+// ------------------------------------------------------------------ auditoria
+/** GET /auditoria (auditor e admin): eventos encadeados por hash. */
+export interface EventoAuditoria {
+  seq: number;
+  usuario_id: string | null;
+  evento: string;
+  detalhes: Record<string, unknown> | null;
+  criado_em: string;
+  hash: string;
+}
+
+/** GET /auditoria/verificar */
+/** GET /auditoria/cabeca: último evento da trilha do tenant (nulos se ela está vazia). */
+export interface CabecaCadeia {
+  seq: number | null;
+  hash: string | null;
+  criado_em: string | null;
+  n_eventos: number;
+}
+
+export interface VerificacaoCadeia {
+  integra: boolean;
+  n_eventos: number;
+  primeiro_seq_quebrado?: number | null;
+}
+
+// ------------------------------------------------------------------ fontes e métricas
+/** GET /fontes/execucoes: histórico de ingestão, mais recentes primeiro. */
+export interface ExecucaoIngestao {
+  id: string;
+  fonte_id: string;
+  status: "rodando" | "ok" | "parcial" | "falhou" | string;
+  iniciada_em: string;
+  finalizada_em: string | null;
+  registros_lidos: number | null;
+  registros_novos: number | null;
+  registros_descartados: number | null;
+  erro: string | null;
+}
+
+/** Resumo de eval/reports/gabarito.json (make eval). Campos ausentes chegam como undefined. */
+export interface MetricasGabarito {
+  gerado_em?: string;
+  provedor_llm?: string;
+  n_casos?: number;
+  ok?: number;
+  acerto_intent?: number;
+  n_intent_avaliada?: number;
+  meta_intent?: number;
+  acerto_comportamento?: number;
+  acerto_resultado?: number | null;
+  n_com_sql_referencia?: number;
+  citacao_correta?: number | null;
+  n_com_citacao?: number;
+  taxa_fallback?: number;
+  /** Resultado de cada provedor de LLM com que o gabarito rodou (eval/reports/gabarito.<provedor>.json). */
+  por_provedor?: Record<string, MetricasGabarito>;
+}
+
+/** Resumo de eval/reports/ataques.json (make eval-ataques). */
+export interface MetricasAtaques {
+  gerado_em?: string;
+  provedor_llm?: string;
+  n_casos?: number;
+  bloqueados?: number;
+  pct_bloqueado?: number;
+  vazamentos?: number;
+  por_categoria?: Record<string, { n: number; bloqueados: number; vazamentos: number }>;
+  /** Resultado de cada provedor de LLM com que a suíte rodou (eval/reports/ataques.<provedor>.json). */
+  por_provedor?: Record<string, MetricasAtaques>;
+}
+
+/** GET /metricas: cada parte é null enquanto o relatório não foi gerado. */
+export interface Metricas {
+  eval: MetricasGabarito | null;
+  ataques: MetricasAtaques | null;
+  cronometro: Record<string, unknown> | null;
+  ultima_atualizacao: string | null;
 }

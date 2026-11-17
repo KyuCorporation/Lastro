@@ -31,7 +31,8 @@ def salvar(diretorio: Path, respostas: Iterable[RespostaBruta], descricao: str) 
             }
         )
     manifesto = {"descricao": descricao, "arquivos": itens}
-    (diretorio / MANIFESTO).write_text(json.dumps(manifesto, ensure_ascii=False, indent=2) + "\n")
+    texto = json.dumps(manifesto, ensure_ascii=False, indent=2) + "\n"
+    (diretorio / MANIFESTO).write_bytes(texto.encode("utf-8"))  # igual em qualquer sistema (Windows incluso)
     return diretorio
 
 
@@ -43,7 +44,7 @@ def conjuntos(diretorio_fonte: Path) -> list[Path]:
 
 
 def ler(diretorio: Path) -> Iterator[RespostaBruta]:
-    manifesto = json.loads((diretorio / MANIFESTO).read_text())
+    manifesto = json.loads((diretorio / MANIFESTO).read_text(encoding="utf-8"))
     for item in manifesto["arquivos"]:
         yield RespostaBruta(
             conteudo=(diretorio / item["arquivo"]).read_bytes(),

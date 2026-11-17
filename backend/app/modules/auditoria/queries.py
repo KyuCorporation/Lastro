@@ -25,6 +25,16 @@ select seq, usuario_id, evento, detalhes, criado_em, hash
 # (001_schema.sql / 006): hash = sha256(hash_anterior | tenant | usuario | evento | detalhes | epoch). Fazer no
 # Postgres garante o mesmo texto de jsonb e de epoch que o trigger usou. Um elo quebra quando o hash gravado não
 # confere com o conteúdo, ou quando hash_anterior não é o hash do evento anterior (evento apagado ou inserido).
+# Último evento da trilha do tenant: publicado fora do banco, torna detectável reescrever a trilha inteira ou
+# cortar o fim dela (docs/modelo-ameacas.md).
+CABECA_DA_CADEIA = """
+select a.seq, a.hash, a.criado_em, (select count(*) from auditoria where tenant_id = ctx_tenant())::int as n_eventos
+  from (select 1) as um
+  left join lateral (
+    select seq, hash, criado_em from auditoria where tenant_id = ctx_tenant() order by seq desc limit 1
+  ) a on true
+"""
+
 VERIFICAR_CADEIA = """
 with trilha as (
   select seq, hash_anterior, hash,
