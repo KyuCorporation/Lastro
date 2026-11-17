@@ -14,7 +14,7 @@ Regras:
 - `fora_de_escopo` e `esclarecer` não consultam o banco (`IntentSemConsulta`). `socios_sancionados` ainda não tem SQL.
 - `fila_carteira`: fornecedores da carteira (conjunto `fila`, derivado e sem limite) ordenados pela mesma prioridade da tela (`carteiras/prioridade.py`), com os sinais visíveis nas UFs da sessão. Cita os contratos vigentes que formam o valor exposto e as sanções vigentes. A carteira vem do contexto da consulta; para carteira de outro tenant a RLS de `carteira_itens` devolve fila vazia.
 - `orgaos_fornecedor`: ranking de órgãos com participação no valor contratado (conjuntos `ranking`, derivado, e `contratos`, citável).
-- `busca_objeto`: busca textual em português (`plainto_tsquery`) no objeto dos contratos, nacional (sem CNPJ), nas UFs da sessão; cita os 20 mais relevantes e soma o total de todos.
+- `busca_objeto`: busca textual em português (`plainto_tsquery`) no objeto dos contratos, nacional (sem CNPJ), nas UFs da sessão; cita os 20 mais relevantes e soma o total de todos. Sem acento dos dois lados; cada palavra do termo precisa de uma palavra do objeto com o mesmo radical e até 2 letras de diferença no tamanho (v3: "medicamentos" não acha "médica").
 
 Os marcadores e o modelo de resposta determinístico de cada intent ficam em `app/llm/marcadores.py`.
 
