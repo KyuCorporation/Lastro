@@ -1,9 +1,17 @@
-"""Relatórios do eval: reports/<modo>.json (lido por GET /metricas) e reports/resumo.md (para pessoas)."""
+"""Relatórios do eval: reports/<modo>.json (lido por GET /metricas) e reports/resumo.md (para pessoas).
+
+Cada execução grava também reports/<modo>.<provedor>.json: rodar com o Gemini não apaga o resultado do modo sem LLM,
+e a tela de métricas mostra os dois lado a lado.
+"""
 
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+# Nome de provedor que pode virar parte do nome do arquivo (o mesmo padrão é conferido em GET /metricas).
+PROVEDOR_VALIDO = re.compile(r"[a-z0-9_-]{1,32}")
 
 
 def escrever_json(pasta: Path, modo: str, provedor: str, metricas: dict[str, Any], casos: list[dict]) -> Path:
@@ -17,7 +25,10 @@ def escrever_json(pasta: Path, modo: str, provedor: str, metricas: dict[str, Any
         "metricas": metricas,
         "casos": casos,
     }
-    destino.write_text(json.dumps(relatorio, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    texto = json.dumps(relatorio, ensure_ascii=False, indent=2) + "\n"
+    destino.write_text(texto, encoding="utf-8")
+    if PROVEDOR_VALIDO.fullmatch(provedor):
+        (pasta / f"{modo}.{provedor}.json").write_text(texto, encoding="utf-8")
     return destino
 
 

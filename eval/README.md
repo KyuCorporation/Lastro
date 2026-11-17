@@ -8,6 +8,8 @@
 - `run_eval.py`: entrada do harness. `lastro_eval/`: formato dos casos (`casos.py`), checagens puras
   (`checagens.py`), execução (`ataques.py`) e relatórios (`relatorio.py`).
 - Os números de `reports/` alimentam `GET /metricas`. Os relatórios são gerados, não versionados.
+  Cada execução grava `reports/<modo>.json` e uma cópia `reports/<modo>.<provedor>.json` (`mock`, `gemini`):
+  rodar com o Gemini não apaga o resultado sem LLM, e a tela de métricas mostra os dois lado a lado.
 
 ## Rodar
 
