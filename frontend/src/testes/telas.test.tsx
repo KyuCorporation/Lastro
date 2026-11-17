@@ -79,6 +79,8 @@ describe("01 consulta inteligente", () => {
     const [primeira, segunda] = within(fontes).getAllByRole("listitem");
     expect(primeira).toHaveTextContent("ctr:2025:001"); // identificador de origem, não o id interno
     expect(primeira).not.toHaveTextContent("linha-1");
+    // O título da citação diz o que é o registro, em texto montado pelo backend.
+    expect(primeira).toHaveTextContent("[1] Contrato com Secretaria de Saúde · R$ 1.000.000,00 · até 14/01/2027");
     expect(segunda).toHaveTextContent("Registro sem link público");
 
     const integridade = screen.getByRole("region", { name: "Integridade da consulta" });

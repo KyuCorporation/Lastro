@@ -68,7 +68,7 @@ export function ResultadoConsulta({ resultado, recibo, ufs }: Props) {
         {recibo && <ValoresDaResposta conteudo={recibo.conteudo} />}
 
         {recibo && <ResumoDaConsulta recibo={recibo} />}
-        <ListaCitacoes citacoes={resultado.citacoes} linhas={recibo?.conteudo.linhas} />
+        <ListaCitacoes citacoes={resultado.citacoes} />
 
         {resultado.status === "respondida" || resultado.status === "abstencao" ? (
           <p className="mt-6 text-sm text-kyu-suave">A resposta considera somente os registros disponíveis na base KYU.</p>
