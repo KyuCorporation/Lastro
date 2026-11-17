@@ -73,6 +73,9 @@ class Contrato(Fato):
     data_assinatura: date | None = None
     vigencia_inicio: date | None = None
     vigencia_fim: date | None = None
+    situacao: str | None = (
+        None  # texto da fonte (TCE-PE: `Situacao`); nulo onde ela não informa (migration 009)
+    )
 
 
 class Pagamento(Fato):

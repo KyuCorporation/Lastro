@@ -89,7 +89,7 @@ def test_recibo_segue_o_contrato_e_o_hash_confere_depois_de_gravado(api, autenti
     assert conteudo["consulta_id"] == corpo["consulta_id"]
     assert conteudo["resposta_final"] == corpo["resposta"]
     assert conteudo["ufs_autorizadas"] == ["PE"]
-    assert conteudo["execucao"]["consulta_catalogo"] == "contratos_vencendo@v1"
+    assert conteudo["execucao"]["consulta_catalogo"] == "contratos_vencendo@v2"
     assert conteudo["execucao"]["ufs_efetivas"] == ["PE"] and conteudo["execucao"]["n_linhas"] == 1
     assert [linha["id_origem"] for linha in conteudo["linhas"]] == ["TCAT-C1"]
     assert conteudo["verificacao"] == {"status": "aprovado", "motivos": []}

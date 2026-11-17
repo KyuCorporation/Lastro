@@ -144,3 +144,10 @@ def test_sancao_retirada_do_cadastro_aparece_encerrada_com_a_data(cliente, auten
     finally:
         with _superusuario() as su:
             su.execute("update sancoes set removida_em = null where id_origem = 'TCAT-S1'")
+
+
+def test_contrato_rescindido_sai_dos_vigentes_e_do_resumo(cliente, autenticar, c2_rescindido):
+    d = _dossie(cliente, autenticar("ana@alfa.demo"), F1).json()
+    assert {c["id_origem"] for c in d["contratos_vigentes"]} == {"TCAT-C1"}
+    (pe,) = [r for r in d["resumo_por_uf"] if r["uf"] == "PE"]
+    assert pe["valor_vigente"] == "100000.00"

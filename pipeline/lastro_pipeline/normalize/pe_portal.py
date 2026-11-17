@@ -62,6 +62,7 @@ CAMPOS_AMOSTRA: dict[str, tuple[str, ...]] = {
         "Valor",
         "Vigencia",
         "LinkArquivo",
+        "Situacao",
     ),
     "empenho": (
         "ESFERA",
@@ -227,6 +228,7 @@ def _contrato(registro: dict[str, Any], url_origem: str, esfera_param: str | Non
         data_assinatura=None,  # a API não informa; a vigência vem de `Vigencia`
         vigencia_inicio=inicio,
         vigencia_fim=fim,
+        situacao=texto(registro.get("Situacao"), 120),
     )
     return RegistroNormalizado(fato=fato, orgao=orgao, fornecedor=fornecedor)
 

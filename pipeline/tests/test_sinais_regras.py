@@ -28,7 +28,9 @@ def d(dias: int) -> date:
     return HOJE + timedelta(days=dias)
 
 
-def contrato(valor, fim, *, uf="PE", cnpj=F1, orgao="o:1", assinatura=None, id_=None) -> ContratoFato:
+def contrato(
+    valor, fim, *, uf="PE", cnpj=F1, orgao="o:1", assinatura=None, id_=None, situacao=None
+) -> ContratoFato:
     return ContratoFato(
         id=id_ or uuid4(),
         cnpj=cnpj,
@@ -39,6 +41,7 @@ def contrato(valor, fim, *, uf="PE", cnpj=F1, orgao="o:1", assinatura=None, id_=
         vigencia_inicio=None,
         vigencia_fim=fim,
         url_origem="https://exemplo/c",
+        situacao=situacao,
     )
 
 
@@ -109,6 +112,22 @@ def test_contrato_encerrado_ou_sem_valor_nao_entra_no_vigente():
         [contrato("100", d(30)), contrato("900", d(-1)), contrato(None, d(400)), contrato("0", d(400))], HOJE
     )
     assert sinal.valor == Decimal("100.0")
+
+
+@pytest.mark.parametrize(
+    "situacao",
+    ["Concluído", "Rescindido por Acordo Entre as Partes", "Suspenso por Decisão Administrativa"],
+)
+def test_contrato_encerrado_ou_suspenso_na_fonte_nao_entra_no_vigente(situacao):
+    """Data final no futuro, mas a fonte diz que acabou (migration 009): fora do total e do vencendo."""
+    (sinal,) = penhasco([contrato("100", d(30)), contrato("900", d(400), situacao=situacao)], HOJE)
+    assert sinal.valor == Decimal("100.0")
+    assert penhasco([contrato("900", d(30), situacao=situacao)], HOJE) == []
+
+
+def test_contrato_regular_ou_sem_situacao_conta():
+    (sinal,) = penhasco([contrato("100", d(30), situacao="Regular"), contrato("100", d(400))], HOJE)
+    assert sinal.valor == Decimal("50.0")
 
 
 def test_penhasco_e_calculado_por_uf_sem_misturar():

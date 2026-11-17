@@ -50,6 +50,7 @@ class ContratoFato:
     vigencia_inicio: date | None
     vigencia_fim: date | None
     url_origem: str | None
+    situacao: str | None = None
 
 
 @dataclass(frozen=True)
@@ -184,9 +185,20 @@ def sancao_direta(sancoes: Iterable[SancaoFato], hoje: date) -> list[Sinal]:
 # ===================== penhasco =====================
 
 
+# Situação da fonte que mantém o contrato vigente; nula quando a fonte não informa (PNCP). Concluído, rescindido ou
+# suspenso não conta, mesmo com data final no futuro (migration 009).
+SITUACAO_REGULAR = "Regular"
+
+
 def contrato_vigente(c: ContratoFato, hoje: date) -> bool:
-    """Mesmo critério do catálogo (`contratos_vigentes`): termina hoje ou depois e tem valor."""
-    return c.vigencia_fim is not None and c.vigencia_fim >= hoje and c.valor is not None and c.valor > 0
+    """Mesmo critério do catálogo (`contratos_vigentes`): termina hoje ou depois, tem valor e a situação é regular."""
+    return (
+        c.vigencia_fim is not None
+        and c.vigencia_fim >= hoje
+        and c.valor is not None
+        and c.valor > 0
+        and c.situacao in (None, SITUACAO_REGULAR)
+    )
 
 
 def penhasco(contratos: Iterable[ContratoFato], hoje: date) -> list[Sinal]:

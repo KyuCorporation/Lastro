@@ -33,7 +33,8 @@ SQL_TRAVAR = "select pg_advisory_xact_lock(hashtext('lastro_sinais'))"
 
 # Só o que as regras usam: contratos que ainda podem estar vigentes ou foram assinados na janela da concentração.
 SQL_CONTRATOS = """
-select id, fornecedor_cnpj, uf, orgao_id, valor_global, data_assinatura, vigencia_inicio, vigencia_fim, url_origem
+select id, fornecedor_cnpj, uf, orgao_id, valor_global, data_assinatura, vigencia_inicio, vigencia_fim, url_origem,
+       situacao
   from contratos
  where vigencia_fim >= %(hoje)s
     or coalesce(data_assinatura, vigencia_inicio) between %(inicio)s and %(hoje)s

@@ -125,6 +125,13 @@ def test_fila_priorizada_com_sinais_so_das_ufs_do_usuario(cliente, autenticar, c
     assert "em AL" not in r.text  # nenhuma explicação de sinal de AL
 
 
+def test_contrato_rescindido_nao_conta_no_valor_exposto(cliente, autenticar, carteira, c2_rescindido):
+    itens = {
+        i["cnpj"]: i for i in _fila(cliente, autenticar("ana@alfa.demo"), carteira["id"]).json()["itens"]
+    }
+    assert itens[F1]["valor_exposto"] == "100000.00"  # só C1; C2 foi rescindido
+
+
 def test_admin_com_pe_e_al_ve_o_sinal_e_a_exposicao_de_al(cliente, autenticar, carteira):
     itens = {
         i["cnpj"]: i for i in _fila(cliente, autenticar("admin@alfa.demo"), carteira["id"]).json()["itens"]

@@ -41,6 +41,7 @@ exposto as (
     from contratos c
     join itens i on i.cnpj = c.fornecedor_cnpj
    where c.vigencia_fim >= %(hoje)s
+     and coalesce(c.situacao, 'Regular') = 'Regular'
      and c.uf::text = any (ctx_ufs())
    group by c.fornecedor_cnpj
 ),

@@ -44,7 +44,7 @@ Em todas: 1 requisição por segundo, retry com backoff, cache em disco do dia (
 
 | Método | O que traz | Filtros usados | Campos usados |
 |---|---|---|---|
-| `Contratos` | contratos do estado e dos municípios | `AnoContrato`, `Esfera` (`Municipio` só na amostra) | `CodigoContrato`, `CodigoEfiscoUG` (estado), `CodigoUG`, `UnidadeGestora`, `CPF_CNPJ`, `TipoDocumento`, `RazaoSocial`, `Objeto`, `Valor`, `Vigencia` ("dd/mm/aaaa a dd/mm/aaaa"), `Esfera`, `LinkArquivo` (página do documento no sistema do tribunal, `http://sistemas.tcepe.tc.br/...remessaTCEPE.html?...&idDocumento=N`) |
+| `Contratos` | contratos do estado e dos municípios | `AnoContrato`, `Esfera` (`Municipio` só na amostra) | `CodigoContrato`, `CodigoEfiscoUG` (estado), `CodigoUG`, `UnidadeGestora`, `CPF_CNPJ`, `TipoDocumento`, `RazaoSocial`, `Objeto`, `Valor`, `Vigencia` ("dd/mm/aaaa a dd/mm/aaaa"), `Esfera`, `Situacao` ("Regular", "Concluído", "Rescindido por Acordo Entre as Partes", "Suspenso por Decisão Administrativa"), `LinkArquivo` (página do documento no sistema do tribunal, `http://sistemas.tcepe.tc.br/...remessaTCEPE.html?...&idDocumento=N`) |
 | `DespesasEstaduais` | um registro por empenho do estado | `ANOREFERENCIA`, `ID_UNIDADE_GESTORA` (e-Fisco) | `NUMEROEMPENHO`, `CPF_CNPJ`, `NOME_FORNECEDOR`, `VALOREMPENHADO`, `DATAEMPENHO`, `HISTORICO`, `NOMEUNIDADEGESTORA` |
 | `DespesasMunicipais` | um registro por empenho municipal | `CODIGO_MUNICIPIO`, `ANOREFERENCIA`, `MESREFERENCIA` | os mesmos, mais `ID_EMPENHO` e `FORNECEDOR` |
 | `EmpenhoLiquidacao` | liquidações e anulações (valor negativo). **Não traz o credor** | `ANOREFERENCIA`, `ESFERA`, `ID_UNIDADE_GESTORA` | `IDEMPENHO`, `NUMERO`, `TIPO`, `VALOR`, `DATA` |
