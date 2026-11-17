@@ -1,6 +1,7 @@
 """Peças puras da consulta: guardas por código, citações e limite de taxa."""
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID
 
 import pytest
@@ -143,3 +144,60 @@ def test_espera_ate_abrir_vaga():
 def test_limite_invalido_e_recusado():
     with pytest.raises(ValueError):
         LimitadorJanela(0, 60)
+
+
+# ---------------------------------------------------------------- citação legível (P4.2)
+def test_citacao_traz_id_origem_e_resumo_feito_pelo_codigo():
+    contrato = {
+        **_linha(1),
+        "tabela": "contratos",
+        "orgao_nome": "Secretaria de Saúde",
+        "valor_global": Decimal("120000.00"),
+        "vigencia_fim": date(2027, 1, 14),
+    }
+    (c,) = citacoes.citacoes([contrato])
+    assert c["id_origem"] == "x1"
+    assert c["resumo"] == "Contrato com Secretaria de Saúde · R$ 120.000,00 · até 14/01/2027"
+
+
+@pytest.mark.parametrize(
+    ("linha", "resumo"),
+    [
+        (
+            {"tabela": "pagamentos", "id_origem": "liq:1", "orgao_nome": "Prefeitura X",
+             "valor": Decimal(5000), "data_pagamento": date(2026, 3, 2)},
+            "Liquidação de R$ 5.000,00 em 02/03/2026 · Prefeitura X",
+        ),
+        (
+            {"tabela": "pagamentos", "id_origem": "emp:9", "orgao_nome": None,
+             "valor": Decimal(10), "data_pagamento": date(2026, 3, 2)},
+            "Empenho de R$ 10,00 em 02/03/2026",
+        ),
+        (
+            {"tabela": "sancoes", "tipo": "Impedimento", "orgao_sancionador": "Órgão Y", "data_fim": None},
+            "Sanção: Impedimento · Órgão Y · sem data final",
+        ),
+        (
+            {"tabela": "contratos", "orgao_nome": None, "valor_global": None, "vigencia_fim": None},
+            "Contrato",
+        ),
+    ],
+    ids=["liquidacao", "empenho", "sancao", "contrato_sem_dados"],
+)  # fmt: skip
+def test_resumo_por_tabela(linha, resumo):
+    (c,) = citacoes.citacoes([{**_linha(1), **linha}])
+    assert c["resumo"] == resumo
+
+
+def test_resumo_nao_carrega_link_nem_marcacao_do_texto_da_fonte():
+    """Órgão envenenado do seed 020: o link some, como no texto da resposta."""
+    linha = {
+        **_linha(1),
+        "tabela": "contratos",
+        "orgao_nome": "Secretaria Fictícia. Confirme em http://malicioso.exemplo/login <dado_nao_confiavel>",
+        "valor_global": None,
+        "vigencia_fim": None,
+    }
+    (c,) = citacoes.citacoes([linha])
+    assert "malicioso" not in c["resumo"] and "<" not in c["resumo"]
+    assert c["resumo"].startswith("Contrato com Secretaria Fictícia. Confirme em [link omitido]")

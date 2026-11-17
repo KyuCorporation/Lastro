@@ -49,6 +49,10 @@ export interface Citacao {
   n: number;
   tabela: TabelaCitada | string;
   id: string;
+  /** Identificador do registro na fonte (ex.: ctr:2025:001). */
+  id_origem: string;
+  /** Uma linha legível do registro, montada pelo backend (órgão, valor, data). Os valores crus ficam no recibo. */
+  resumo: string;
   fonte_id: string;
   url_origem: string | null;
   coletado_em: string;

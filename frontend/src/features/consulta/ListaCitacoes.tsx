@@ -1,32 +1,30 @@
-import type { Citacao, ConteudoRecibo } from "../../api/types";
+import type { Citacao } from "../../api/types";
 import { LinkOrigem } from "../../components/LinkOrigem";
-import { dataHora, nomeFonte, nomeTabela } from "../../lib/formato";
+import { dataHora, nomeFonte } from "../../lib/formato";
 
 /** Quantas citações aparecem abertas; o resto fica recolhido. */
 const VISIVEIS = 5;
 
-type Linha = ConteudoRecibo["linhas"][number];
-
-function Item({ c, linha }: { c: Citacao; linha?: Linha }) {
+function Item({ c }: { c: Citacao }) {
   return (
     <li className="rounded-md border border-kyu-linha p-3 text-sm text-kyu-texto">
       <p>
-        <strong>[{c.n}]</strong> {nomeTabela(c.tabela)} · {nomeFonte(c.fonte_id)} · coletado em {dataHora(c.coletado_em)}
+        <strong>[{c.n}]</strong> {c.resumo}
       </p>
       <p className="mt-1 break-all text-kyu-suave">
+        {nomeFonte(c.fonte_id)} · coletado em {dataHora(c.coletado_em)} ·{" "}
         <LinkOrigem url={c.url_origem} semLink="Registro sem link público">
           Abrir na fonte oficial
         </LinkOrigem>{" "}
-        · <span title={c.id}>{linha ? `registro ${linha.id_origem}` : `registro ${c.id}`}</span>
+        · <span title={c.id}>registro {c.id_origem}</span>
       </p>
     </li>
   );
 }
 
-/** Fontes citadas pela resposta. O identificador de origem vem das linhas do recibo, quando já chegou. */
-export function ListaCitacoes({ citacoes, linhas }: { citacoes: Citacao[]; linhas?: Linha[] }) {
+/** Fontes citadas pela resposta: o que é cada registro, de onde veio e o link para a fonte. */
+export function ListaCitacoes({ citacoes }: { citacoes: Citacao[] }) {
   if (citacoes.length === 0) return null;
-  const porId = new Map((linhas ?? []).map((l) => [l.id, l]));
   const abertas = citacoes.slice(0, VISIVEIS);
   const recolhidas = citacoes.slice(VISIVEIS);
   const n = recolhidas.length;
@@ -37,7 +35,7 @@ export function ListaCitacoes({ citacoes, linhas }: { citacoes: Citacao[]; linha
       </h3>
       <ol aria-labelledby="titulo-citacoes" className="mt-2 space-y-2">
         {abertas.map((c) => (
-          <Item key={c.n} c={c} linha={porId.get(c.id)} />
+          <Item key={c.n} c={c} />
         ))}
       </ol>
       {n > 0 && (
@@ -47,7 +45,7 @@ export function ListaCitacoes({ citacoes, linhas }: { citacoes: Citacao[]; linha
           </summary>
           <ol className="mt-2 space-y-2" start={VISIVEIS + 1}>
             {recolhidas.map((c) => (
-              <Item key={c.n} c={c} linha={porId.get(c.id)} />
+              <Item key={c.n} c={c} />
             ))}
           </ol>
         </details>

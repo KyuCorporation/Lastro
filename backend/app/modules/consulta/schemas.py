@@ -31,6 +31,8 @@ class Citacao(BaseModel):
     n: int
     tabela: str
     id: str
+    id_origem: str
+    resumo: str  # texto para exibir, montado pelo código; os valores crus estão no recibo
     fonte_id: str
     url_origem: str | None
     coletado_em: datetime
