@@ -1,0 +1,51 @@
+{
+ "resposta": {
+  "status": "OK",
+  "tamanhoResultado": "2",
+  "limiteResultado": "100000",
+  "conteudo": [
+   {
+    "CodigoEfiscoUG": "510101",
+    "CodigoUG": "9001",
+    "SiglaUG": "SEINFRA-EX",
+    "UnidadeGestora": "SECRETARIA EXEMPLO DE INFRAESTRUTURA (SINTÉTICO)",
+    "Municipio": "Recife",
+    "Esfera": "E ",
+    "CodigoContrato": "90000001",
+    "NumeroContrato": "001",
+    "AnoContrato": "2025",
+    "TipoDocumento": "CNPJ",
+    "CPF_CNPJ": "99000001000101    ",
+    "NumeroDocumento": "99000001000101",
+    "NumeroDocumentoAjustado": "99000001000101",
+    "RazaoSocial": "CONSTRUTORA EXEMPLO ALFA LTDA (SINTÉTICO)",
+    "Objeto": "Manutenção predial de escolas estaduais do agreste",
+    "Valor": "1250000.00",
+    "Vigencia": "15/01/2025 a 14/01/2027",
+    "Estagio": "Em Execução",
+    "Situacao": "Regular"
+   },
+   {
+    "CodigoEfiscoUG": "510101",
+    "CodigoUG": "9001",
+    "SiglaUG": "SEINFRA-EX",
+    "UnidadeGestora": "SECRETARIA EXEMPLO DE INFRAESTRUTURA (SINTÉTICO)",
+    "Municipio": "Recife",
+    "Esfera": "E ",
+    "CodigoContrato": "90000002",
+    "NumeroContrato": "002",
+    "AnoContrato": "2025",
+    "TipoDocumento": "CPF",
+    "CPF_CNPJ": "***.***.789-09",
+    "NumeroDocumento": "12345678909",
+    "NumeroDocumentoAjustado": "12345678909",
+    "RazaoSocial": "PESSOA FÍSICA SINTÉTICA",
+    "Objeto": "Consultoria individual (deve ser descartada: CPF)",
+    "Valor": "30000.00",
+    "Vigencia": "01/02/2025 a 31/12/2025",
+    "Estagio": "Fim de Vigência",
+    "Situacao": "Regular"
+   }
+  ]
+ }
+}

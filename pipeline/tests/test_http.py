@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import httpx
 import pytest
 
@@ -92,3 +94,28 @@ def test_montar_url_ignora_parametro_vazio():
     assert montar_url("https://x.test/", "/Contratos!json", {"Ano": 2025, "Mun": None}) == (
         "https://x.test/Contratos!json?Ano=2025"
     )
+
+
+def test_cache_com_validade_maior_reaproveita_dia_anterior(cliente_falso, tmp_path):
+    chamadas = []
+
+    def rotas(req: httpx.Request) -> httpx.Response:
+        chamadas.append(req)
+        return httpx.Response(200, content=b"dado")
+
+    with cliente_falso(rotas, tmp_path) as cliente:
+        cliente.get("https://exemplo.test/fechado")
+        (dia,) = (tmp_path / "teste").iterdir()
+        dia.rename(dia.with_name((date.today() - timedelta(days=3)).isoformat()))
+        assert cliente.get("https://exemplo.test/fechado", validade_dias=30).do_cache
+        assert len(chamadas) == 1
+        assert not cliente.get("https://exemplo.test/fechado").do_cache  # validade padrão: só o dia
+        assert len(chamadas) == 2
+
+
+def test_tratamento_roda_antes_do_cache(cliente_falso, tmp_path):
+    with cliente_falso(lambda _r: httpx.Response(200, content=b"cpf 123"), tmp_path) as cliente:
+        r = cliente.get("https://exemplo.test/a", tratar=lambda b: b.replace(b"123", b"***"))
+    assert r.conteudo == b"cpf ***"
+    gravados = [p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()]
+    assert gravados and not any(b"123" in g for g in gravados)
