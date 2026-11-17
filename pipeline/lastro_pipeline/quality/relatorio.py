@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
+from lastro_pipeline.config import hoje_recife
 from lastro_pipeline.modelos import Contrato, Descarte, Fato, Pagamento, Sancao
 
 DATA_MINIMA = date(1990, 1, 1)
@@ -31,7 +32,7 @@ DATAS_PASSADAS: dict[type[Fato], tuple[str, ...]] = {
 
 @dataclass
 class AvaliadorQualidade:
-    hoje: date = field(default_factory=date.today)
+    hoje: date = field(default_factory=hoje_recife)
     total: int = 0
     _vazios: Counter[str] = field(default_factory=Counter)
     _vistos: set[tuple[str, str]] = field(default_factory=set)

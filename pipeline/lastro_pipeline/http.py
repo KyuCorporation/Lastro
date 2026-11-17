@@ -30,7 +30,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from lastro_pipeline.config import USER_AGENT
+from lastro_pipeline.config import USER_AGENT, hoje_recife
 
 log = logging.getLogger(__name__)
 
@@ -168,10 +168,10 @@ class ClienteHttp:
         if self._cache_dir is None:
             return None
         chave = hashlib.sha256(url.encode()).hexdigest()
-        return self._cache_dir / (dia or date.today()).isoformat() / chave
+        return self._cache_dir / (dia or hoje_recife()).isoformat() / chave
 
     def _ler_cache(self, url: str, validade_dias: int = 1) -> Resposta | None:
-        hoje = date.today()
+        hoje = hoje_recife()
         candidatos = (
             self._caminho_cache(url, hoje - timedelta(days=d)) for d in range(max(1, validade_dias))
         )

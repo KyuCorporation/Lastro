@@ -27,7 +27,7 @@ from functools import partial
 from itertools import product
 from typing import Any
 
-from lastro_pipeline.config import Settings
+from lastro_pipeline.config import Settings, hoje_recife
 from lastro_pipeline.connectors.base import RegistroOrigem
 from lastro_pipeline.http import ClienteHttp, FonteIndisponivel, montar_url
 from lastro_pipeline.modelos import Normalizacao, RegistroNormalizado, RespostaBruta
@@ -60,7 +60,7 @@ class ConectorPePortal:
         self._municipios = settings.municipios_tcepe
         self._ugs_estaduais = settings.ugs_estaduais_tcepe
         self._cache_dias = settings.tcepe_cache_dias
-        self._hoje = hoje or date.today()
+        self._hoje = hoje or hoje_recife()
         # chave do empenho (`<UG>:<exercício>:<empenho>`) → (CNPJ do credor, órgão)
         self._credores: dict[str, tuple[str, str | None]] = {}
 

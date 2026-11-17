@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from lastro_pipeline.config import Settings
+from lastro_pipeline.config import Settings, hoje_recife
 from lastro_pipeline.connectors.base import RegistroOrigem
 from lastro_pipeline.http import ClienteHttp, FonteBloqueada, FonteIndisponivel, montar_url
 from lastro_pipeline.modelos import Normalizacao, RespostaBruta
@@ -74,7 +74,7 @@ class ConectorSancoes:
         return {"cadastro": self.fonte_id}
 
     def coletar(self, cliente: ClienteHttp) -> Iterator[RespostaBruta]:
-        hoje = self._hoje or date.today()
+        hoje = self._hoje or hoje_recife()
         for atraso in range(self._dias + 1):
             dia = hoje - timedelta(days=atraso)
             url = montar_url(self._base, f"{self.fonte_id}/{dia:%Y%m%d}")
