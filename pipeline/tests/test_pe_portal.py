@@ -46,7 +46,11 @@ def test_fixture_cobre_contratos_estaduais_municipais_empenho_e_liquidacao(setti
     assert {p.fato.id_origem.split(":")[0] for p in pagamentos} == {"emp", "liq"}
     assert all(s.fato.uf == "PE" for s in validos)
     assert all(s.fato.fonte_id == "pe_portal" for s in validos)
-    assert all(s.fato.url_origem and s.fato.url_origem.startswith("https://") for s in validos)
+    # Contrato com `LinkArquivo` aponta para a página do documento no tribunal (só http); o resto, para a API.
+    assert all(
+        s.fato.url_origem and s.fato.url_origem.startswith(("https://", "http://sistemas.tcepe.tc.br/"))
+        for s in validos
+    )
 
 
 def test_pessoa_fisica_e_descartada_crua_ou_ja_saneada(settings):
@@ -69,6 +73,36 @@ def test_mapeamento_de_um_contrato(settings):
     assert contrato.vigencia_fim.isoformat() == "2027-01-14"
     assert contrato.orgao_id == "pe_portal:510101"  # estado: código e-Fisco, o mesmo das despesas
     assert contrato.data_assinatura is None  # a API não informa
+    assert (
+        contrato.url_origem
+        == "http://sistemas.tcepe.tc.br/audinArquivos/licon/remessaTCEPE/remessaTCEPE.html?tipoFonteDocumento=IJ&idDocumento=90000001"
+    )  # LinkArquivo: a página do contrato no TCE-PE
+
+
+def _contrato_manual(**troca: str) -> dict:
+    registro = json.loads((MANUAL / "contrato_2025_E.json").read_text(encoding="utf-8"))["resposta"][
+        "conteudo"
+    ][0]
+    return {**registro, **troca}
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "",
+        "https://malicioso.exemplo/contrato",
+        "javascript:alert(1)",
+        "http://sistemas.tcepe.tc.br.malicioso.exemplo/x",
+    ],
+    ids=["vazio", "outro_host", "javascript", "host_parecido"],
+)
+def test_contrato_sem_link_valido_do_tce_aponta_para_o_recorte_da_api(settings, link):
+    (saida,) = _normalizar(settings, [_resposta("contrato", [_contrato_manual(LinkArquivo=link)])])
+    assert saida.fato.url_origem == "https://tce.test/x"
+
+
+def test_amostra_guarda_o_link_do_contrato():
+    assert "LinkArquivo" in mapa.CAMPOS_AMOSTRA["contrato"]
 
 
 def test_liquidacao_herda_o_credor_do_empenho(settings):

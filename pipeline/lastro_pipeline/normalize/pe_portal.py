@@ -61,6 +61,7 @@ CAMPOS_AMOSTRA: dict[str, tuple[str, ...]] = {
         "Objeto",
         "Valor",
         "Vigencia",
+        "LinkArquivo",
     ),
     "empenho": (
         "ESFERA",
@@ -93,6 +94,14 @@ CAMPOS_AMOSTRA: dict[str, tuple[str, ...]] = {
 _CPF_FORMATADO = re.compile(r"\d{3}\.\d{3}\.\d{3}-\d{2}")
 _ONZE_DIGITOS = re.compile(r"(?<!\d)\d{11}(?!\d)")
 _VIGENCIA = re.compile(r"(\d{2}/\d{2}/\d{4})\s*a\s*(\d{2}/\d{2}/\d{4})")
+# `LinkArquivo`: página do documento do contrato no sistema do tribunal (só http). Vale como `url_origem` só se for
+# desse host; qualquer outra coisa (vazio, outro host, outro esquema) fica com a URL do recorte da API.
+_LINK_TCEPE = re.compile(r"https?://sistemas\.tcepe\.tc\.br/[^\s\"<>]*")
+
+
+def _link_do_contrato(registro: dict[str, Any], url_recorte: str) -> str:
+    link = (texto(registro.get("LinkArquivo")) or "").strip()
+    return link if _LINK_TCEPE.fullmatch(link) else url_recorte
 
 
 # ------------------------------------------------------------------ saneamento (LGPD)
@@ -209,7 +218,7 @@ def _contrato(registro: dict[str, Any], url_origem: str, esfera_param: str | Non
     fato = Contrato(
         fonte_id=FONTE_ID,
         id_origem=f"ctr:{codigo}",
-        url_origem=url_origem,
+        url_origem=_link_do_contrato(registro, url_origem),
         uf=UF,
         orgao_id=orgao.id if orgao else None,
         fornecedor_cnpj=fornecedor.cnpj,

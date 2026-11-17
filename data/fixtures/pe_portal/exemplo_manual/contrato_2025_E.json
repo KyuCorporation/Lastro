@@ -23,7 +23,8 @@
     "Valor": "1250000.00",
     "Vigencia": "15/01/2025 a 14/01/2027",
     "Estagio": "Em Execução",
-    "Situacao": "Regular"
+    "Situacao": "Regular",
+    "LinkArquivo": "http://sistemas.tcepe.tc.br/audinArquivos/licon/remessaTCEPE/remessaTCEPE.html?tipoFonteDocumento=IJ&idDocumento=90000001"
    },
    {
     "CodigoEfiscoUG": "510101",
