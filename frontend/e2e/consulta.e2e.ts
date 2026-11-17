@@ -56,9 +56,10 @@ test("contrato real do TCE-PE vem com link para a fonte oficial", async ({ page 
   await expect(resposta).toContainText("R$ 1.250.000,00");
   await expect(resposta).toContainText("14/01/2027");
   await expect(resposta.getByRole("note")).toHaveCount(0); // não é dado sintético
+  // LinkArquivo: a página do documento do contrato no sistema do tribunal (só http).
   await expect(resposta.getByRole("link", { name: /Abrir na fonte oficial/ })).toHaveAttribute(
     "href",
-    /^https:\/\/sistemas\.tcepe\.tc\.br\/DadosAbertos\/Contratos!json/,
+    /^http:\/\/sistemas\.tcepe\.tc\.br\/audinArquivos\/.*idDocumento=90000001$/,
   );
 });
 
@@ -127,11 +128,12 @@ test("recibo de evidências mostra os registros reais, o total e o selo", async 
   await expect(linha).toContainText("TCE-PE Dados Abertos");
   await expect(linha.getByRole("link", { name: /Registro 01/ })).toHaveAttribute(
     "href",
-    /^https:\/\/sistemas\.tcepe\.tc\.br\/DadosAbertos\//,
+    /^http:\/\/sistemas\.tcepe\.tc\.br\/audinArquivos\//,
   );
   await expect(page.getByRole("region", { name: "Valores usados na resposta" })).toContainText("R$ 1.250.000,00");
   await expect(page.getByRole("region", { name: "Plano e parâmetros" })).toContainText("contratos_vencendo@v2");
-  await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible(); // selo sha256 do recibo
+  // Selo sha256 do recibo, seguido do botão de copiar no mesmo elemento.
+  await expect(page.getByText(/^[0-9a-f]{64}(?![0-9a-f])/)).toBeVisible();
 });
 
 test("prompt injection digitado na pergunta é bloqueado e não devolve nada", async ({ page }) => {
@@ -168,7 +170,8 @@ test("auditor vê as consultas do cliente e não pergunta", async ({ page }) => 
   await expect(page.getByLabel("Pergunta em linguagem natural")).toHaveCount(0);
   await page.getByRole("link", { name: "Auditoria" }).click();
   await expect(page.getByText(/Consultas de todo o cliente/)).toBeVisible();
-  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByRole("table", { name: /Consultas registradas/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cabeça da cadeia" })).toContainText(/[0-9a-f]{64}/);
 });
 
 test("acesso mostra a sessão real e a matriz; gestor não tem Auditoria no menu", async ({ page }) => {
