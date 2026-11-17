@@ -73,3 +73,21 @@ def test_entrada_invalida_422_no_formato_padrao():
     r = client.post("/auth/login", json={"email": "ana@alfa.demo"})
     assert r.status_code == 422
     assert r.json()["erro"]["codigo"] == "ENTRADA_INVALIDA"
+
+
+def test_login_fica_na_trilha_de_auditoria_do_tenant(ctx_caio):
+    """O schema prevê o evento `login`. Senha errada não grava: sem sessão não há tenant para a trilha."""
+    from app.core.db import sessao
+
+    def logins_da_ana() -> int:
+        with sessao(ctx_caio) as conn:
+            return conn.execute(
+                "select count(*) from auditoria where evento = 'login' and usuario_id = %s",
+                ("00000000-0000-0000-0000-0000000000a1",),
+            ).fetchone()[0]
+
+    antes = logins_da_ana()
+    assert client.post("/auth/login", json={"email": "ana@alfa.demo", "senha": "errada"}).status_code == 401
+    assert logins_da_ana() == antes
+    assert client.post("/auth/login", json={"email": "ana@alfa.demo", "senha": "demo123"}).status_code == 200
+    assert logins_da_ana() == antes + 1
