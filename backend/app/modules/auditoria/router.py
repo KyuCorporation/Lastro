@@ -7,6 +7,7 @@ from app.modules.auditoria import service
 from app.modules.auditoria.schemas import (
     LIMITE_MAXIMO,
     LIMITE_PADRAO,
+    CabecaCadeia,
     EventoAuditoria,
     VerificacaoCadeiaSaida,
 )
@@ -33,3 +34,9 @@ def verificar_auditoria(ctx: Auditor) -> VerificacaoCadeiaSaida:
     return VerificacaoCadeiaSaida(
         integra=v.integra, n_eventos=v.n_eventos, primeiro_seq_quebrado=v.primeiro_seq_quebrado
     )
+
+
+@router.get("/auditoria/cabeca", response_model=CabecaCadeia)
+def cabeca_da_auditoria(ctx: Auditor) -> CabecaCadeia:
+    # O hash do último evento, para publicar fora do banco (ata, e-mail, repositório).
+    return CabecaCadeia(**service.cabeca(ctx))

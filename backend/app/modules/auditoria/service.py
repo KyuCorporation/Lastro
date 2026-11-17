@@ -56,3 +56,10 @@ def verificar_em(conn: psycopg.Connection) -> VerificacaoCadeia:
 def verificar(ctx: ContextoAcesso) -> VerificacaoCadeia:
     with sessao(ctx) as conn:
         return verificar_em(conn)
+
+
+def cabeca(ctx: ContextoAcesso) -> dict[str, Any]:
+    with sessao(ctx) as conn:
+        linha = conn.cursor(row_factory=dict_row).execute(queries.CABECA_DA_CADEIA).fetchone()
+    assert linha is not None
+    return linha
