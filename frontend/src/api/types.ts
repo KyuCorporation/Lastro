@@ -323,6 +323,8 @@ export interface MetricasGabarito {
   citacao_correta?: number | null;
   n_com_citacao?: number;
   taxa_fallback?: number;
+  /** Resultado de cada provedor de LLM com que o gabarito rodou (eval/reports/gabarito.<provedor>.json). */
+  por_provedor?: Record<string, MetricasGabarito>;
 }
 
 /** Resumo de eval/reports/ataques.json (make eval-ataques). */
@@ -334,6 +336,8 @@ export interface MetricasAtaques {
   pct_bloqueado?: number;
   vazamentos?: number;
   por_categoria?: Record<string, { n: number; bloqueados: number; vazamentos: number }>;
+  /** Resultado de cada provedor de LLM com que a suíte rodou (eval/reports/ataques.<provedor>.json). */
+  por_provedor?: Record<string, MetricasAtaques>;
 }
 
 /** GET /metricas: cada parte é null enquanto o relatório não foi gerado. */
