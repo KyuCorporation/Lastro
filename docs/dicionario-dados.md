@@ -1,6 +1,6 @@
 # Dicionário de dados
 
-Gerado a partir de `db/migrations/001_schema.sql` (com 002 a 007) e dos normalizadores da pipeline. O mapeamento campo a campo de cada fonte está em `docs/catalogo-fontes.md`. Este documento diz o que cada coluna guarda e qual regra a protege.
+Gerado a partir de `db/migrations/001_schema.sql` (com 002 a 008) e dos normalizadores da pipeline. O mapeamento campo a campo de cada fonte está em `docs/catalogo-fontes.md`. Este documento diz o que cada coluna guarda e qual regra a protege.
 
 Convenções:
 - dinheiro é `numeric(18,2)` no banco e string decimal na API (`"1234.56"`), nunca float;
@@ -110,8 +110,10 @@ Convenções:
 | `cnpj` | char(14) | Sancionado | Sem FK: a empresa sancionada pode não ter contrato carregado |
 | `tipo` | text | `CATEGORIA DA SANÇÃO` | |
 | `orgao_sancionador`, `uf_orgao` | text, char(2) | | |
-| `data_inicio`, `data_fim` | date | | Vigente = início até hoje e fim vazio ou a partir de hoje |
+| `data_inicio`, `data_fim` | date | | Vigente = início até hoje, fim vazio ou a partir de hoje, e `removida_em` vazio |
 | `fundamentacao` | text | Até 2.000 caracteres | |
+| `vista_em` | timestamptz | Última coleta completa do cadastro em que a sanção veio (migration 008) | Fora do `hash_conteudo` |
+| `removida_em` | timestamptz | Primeira coleta completa (online, status `ok`) em que a sanção não veio: saiu do cadastro da CGU | Volta a vazio se ela reaparecer. A fixture offline nunca marca |
 
 **`socios`**: quadro societário. A tabela existe, mas nenhum conector a preenche ainda (ver `premissas-limitacoes.md`). RLS: analista, auditor e admin.
 
