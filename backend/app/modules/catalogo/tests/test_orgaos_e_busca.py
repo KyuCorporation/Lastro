@@ -8,7 +8,7 @@ from app.core.db import sessao
 from app.llm.plano import Parametros, PlanoConsulta
 from app.modules.catalogo.executor import executar
 from app.modules.catalogo.registry import CONSULTAS, PROVENIENCIA, sql
-from app.modules.catalogo.tests.conftest import F1, F2, HOJE
+from app.modules.catalogo.tests.conftest import F1, F2, HOJE, _superusuario, d
 
 pytestmark = pytest.mark.usefixtures("dados_catalogo")
 
@@ -70,7 +70,7 @@ def test_orgaos_de_fornecedor_sem_contratos(ctx_ana):
 # ------------------------------------------------------------------ busca_objeto
 def test_busca_full_text_em_portugues(ctx_ana):
     r = executar(busca("limpeza tcat"), ctx_ana, HOJE)
-    assert r.versao == "busca_objeto@v2"
+    assert r.versao == "busca_objeto@v3"
     assert origens(r.conjuntos["linhas"]) == {"TCAT-C1", "TCAT-C3"}  # C4 é de AL
     assert r.totais == {"n_contratos": 2, "valor_total": Decimal("150000.00")}
     assert r.parametros["termo"] == "limpeza tcat" and "cnpj" not in r.parametros
@@ -84,6 +84,38 @@ def test_busca_usa_radical_do_portugues(ctx_ana):
         "TCAT-C1",
         "TCAT-C2",
     }
+
+
+@pytest.fixture
+def objetos_de_medic():
+    """G038: sem acento, "médica" e "medicamentos" têm o mesmo radical ("medic"). Contratos de F2 já encerrados, só
+    durante o teste: não mexem nos totais de F1 nem na exposição de F2 dos outros testes."""
+    contratos = [
+        ("TCAT-M1", "Aquisição de medicamentos para a rede tcat"),
+        ("TCAT-M2", "MEDICAMENTO DE USO CONTINUO TCAT"),
+        ("TCAT-M3", "Anuidade da Associação Brasileira de Educação Médica tcat"),
+    ]
+    with _superusuario() as su:
+        for id_origem, objeto in contratos:
+            su.execute(
+                "insert into contratos (fonte_id, id_origem, uf, orgao_id, fornecedor_cnpj, objeto, valor_global, "
+                "data_assinatura, vigencia_fim, url_origem, coletado_em, hash_conteudo) values ('demo_sintetico', "
+                "%s, 'PE', 'demo_sintetico:TCAT-PE1', %s, %s, 1000, %s, %s, 'about:blank#g038', now(), "
+                "repeat('d', 64))",
+                (id_origem, F2, objeto, d(-400), d(-30)),
+            )
+    yield
+    with _superusuario() as su:
+        su.execute("delete from contratos where id_origem like 'TCAT-M%%'")
+
+
+def test_busca_nao_confunde_palavras_que_so_dividem_o_radical_sem_acento(ctx_ana, objetos_de_medic):
+    assert origens(executar(busca("medicamentos tcat"), ctx_ana, HOJE).conjuntos["linhas"]) == {
+        "TCAT-M1",
+        "TCAT-M2",  # singular e sem acento na fonte: continua achando
+    }
+    assert origens(executar(busca("educação médica tcat"), ctx_ana, HOJE).conjuntos["linhas"]) == {"TCAT-M3"}
+    assert origens(executar(busca("educacao medica tcat"), ctx_ana, HOJE).conjuntos["linhas"]) == {"TCAT-M3"}
 
 
 def test_busca_ignora_acento_dos_dois_lados(ctx_admin):

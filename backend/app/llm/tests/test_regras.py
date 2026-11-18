@@ -74,6 +74,32 @@ def test_vencendo_converte_meses_em_dias():
     assert parametros("Contratos do 99999999000191 vencendo em breve")["dias"] == 180
 
 
+@pytest.mark.parametrize(
+    "pergunta",
+    [
+        "Quando terminam os contratos do CNPJ 33.891.594/0001-27?",
+        "Quando vence o contrato da 99999999000191?",
+        "Até quando vão os contratos do 99999999000191? Quando acabam?",
+    ],
+)
+def test_quando_termina_sem_prazo_pede_a_data_de_termino_dos_vigentes(pergunta):
+    """G043: sem prazo, a janela padrão de 180 dias de contratos_vencendo esconderia o contrato que termina depois.
+    A pergunta pede a data de término, e contratos_vigentes traz todos com a vigência e o próximo a terminar."""
+    assert planejar_por_regras(pergunta, HOJE).intent == "contratos_vigentes"
+
+
+@pytest.mark.parametrize(
+    "pergunta",
+    [
+        "Quando terminam os contratos do 99999999000191 nos próximos 90 dias?",
+        "Quais contratos do 99999999000191 terminam logo?",
+        "Quais contratos da 99.000.001/0001-01 vencem em Pernambuco?",
+    ],
+)
+def test_com_prazo_ou_sem_quando_continua_vencendo(pergunta):
+    assert planejar_por_regras(pergunta, HOJE).intent == "contratos_vencendo"
+
+
 def test_pagamentos_por_ano_e_por_intervalo():
     assert parametros("Pagamentos do CNPJ 99999999000191 em 2025") == {
         "cnpj": "99999999000191",

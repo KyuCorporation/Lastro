@@ -6,15 +6,15 @@ Duas partes:
 
 ## 1. Resultados automáticos
 
-Rodada de 08/11/2026 com `LLM_PROVIDER=mock`, sem LLM; o planejador é o roteador por regras. Com o Gemini, rodar de novo e registrar ao lado.
+Rodada de 17/11/2026 da versão estável (PR #73, commit `89bdafd`, banco criado do zero com migrations, seeds e dados do demo), com `LLM_PROVIDER=mock`, sem LLM; o planejador é o roteador por regras. Com o Gemini, rodar de novo e registrar ao lado.
 
 | Avaliação | Resultado | Meta (SPEC §14.6) |
 |---|---|---|
-| Gabarito: perguntas sem falha | 100 de 100 | — |
+| Gabarito: perguntas sem falha | 99 de 100 (a falha é o G100, divergência aceita; ver 1.1) | — |
 | Gabarito: acerto de intent | 100% (80 avaliadas) | ≥ 90% |
-| Gabarito: citação correta | 100% (42 respostas) | — |
-| Gabarito: resultado igual ao SQL de referência | 100% (só 1 pergunta tinha SQL independente nesta rodada; ver 1.1) | — |
-| Ataques bloqueados | 58 de 58 (100%) | ≥ 95% |
+| Gabarito: citação correta | 100% (44 respostas) | — |
+| Gabarito: resultado igual ao SQL de referência | 98,3% (58 de 59 com SQL independente; ver 1.1) | — |
+| Ataques bloqueados | 63 de 63 (100%) | ≥ 95% |
 | Vazamentos entre UFs ou tenants | 0 | zero |
 | Matriz de acesso (`backend/app/tests/test_acesso.py`) | todos os casos do SPEC §6.4 passando | — |
 
@@ -24,14 +24,14 @@ A tela 08 Métricas mostra a rodada mais recente, lida de `eval/reports/`.
 
 Os 59 casos `responder` do gabarito passaram a ter `sql_referencia`. Os de G005 em diante foram escritos por um agente que leu só `db/migrations/` e `docs/dicionario-dados.md`, sem o SQL do catálogo e sem rodar o sistema. O harness compara o conjunto de linhas da referência com as linhas do recibo.
 
-Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**. Depois da correção da busca (`busca_objeto@v2`), a segunda rodada deu **94 de 100**.
+Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**. Depois da correção da busca (`busca_objeto@v2`), a segunda rodada deu **94 de 100**. Com `busca_objeto@v3` (G038), a terceira deu **95 de 100**. Com os ajustes da versão estável (G043, G024, G025, G026 e G100; PRs #69 a #72, integrados no #73), a quarta deu **99 de 100**: a única falha é o G100, divergência aceita ("só na referência: 2, só no recibo: 0"). A citação passou a ser contada em 44 respostas, contra 43, porque o G043 agora responde com os contratos vigentes.
 
-| Medida | Primeira rodada | Depois da correção |
-|---|---|---|
-| Acerto de resultado | 88,1% (52 de 59) | 89,8% (53 de 59) |
-| Intent | 100% | 100% |
-| Comportamento | 100% | 100% |
-| Citação | 100% | 100% |
+| Medida | Primeira rodada | Com `busca_objeto@v2` | Com `busca_objeto@v3` | Versão estável (#73) |
+|---|---|---|---|---|
+| Acerto de resultado | 88,1% (52 de 59) | 89,8% (53 de 59) | 91,5% (54 de 59) | 98,3% (58 de 59) |
+| Intent | 100% | 100% | 100% | 100% |
+| Comportamento | 100% | 100% | 100% | 100% |
+| Citação | 100% | 100% | 100% | 100% |
 
 Divergências:
 
@@ -39,11 +39,11 @@ Divergências:
 |---|---|---|---|
 | G030 | "Contratos sobre manutenção predial" (PE) | O sistema não achava o contrato que a referência acha | **Defeito do sistema, corrigido em `busca_objeto@v2`.** O roteador por regras tira o acento do termo (`manutencao predial`), e o `objeto_tsv` guarda o objeto com acento: "manutencao" e "manutenção" não casavam. A resposta saía como abstenção ("não encontrei"), que o harness aceita como resposta certa de "responder" sem registro. A v2 compara os dois lados sem acento. |
 | G051 | "Busque contratos com objeto de aquisição de medicamentos em AL" | O sistema não achava nenhum dos 19 contratos | **Defeito do sistema, corrigido em `busca_objeto@v2`**, pela mesma causa (`aquisicao`). |
-| G038 | "Busque contratos com objeto de medicamentos" (depois da v2) | O recibo traz um contrato a mais: a anuidade da Associação Brasileira de Educação Médica | Custo conhecido da v2. Sem acento, "médica" e "medicamentos" têm o mesmo radical ("medic"). A referência evitou esse caso. |
-| G024, G025 | "Quanto o fornecedor 99.000.002/0001-48 recebeu entre …" | O recibo tem uma linha a mais: o empenho de 05/04/2025 | Leitura diferente. O sistema cita o empenho à parte ("reserva no orçamento, etapa anterior à liquidação") e não o soma ao recebido. A referência deixa o empenho fora do conjunto. |
-| G026 | "Resumo do fornecedor 99.000.002/0001-48" | O recibo tem o empenho a mais | Mesma leitura de G024. |
-| G043 | "Quando terminam os contratos do CNPJ 33.891.594/0001-27?" | O sistema responde que nada vence em 180 dias; a referência traz o contrato que ainda não terminou | Leitura diferente, com resposta pouco útil. Sem prazo na pergunta, o sistema aplica a janela padrão de 180 dias de `contratos_vencendo`, e a pergunta pede a data de término. |
-| G100 | "A maior parte do dinheiro … vem de um órgão só?" | O sistema usa só os contratos (1 linha); a referência soma contratos e liquidações (3 linhas) | Leitura diferente de "dinheiro": valor contratado ou recebido. |
+| G038 | "Busque contratos com objeto de medicamentos" (depois da v2) | O recibo traz um contrato a mais: a anuidade da Associação Brasileira de Educação Médica | Custo conhecido da v2. Sem acento, "médica" e "medicamentos" têm o mesmo radical ("medic"). A referência evitou esse caso. **Corrigido em `busca_objeto@v3` (terceira rodada, 95 de 100):** cada palavra do termo precisa de uma palavra do objeto com o mesmo radical e até 2 letras de diferença no tamanho; "medicamentos" (12 letras) deixa de achar "médica" (6), e plural e singular continuam se achando. |
+| G024, G025 | "Quanto o fornecedor 99.000.002/0001-48 recebeu entre …" | O recibo tem uma linha a mais: o empenho de 05/04/2025 | Leitura diferente. O sistema cita o empenho à parte ("reserva no orçamento, etapa anterior à liquidação") e não o soma ao recebido. A referência deixa o empenho fora do conjunto. **Tratado no gabarito (depois desta rodada):** os dois casos ganharam `sql_contexto` (o empenho do período), e o harness aceita no recibo, além da referência, só as linhas desse contexto declarado. O `sql_referencia` e o sistema não mudaram. |
+| G026 | "Resumo do fornecedor 99.000.002/0001-48" | O recibo tem o empenho a mais | Mesma leitura de G024. **Tratado do mesmo jeito (depois desta rodada):** `sql_contexto` com os empenhos do fornecedor, que o resumo cita à parte ("Há ainda R$ X empenhados…") sem somar ao recebido. |
+| G043 | "Quando terminam os contratos do CNPJ 33.891.594/0001-27?" | O sistema responde que nada vence em 180 dias; a referência traz o contrato que ainda não terminou | Leitura diferente, com resposta pouco útil. Sem prazo na pergunta, o sistema aplicava a janela padrão de 180 dias de `contratos_vencendo`, e a pergunta pede a data de término. **Corrigido no roteador por regras (depois desta rodada):** "quando termina/vence/acaba" sem prazo vai para `contratos_vigentes`, que lista cada contrato com a vigência e diz o próximo a terminar; com prazo, continua em `contratos_vencendo`. A `intent_esperada` do G043 passou a ser `contratos_vigentes`. |
+| G100 | "A maior parte do dinheiro … vem de um órgão só?" | O sistema usa só os contratos (1 linha); a referência soma contratos e liquidações (3 linhas) | Leitura diferente de "dinheiro": valor contratado ou recebido. **Divergência aceita, sem mexer na referência (depois desta rodada):** `orgaos_fornecedor` mede a concentração pelo valor contratado, e a resposta passa a dizer isso ("com X% do valor contratado"; "Concentração do valor contratado em um só órgão…"). O caso continua divergente no eval. Medir também o recebido por órgão, como o sinal `concentracao` da pipeline (SPEC §9), fica para uma versão nova da consulta. |
 
 Escolhas da referência que coincidiram com o sistema:
 - empenho não conta como recebido;

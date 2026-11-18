@@ -442,10 +442,12 @@ def _orgaos(r: ResultadoConsulta) -> Material:
     orgaos = _p(t["n_orgaos"], "órgão", "órgãos")
     modelo = (
         f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem contratos com {n_o} {orgaos}, "
-        f"somando {valor}. O maior é {maior}, com {pct} do valor."
+        f"somando {valor}. O maior é {maior}, com {pct} do valor contratado."
     )
+    # A base é o valor contratado; o sinal `concentracao` da pipeline (SPEC §9) mede o recebido. O texto diz a base
+    # para "dinheiro" não ser lido como recebido (G100).
     if t["maior_participacao"] is not None and t["maior_participacao"] >= LIMIAR_CONCENTRACAO:
-        modelo += " Concentração em um só órgão é um sinal para investigar."
+        modelo += " Concentração do valor contratado em um só órgão é um sinal para investigar."
     registros = tuple(
         f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
         for g in ranking[:LIMITE_REGISTROS_TEXTO]

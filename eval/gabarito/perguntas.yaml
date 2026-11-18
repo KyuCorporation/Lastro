@@ -196,6 +196,11 @@
      where fornecedor_cnpj = '99000002000148'
        and id_origem not like 'emp:%'
        and data_pagamento between '2025-04-01' and '2025-05-31'
+  sql_contexto: |
+    select id from pagamentos
+     where fornecedor_cnpj = '99000002000148'
+       and id_origem like 'emp:%'
+       and data_pagamento between '2025-04-01' and '2025-05-31'
 - id: G025
   usuario: ana@alfa.demo
   pergunta: "Pagamentos ao CNPJ 99000002000148 em 2025"
@@ -205,6 +210,11 @@
     select id from pagamentos
      where fornecedor_cnpj = '99000002000148'
        and id_origem not like 'emp:%'
+       and data_pagamento between '2025-01-01' and '2025-12-31'
+  sql_contexto: |
+    select id from pagamentos
+     where fornecedor_cnpj = '99000002000148'
+       and id_origem like 'emp:%'
        and data_pagamento between '2025-01-01' and '2025-12-31'
 - id: G026
   usuario: ana@alfa.demo
@@ -218,6 +228,10 @@
     select id::text from pagamentos
      where fornecedor_cnpj = '99000002000148'
        and id_origem not like 'emp:%'
+  sql_contexto: |
+    select id::text from pagamentos
+     where fornecedor_cnpj = '99000002000148'
+       and id_origem like 'emp:%'
 - id: G027
   usuario: ana@alfa.demo
   pergunta: "A 99.000.002/0001-48 ainda tem contrato em vigor?"
@@ -368,7 +382,7 @@
 - id: G043
   usuario: bia@beta.demo
   pergunta: "Quando terminam os contratos do CNPJ 33.891.594/0001-27?"
-  intent_esperada: contratos_vencendo
+  intent_esperada: contratos_vigentes
   comportamento: responder
   sql_referencia: |
     select id from contratos
