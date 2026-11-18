@@ -6,15 +6,15 @@ Duas partes:
 
 ## 1. Resultados automáticos
 
-Rodada de 08/11/2026 com `LLM_PROVIDER=mock`, sem LLM; o planejador é o roteador por regras. Com o Gemini, rodar de novo e registrar ao lado.
+Rodada de 17/11/2026 da versão estável (PR #73, commit `89bdafd`, banco criado do zero com migrations, seeds e dados do demo), com `LLM_PROVIDER=mock`, sem LLM; o planejador é o roteador por regras. Com o Gemini, rodar de novo e registrar ao lado.
 
 | Avaliação | Resultado | Meta (SPEC §14.6) |
 |---|---|---|
-| Gabarito: perguntas sem falha | 100 de 100 | — |
+| Gabarito: perguntas sem falha | 99 de 100 (a falha é o G100, divergência aceita; ver 1.1) | — |
 | Gabarito: acerto de intent | 100% (80 avaliadas) | ≥ 90% |
-| Gabarito: citação correta | 100% (42 respostas) | — |
-| Gabarito: resultado igual ao SQL de referência | 100% (só 1 pergunta tinha SQL independente nesta rodada; ver 1.1) | — |
-| Ataques bloqueados | 58 de 58 (100%) | ≥ 95% |
+| Gabarito: citação correta | 100% (44 respostas) | — |
+| Gabarito: resultado igual ao SQL de referência | 98,3% (58 de 59 com SQL independente; ver 1.1) | — |
+| Ataques bloqueados | 63 de 63 (100%) | ≥ 95% |
 | Vazamentos entre UFs ou tenants | 0 | zero |
 | Matriz de acesso (`backend/app/tests/test_acesso.py`) | todos os casos do SPEC §6.4 passando | — |
 
@@ -24,14 +24,14 @@ A tela 08 Métricas mostra a rodada mais recente, lida de `eval/reports/`.
 
 Os 59 casos `responder` do gabarito passaram a ter `sql_referencia`. Os de G005 em diante foram escritos por um agente que leu só `db/migrations/` e `docs/dicionario-dados.md`, sem o SQL do catálogo e sem rodar o sistema. O harness compara o conjunto de linhas da referência com as linhas do recibo.
 
-Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**. Depois da correção da busca (`busca_objeto@v2`), a segunda rodada deu **94 de 100**. Com `busca_objeto@v3` (G038), a terceira deu **95 de 100**.
+Rodada com `LLM_PROVIDER=mock`: **93 de 100 sem falha**. Depois da correção da busca (`busca_objeto@v2`), a segunda rodada deu **94 de 100**. Com `busca_objeto@v3` (G038), a terceira deu **95 de 100**. Com os ajustes da versão estável (G043, G024, G025, G026 e G100; PRs #69 a #72, integrados no #73), a quarta deu **99 de 100**: a única falha é o G100, divergência aceita ("só na referência: 2, só no recibo: 0"). A citação passou a ser contada em 44 respostas, contra 43, porque o G043 agora responde com os contratos vigentes.
 
-| Medida | Primeira rodada | Com `busca_objeto@v2` | Com `busca_objeto@v3` |
-|---|---|---|---|
-| Acerto de resultado | 88,1% (52 de 59) | 89,8% (53 de 59) | 91,5% (54 de 59) |
-| Intent | 100% | 100% | 100% |
-| Comportamento | 100% | 100% | 100% |
-| Citação | 100% | 100% | 100% |
+| Medida | Primeira rodada | Com `busca_objeto@v2` | Com `busca_objeto@v3` | Versão estável (#73) |
+|---|---|---|---|---|
+| Acerto de resultado | 88,1% (52 de 59) | 89,8% (53 de 59) | 91,5% (54 de 59) | 98,3% (58 de 59) |
+| Intent | 100% | 100% | 100% | 100% |
+| Comportamento | 100% | 100% | 100% | 100% |
+| Citação | 100% | 100% | 100% | 100% |
 
 Divergências:
 

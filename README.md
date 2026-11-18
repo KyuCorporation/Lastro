@@ -316,12 +316,12 @@ Sem `make`, use `docker compose run --rm pipeline python -m lastro_pipeline.cli 
 | Suíte | Resultado |
 |---|---|
 | Pipeline | 142 testes passando |
-| API | 619 testes passando |
-| Harness da avaliação | 59 testes passando |
+| API | 626 testes passando |
+| Harness da avaliação | 67 testes passando |
 | Interface | 108 testes passando |
 | Ponta a ponta | 17/17 |
 | Ataques | 63/63 bloqueados, zero vazamento |
-| Gabarito sem LLM | 95 de 100 casos; intent 100%, citação 100% |
+| Gabarito sem LLM | 99 de 100 casos; resultado 58 de 59; intent 100%, citação 100% |
 
 O relatório completo fica em [`eval/reports/resumo.md`](eval/reports/resumo.md).
 
