@@ -64,9 +64,15 @@ def test_orgaos_texto_pronto_com_sinal_de_concentracao():
     assert r.status == "aprovado"
     assert r.texto == (
         "Nas fontes autorizadas para você (PE), o fornecedor 11.222.333/0001-81 tem contratos com 2 órgãos, "
-        "somando R$ 1.000.000,00. O maior é Secretaria de Educação, com 80,00% do valor. "
-        "Concentração em um só órgão é um sinal para investigar."
+        "somando R$ 1.000.000,00. O maior é Secretaria de Educação, com 80,00% do valor contratado. "
+        "Concentração do valor contratado em um só órgão é um sinal para investigar."
     )
+
+
+def test_orgaos_diz_que_a_participacao_e_do_valor_contratado():
+    """G100: "dinheiro" pode ser o contratado ou o recebido. A resposta mede o contratado e diz isso."""
+    texto = redigir("Quais órgãos contratam?", orgaos("55.00"), ufs_autorizadas=("PE",), provedor=None).texto
+    assert texto.endswith("com 55,00% do valor contratado.")
 
 
 def test_orgaos_sem_concentracao_nao_fala_em_sinal():

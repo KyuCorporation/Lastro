@@ -104,8 +104,18 @@ def _normalizar(dados: dict) -> dict:
     return dados
 
 
-def validar_plano(bruto: str) -> PlanoConsulta:
-    """Valida a saída da LLM. Formato é normalizado; desvio de sentido ou do contrato vira PlanoInvalido."""
+def _na_carteira(dados: dict, carteira_id: UUID | None) -> dict:
+    """A LLM não conhece a carteira: em `fila_carteira`, ela vem do contexto da consulta, não do plano."""
+    if carteira_id is None or dados.get("intent") != "fila_carteira":
+        return dados
+    params = dados["parametros"] if isinstance(dados.get("parametros"), dict) else {}
+    return {**dados, "parametros": {**params, "carteira_id": str(carteira_id)}}
+
+
+def validar_plano(bruto: str, carteira_id: UUID | None = None) -> PlanoConsulta:
+    """Valida a saída da LLM. Formato é normalizado; desvio de sentido ou do contrato vira PlanoInvalido.
+
+    `carteira_id`: a carteira escolhida como contexto da consulta, que preenche `fila_carteira`."""
     texto = _CERCA.sub(r"\1", bruto)
     try:
         dados = json.loads(texto)
@@ -113,6 +123,6 @@ def validar_plano(bruto: str) -> PlanoConsulta:
             raise PlanoInvalido("o plano não é um objeto JSON")
         if "intent" not in dados:
             raise PlanoInvalido("campo obrigatório ausente: intent")
-        return PlanoConsulta.model_validate(_normalizar(dados), strict=False)
+        return PlanoConsulta.model_validate(_na_carteira(_normalizar(dados), carteira_id), strict=False)
     except (json.JSONDecodeError, ValidationError) as exc:
         raise PlanoInvalido(str(exc)) from exc

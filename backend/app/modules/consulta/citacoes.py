@@ -22,6 +22,8 @@ TABELA_DO_CONJUNTO: dict[tuple[str, str], str] = {
     ("sancoes_fornecedor", "linhas"): "sancoes",
     ("orgaos_fornecedor", "contratos"): "contratos",
     ("busca_objeto", "linhas"): "contratos",
+    ("fila_carteira", "contratos"): "contratos",
+    ("fila_carteira", "sancoes"): "sancoes",
 }
 
 # Quantas linhas viram citação na resposta. O recibo leva todas as linhas usadas.

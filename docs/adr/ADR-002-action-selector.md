@@ -11,7 +11,7 @@
 **Consequências:** cobertura limitada às intents; em troca, resultados auditáveis, injeção sem efeito sobre o que é consultado e testes determinísticos.
 
 **No código (08/11/2026):**
-- Catálogo em `backend/app/modules/catalogo/registry.py`, com o SQL de cada intent em `sql/<intent>.<conjunto>.sql`. São 7 intents com SQL; `fila_carteira` e `socios_sancionados` viram abstenção.
+- Catálogo em `backend/app/modules/catalogo/registry.py`, com o SQL de cada intent em `sql/<intent>.<conjunto>.sql`. São 8 intents com SQL; `socios_sancionados` vira abstenção.
 - O plano é validado contra `contracts/plano_consulta.schema.json` em `backend/app/llm/plano.py`.
 - Sem LLM, o roteador por regras (`llm/regras.py`) produz o mesmo plano.
 - Provas: `llm/tests/test_planejador.py::test_paridade_com_contracts_plano_consulta`, `llm/tests/test_contrato_catalogo.py` (o resultado real de cada intent alimenta a redação) e o gabarito (`make eval`).

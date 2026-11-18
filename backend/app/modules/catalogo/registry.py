@@ -1,6 +1,7 @@
 """Consultas executáveis do catálogo: intent → versão e conjuntos de SQL (`sql/<intent>.<conjunto>.sql`).
 
-Intents N1 e as N2 `orgaos_fornecedor` e `busca_objeto`. `fora_de_escopo` e `esclarecer` não consultam o banco.
+Intents N1 e as N2 `orgaos_fornecedor`, `busca_objeto` e `fila_carteira`. `fora_de_escopo` e `esclarecer` não
+consultam o banco.
 """
 
 from dataclasses import dataclass
@@ -30,6 +31,7 @@ class ConsultaCatalogo:
     citaveis: tuple[str, ...]
     usa_uf: bool = True
     usa_cnpj: bool = True
+    usa_carteira: bool = False
 
     @property
     def id_versao(self) -> str:
@@ -53,7 +55,16 @@ CONSULTAS: dict[str, ConsultaCatalogo] = {
         ConsultaCatalogo("pagamentos_periodo", "v2", ("linhas",), ("linhas",)),
         ConsultaCatalogo("sancoes_fornecedor", "v2", ("linhas",), ("linhas",), usa_uf=False),
         ConsultaCatalogo("orgaos_fornecedor", "v2", ("ranking", "contratos"), ("contratos",)),
-        ConsultaCatalogo("busca_objeto", "v2", ("linhas",), ("linhas",), usa_cnpj=False),
+        ConsultaCatalogo("busca_objeto", "v3", ("linhas",), ("linhas",), usa_cnpj=False),
+        # fila: um registro por fornecedor (derivado); contratos vigentes e sanções vigentes são as evidências.
+        ConsultaCatalogo(
+            "fila_carteira",
+            "v1",
+            ("fila", "contratos", "sancoes"),
+            ("contratos", "sancoes"),
+            usa_cnpj=False,
+            usa_carteira=True,
+        ),
     ]
 }
 

@@ -44,7 +44,7 @@ MENSAGEM_FORA_DO_CATALOGO = (
 )
 MENSAGEM_INTENT_INDISPONIVEL = (
     "Esse tipo de consulta ainda não está disponível. Por enquanto: resumo, contratos vigentes ou vencendo, "
-    "pagamentos num período e sanções de um fornecedor."
+    "pagamentos num período e sanções de um fornecedor, ou a fila de uma carteira."
 )
 MENSAGEM_CNPJ_INVALIDO = "O CNPJ informado não é válido (dígito verificador). Pode conferir?"
 MENSAGEM_TEMPO_ESGOTADO = "A consulta demorou além do limite. Tente de novo em instantes."
@@ -185,6 +185,7 @@ def _decidir(entrada: ConsultaEntrada, ctx: ContextoAcesso, amb: Ambiente) -> De
         provedor=amb.provedor,
         timeout_s=amb.timeout_s,
         restante=restante,
+        carteira_id=entrada.carteira_id,  # já conferida em `responder`: carteira de outro tenant parou lá
     )
     plano = planejamento.plano
     if plano.intent == "esclarecer":

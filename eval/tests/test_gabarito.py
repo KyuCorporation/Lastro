@@ -2,7 +2,7 @@
 
 import pytest
 
-from lastro_eval.gabarito import CasoGabarito, Observado, carregar, julgar, metricas
+from lastro_eval.gabarito import CasoGabarito, Observado, carregar, conferir_resultado, julgar, metricas
 from tests.conftest import EVAL
 
 
@@ -60,3 +60,29 @@ def test_metricas():
 def test_arquivo_do_gabarito_valido():
     casos = carregar(EVAL / "gabarito" / "perguntas.yaml")
     assert len(casos) >= 20 and len({c.id for c in casos}) == len(casos)
+
+
+# ------------------------------------------------------------------ resultado: referência e contexto declarado
+@pytest.mark.parametrize(
+    ("referencia", "contexto", "recibo", "acerta", "nota"),
+    [
+        ({"a", "b"}, set(), {"a", "b"}, True, None),
+        ({"a", "b"}, set(), {"a", "b", "e"}, False, "só na referência: 0, só no recibo: 1"),
+        ({"a", "b"}, set(), {"a"}, False, "só na referência: 1, só no recibo: 0"),
+        # G024/G025: o empenho citado à parte é contexto declarado, não erro
+        ({"a", "b"}, {"e"}, {"a", "b", "e"}, True, None),
+        # o contexto é opcional: resposta sem ele continua certa
+        ({"a", "b"}, {"e"}, {"a", "b"}, True, None),
+        # contexto não cobre linha que falta da referência nem linha estranha
+        ({"a", "b"}, {"e"}, {"a", "e"}, False, "só na referência: 1, só no recibo: 0"),
+        ({"a", "b"}, {"e"}, {"a", "b", "e", "x"}, False, "só na referência: 0, só no recibo: 1"),
+    ],
+)
+def test_conferir_resultado(referencia, contexto, recibo, acerta, nota):
+    assert conferir_resultado(referencia, recibo, contexto) == (acerta, nota)
+
+
+def test_casos_com_contexto_tem_referencia():
+    for caso in carregar(EVAL / "gabarito" / "perguntas.yaml"):
+        if caso.sql_contexto:
+            assert caso.sql_referencia and caso.comportamento == "responder", caso.id

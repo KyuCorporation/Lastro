@@ -24,7 +24,7 @@ N1_COM_SQL = {
     "pagamentos_periodo",
     "sancoes_fornecedor",
 }
-N2_COM_SQL = {"orgaos_fornecedor", "busca_objeto"}
+N2_COM_SQL = {"orgaos_fornecedor", "busca_objeto", "fila_carteira"}
 
 
 def plano(intent: str, **parametros) -> PlanoConsulta:

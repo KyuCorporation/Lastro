@@ -442,10 +442,12 @@ def _orgaos(r: ResultadoConsulta) -> Material:
     orgaos = _p(t["n_orgaos"], "órgão", "órgãos")
     modelo = (
         f"Nas fontes autorizadas para você ({ufs}), o fornecedor {cnpj} tem contratos com {n_o} {orgaos}, "
-        f"somando {valor}. O maior é {maior}, com {pct} do valor."
+        f"somando {valor}. O maior é {maior}, com {pct} do valor contratado."
     )
+    # A base é o valor contratado; o sinal `concentracao` da pipeline (SPEC §9) mede o recebido. O texto diz a base
+    # para "dinheiro" não ser lido como recebido (G100).
     if t["maior_participacao"] is not None and t["maior_participacao"] >= LIMIAR_CONCENTRACAO:
-        modelo += " Concentração em um só órgão é um sinal para investigar."
+        modelo += " Concentração do valor contratado em um só órgão é um sinal para investigar."
     registros = tuple(
         f"- Órgão {dado_nao_confiavel(g.get('orgao_nome'))} (UF {g['uf']})"
         for g in ranking[:LIMITE_REGISTROS_TEXTO]
@@ -489,6 +491,89 @@ def _busca(r: ResultadoConsulta) -> Material:
     if t["n_contratos"] > len(linhas):
         modelo += " Os mais relevantes estão citados abaixo."
     return m.material(modelo, False, _registros_contratos(linhas))
+
+
+# Nome de cada sinal no texto, igual ao da interface (frontend/src/lib/apresentacao.ts). Vocabulário do código.
+NOME_SINAL = {
+    "sancao_direta": "sanção vigente",
+    "penhasco": "vencimentos concentrados",
+    "concentracao": "concentração em um órgão",
+    "contagio": "sócio em comum com empresa sancionada",
+    "liquidez": "liquidez",
+}
+
+
+def _nomes_sinais(tipos: Any) -> str:
+    return ", ".join(NOME_SINAL.get(t, t) for t in tipos)
+
+
+@modelo_da_intent("fila_carteira")
+def _fila(r: ResultadoConsulta) -> Material:
+    m, t, fila = _Montador(), r.totais, r.conjuntos["fila"]
+    if not fila:
+        # Carteira sem itens ou de outro tenant (a RLS não mostra): mesma resposta, sem dizer qual dos dois.
+        return m.material("Não encontrei fornecedores nesta carteira.", True)
+    n = m.add(
+        t["n_fornecedores"],
+        "inteiro",
+        "número de fornecedores na carteira",
+        "count(carteira_itens)",
+        ancoras=("fornec", "empresa", "carteira"),
+    )
+    n_s = m.add(
+        t["n_com_sinal"],
+        "inteiro",
+        "número de fornecedores da carteira com sinal para investigar",
+        "count(fornecedores com sinal)",
+        ancoras=("sina",),
+    )
+    valor = m.add(
+        t["valor_exposto"],
+        "moeda",
+        "valor somado dos contratos vigentes dos fornecedores da carteira",
+        "sum(contratos.valor_global) vigentes",
+        ancoras=(*A_VIGENTE, "expost", "exposi"),
+    )
+    ufs = _ufs_marcador(m, r)
+    fornecedores = _p(t["n_fornecedores"], "fornecedor", "fornecedores")
+    modelo = f"A carteira tem {n} {fornecedores}"
+    if t["n_com_sinal"]:
+        modelo += f": {n_s} com sinal para investigar"
+        if t["n_com_sinal_forte"]:
+            n_f = m.add(
+                t["n_com_sinal_forte"],
+                "inteiro",
+                "número de fornecedores com sinal forte",
+                "count(fornecedores com sinal forte)",
+                ancoras=("fort",),
+            )
+            modelo += f" ({n_f} com sinal forte)"
+        modelo += "."
+    else:
+        modelo += ", nenhum com sinal para investigar."
+    modelo += f" Nas fontes autorizadas para você ({ufs}), os contratos vigentes deles somam {valor}."
+    if t["primeiro_cnpj"]:
+        cnpj = m.add(
+            formatar_cnpj(t["primeiro_cnpj"]),
+            "texto",
+            "CNPJ do primeiro fornecedor da fila",
+            "fila[0].cnpj",
+            essencial=False,
+        )
+        sinais = m.add(
+            _nomes_sinais(t["primeiro_tipos"]),
+            "texto",
+            "sinais do primeiro fornecedor da fila",
+            "fila[0].tipos",
+            essencial=False,
+        )
+        modelo += f" O primeiro da fila é o fornecedor {cnpj}, com {sinais}: sinal para investigar."
+    registros = tuple(
+        f"- Fornecedor {dado_nao_confiavel(f.get('razao_social'))}: "
+        + (f"sinais: {_nomes_sinais(f['tipos'])}" if f["tipos"] else "sem sinal")
+        for f in fila[:LIMITE_REGISTROS_TEXTO]
+    )
+    return m.material(modelo, False, registros)
 
 
 if faltando := intents_sem_modelo():
